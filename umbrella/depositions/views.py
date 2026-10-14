@@ -5,7 +5,6 @@ import logging
 import os
 import time
 
-from accounts.cluster_usernames import MissingClusterCredentialsError
 from django.http import HttpResponse
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
@@ -44,19 +43,6 @@ logger = logging.getLogger(__name__)
 
 # Wizard autosaves via PATCH only — no PUT full-replace.
 HTTP_METHODS_NO_PUT = ["get", "post", "patch", "delete", "head", "options"]
-
-
-def _ssh_setup_required(cluster_id):
-    return Response(
-        {
-            "success": False,
-            "error": "SSH key not set up for this user",
-            "detail": "Set up your SSH access for this cluster before submitting.",
-            "ssh_setup_required": True,
-            "cluster_id": cluster_id,
-        },
-        status=status.HTTP_403_FORBIDDEN,
-    )
 
 
 @extend_schema_view(
@@ -216,9 +202,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
         dataset = self.get_object()
         try:
-            job = submit_dataset_prep(dataset, user=request.user)
-        except MissingClusterCredentialsError as error:
-            return _ssh_setup_required(error.cluster_id)
+            job = submit_dataset_prep(dataset)
         except SubmissionValidationError as error:
             return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
@@ -238,9 +222,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
         dataset = self.get_object()
         try:
-            job = submit_dataset_push(dataset, user=request.user)
-        except MissingClusterCredentialsError as error:
-            return _ssh_setup_required(error.cluster_id)
+            job = submit_dataset_push(dataset)
         except SubmissionValidationError as error:
             return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
@@ -266,7 +248,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
     def logs(self, request, pk=None):
         from .services.logs import fetch_job_logs
 
-        return Response(fetch_job_logs(self.get_object(), user=request.user))
+        return Response(fetch_job_logs(self.get_object()))
 
     @action(detail=True, methods=["get"], url_path="config.yaml")
     def config_yaml(self, request, pk=None):

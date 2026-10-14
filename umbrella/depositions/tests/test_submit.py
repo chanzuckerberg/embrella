@@ -1,12 +1,10 @@
 """Tests for the dataset submit orchestration."""
 
-from types import SimpleNamespace
-
 import pytest
 import yaml
-from accounts.cluster_usernames import MissingClusterCredentialsError
 from django.utils import timezone
 from stores.models import Cluster, DataKind, PathType
+from stores.paths import resolve_dir
 
 from depositions.models import (
     Dataset,
@@ -20,6 +18,10 @@ from depositions.services import submit
 from depositions.services.dataprep_config import dataprep_config_yaml
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.submission import on_prep_complete
+
+
+def _raise_no_creds():
+    raise RuntimeError("service credentials unavailable")
 
 
 @pytest.fixture
@@ -50,9 +52,8 @@ def mocks(monkeypatch):
         }
         return "slurm-500"
 
-    calls["user"] = SimpleNamespace(pk=1)
-    calls["auth"] = {"username": "cluster-alice", "pkey": "test-key"}
-    monkeypatch.setattr(submit.clusterio, "get_auth_for_user", lambda user, cluster: (calls["auth"], None))
+    calls["auth"] = {"username": "service-user", "pkey": "test-key"}
+    monkeypatch.setattr(submit.clusterio, "get_auth_service_user", lambda: calls["auth"])
     monkeypatch.setattr(submit, "cluster_id_for_run", lambda *a, **k: "bruno")
     monkeypatch.setattr(submit.clusterio, "ensure_remote_dir", lambda *a: calls.__setitem__("mkdir", a))
     monkeypatch.setattr(submit.clusterio, "write_remote_file_atomic", write)
@@ -71,7 +72,7 @@ def mocks(monkeypatch):
 @pytest.mark.django_db
 class TestSubmitDatasetPrep:
     def test_happy_path(self, dataset, mocks, test_msi_session):
-        job = submit.submit_dataset_prep(dataset, user=mocks["user"])
+        job = submit.submit_dataset_prep(dataset)
         assert job.state == "prep_submitted"
         assert job.prep_slurm_job_id == "slurm-500"
         dataset.refresh_from_db()
@@ -84,27 +85,28 @@ class TestSubmitDatasetPrep:
         assert launched["params"]["run_validate"] is False
         assert launched["job_name"] == "deposition_prep_1_2"
         assert launched["params"]["config_yaml"] == "yaml-text"
-        assert launched["params"]["config_path"] == "/hpc/projects/group.czii/depositions/1/dataprep_config.yaml"
+        staging_dir = resolve_dir("deposition_staging", cluster="bruno", deposition_id=1).rstrip("/")
+        assert launched["params"]["config_path"] == f"{staging_dir}/dataprep_config.yaml"
         assert launched["auth"] is mocks["auth"]
         assert mocks["synced"] == (job.id, "prep", "bruno", "slurm-500")
 
     def test_rejects_unreserved_ids(self, dataset, mocks):
         dataset.dataset_id = None  # checked on the passed object
         with pytest.raises(SubmissionValidationError, match="Reserve"):
-            submit.submit_dataset_prep(dataset, user=mocks["user"])
+            submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
 
     def test_rejects_resubmit_while_in_flight(self, dataset, mocks):
         DatasetJob.objects.create(dataset=dataset, state="prep_running", prep_slurm_job_id="old")
         with pytest.raises(SubmissionValidationError, match="already"):
-            submit.submit_dataset_prep(dataset, user=mocks["user"])
+            submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
 
     def test_rejects_selected_annotations_until_supported(self, dataset, mocks):
         session = dataset.sessions.get()
         DepositionAnnotation.objects.create(session=session, copick_kind="picks", copick_ref="ribosome-0")
         with pytest.raises(SubmissionValidationError, match="annotations isn't supported"):
-            submit.submit_dataset_prep(dataset, user=mocks["user"])
+            submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
 
     def test_deselected_annotations_do_not_block(self, dataset, mocks):
@@ -112,19 +114,19 @@ class TestSubmitDatasetPrep:
         DepositionAnnotation.objects.create(
             session=session, copick_kind="picks", copick_ref="ribosome-0", is_selected=False
         )
-        job = submit.submit_dataset_prep(dataset, user=mocks["user"])
+        job = submit.submit_dataset_prep(dataset)
         assert job.state == "prep_submitted"
         assert mocks["launched"] is not None
 
     def test_rejects_not_ready_dataset(self, dataset, mocks):
         TiltseriesMetadata.objects.filter(session__dataset=dataset).delete()
         with pytest.raises(SubmissionValidationError, match="ready to submit"):
-            submit.submit_dataset_prep(dataset, user=mocks["user"])
+            submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
 
     def test_retry_after_failure(self, dataset, mocks):
         DatasetJob.objects.create(dataset=dataset, state="failed", error_message="boom")
-        job = submit.submit_dataset_prep(dataset, user=mocks["user"])
+        job = submit.submit_dataset_prep(dataset)
         assert job.state == "prep_submitted"
         assert not job.error_message
 
@@ -138,7 +140,7 @@ class TestSubmitDatasetPrep:
             error_message="push boom",
             log_excerpt="old upload log",
         )
-        job = submit.submit_dataset_prep(dataset, user=mocks["user"])
+        job = submit.submit_dataset_prep(dataset)
         assert job.state == "prep_submitted"
         assert job.push_slurm_job_id == ""
         assert job.log_excerpt == ""  # old attempt's output cleared too
@@ -149,7 +151,7 @@ class TestSubmitDatasetPrep:
 
         monkeypatch.setattr(submit, "resolve_dir", boom)
         with pytest.raises(RuntimeError):
-            submit.submit_dataset_prep(dataset, user=mocks["user"])
+            submit.submit_dataset_prep(dataset)
         job = DatasetJob.objects.get(dataset=dataset)
         assert job.state == "failed"  # rolled back, not stranded at prep_submitted
         assert mocks["launched"] is None
@@ -167,7 +169,7 @@ class TestSubmitDatasetPrep:
             lambda *, cluster_id, job_id, auth: cancelled.update(id=job_id, cluster=cluster_id, auth=auth),
         )
         with pytest.raises(RuntimeError):
-            submit.submit_dataset_prep(dataset, user=mocks["user"])
+            submit.submit_dataset_prep(dataset)
         job = DatasetJob.objects.get(dataset=dataset)
         assert job.state == "failed"
         # The job reached the cluster, so it must be cancelled rather than left running unwatched.
@@ -183,7 +185,7 @@ class TestSubmitDatasetPrep:
         monkeypatch.setattr(submit.tasks, "start_deposition_job_syncer", boom)
         monkeypatch.setattr(submit, "cancel_deposition_job", bad_cancel)
         with pytest.raises(OSError, match="scancel failed"):
-            submit.submit_dataset_prep(dataset, user=mocks["user"])
+            submit.submit_dataset_prep(dataset)
         job = DatasetJob.objects.get(dataset=dataset)
         # Unconfirmed cancel: leave it for an operator, not retryable into a second prep.
         assert job.state == "prep_submitted"
@@ -194,28 +196,28 @@ class TestSubmitDatasetPrep:
         DatasetJob.objects.create(
             dataset=sibling, state="prep_completed", prep_slurm_job_id="p", staged_at=timezone.now()
         )
-        submit.submit_dataset_prep(dataset, user=mocks["user"])
+        submit.submit_dataset_prep(dataset)
         assert mocks["required_ids"] == {2, 3}
 
     def test_failed_staged_sibling_stays_required(self, dataset, mocks):
         # A failed staged sibling still has a tree to protect.
         sibling = Dataset.objects.create(deposition=dataset.deposition, title="Sib", dataset_id=3)
         DatasetJob.objects.create(dataset=sibling, state="failed", prep_slurm_job_id="", staged_at=timezone.now())
-        submit.submit_dataset_prep(dataset, user=mocks["user"])
+        submit.submit_dataset_prep(dataset)
         assert mocks["required_ids"] == {2, 3}
 
     def test_push_inflight_sibling_is_required_before_staged_at(self, dataset, mocks):
         # A pushing sibling must stay protected in the shared config.
         sibling = Dataset.objects.create(deposition=dataset.deposition, title="Sib", dataset_id=3)
         DatasetJob.objects.create(dataset=sibling, state="push_running", push_slurm_job_id="x", staged_at=None)
-        submit.submit_dataset_prep(dataset, user=mocks["user"])
+        submit.submit_dataset_prep(dataset)
         assert mocks["required_ids"] == {2, 3}
 
     def test_unstaged_sibling_is_not_required(self, dataset, mocks):
         # A sibling that never staged and isn't in flight (failed, staged_at null) has no tree to protect.
         other = Dataset.objects.create(deposition=dataset.deposition, title="Other", dataset_id=4)
         DatasetJob.objects.create(dataset=other, state="failed", staged_at=None)
-        submit.submit_dataset_prep(dataset, user=mocks["user"])
+        submit.submit_dataset_prep(dataset)
         assert mocks["required_ids"] == {2}
 
     def test_lost_claim_before_id_recorded_cancels_orphan(self, dataset, mocks, monkeypatch):
@@ -231,32 +233,32 @@ class TestSubmitDatasetPrep:
 
         monkeypatch.setattr(submit, "launch_deposition_job", launch_then_steal)
         with pytest.raises(submit.LaunchError, match="Lost the prep claim"):
-            submit.submit_dataset_prep(dataset, user=mocks["user"])
+            submit.submit_dataset_prep(dataset)
         assert cancelled == {"id": "slurm-500"}
         assert mocks["synced"] is None  # poller never started
 
 
 @pytest.mark.django_db
 class TestSubmitDatasetPush:
-    def test_push_keeps_notifications_with_hpc_account_not_app_email(self, dataset, mocks):
+    def test_push_runs_as_service_account_with_no_app_email_params(self, dataset, mocks):
         DatasetJob.objects.create(dataset=dataset, state="prep_completed", prep_slurm_job_id="p1")
-        mocks["user"].email = "app-only@example.org"
 
-        submit.submit_dataset_push(dataset, user=mocks["user"])
+        submit.submit_dataset_push(dataset)
 
         launched = mocks["launched"]
-        assert launched["auth"] is mocks["auth"]
+        assert launched["auth"] is mocks["auth"]  # service account
         assert set(launched["params"]) == {"staged_dir", "s3_dest"}
 
     def test_push_happy_path(self, dataset, mocks):
         DatasetJob.objects.create(dataset=dataset, state="prep_completed", prep_slurm_job_id="p1")
-        job = submit.submit_dataset_push(dataset, user=mocks["user"])
+        job = submit.submit_dataset_push(dataset)
         assert job.state == "push_submitted"
         assert job.push_slurm_job_id == "slurm-500"
         launched = mocks["launched"]
         assert launched["processor"] == "deposition-push"
         assert launched["auth"] is mocks["auth"]
-        assert launched["params"]["staged_dir"] == "/hpc/projects/group.czii/depositions/1/2"
+        staging_dir = resolve_dir("deposition_staging", cluster="bruno", deposition_id=1).rstrip("/")
+        assert launched["params"]["staged_dir"] == f"{staging_dir}/2"
         assert launched["params"]["s3_dest"] == "s3://cryoetportal-biohub-hpc-globus/CZII/1/2"
         assert mocks["synced"] == (job.id, "push", "bruno", "slurm-500")
 
@@ -274,7 +276,7 @@ class TestSubmitDatasetPush:
             lambda *, cluster_id, job_id, auth: cancelled.update(id=job_id, cluster=cluster_id, auth=auth),
         )
         with pytest.raises(RuntimeError):
-            submit.submit_dataset_push(dataset, user=mocks["user"])
+            submit.submit_dataset_push(dataset)
         job = DatasetJob.objects.get(dataset=dataset)
         assert job.state == "failed"
         assert cancelled == {"id": "slurm-500", "cluster": "bruno", "auth": mocks["auth"]}
@@ -282,12 +284,12 @@ class TestSubmitDatasetPush:
     def test_push_rejects_before_prep_completed(self, dataset, mocks):
         DatasetJob.objects.create(dataset=dataset, state="prep_submitted", prep_slurm_job_id="p1")
         with pytest.raises(SubmissionValidationError, match="prep_completed"):
-            submit.submit_dataset_push(dataset, user=mocks["user"])
+            submit.submit_dataset_push(dataset)
         assert mocks["launched"] is None
 
     def test_push_rejects_when_never_prepared(self, dataset, mocks):
         with pytest.raises(SubmissionValidationError, match="hasn't been prepared"):
-            submit.submit_dataset_push(dataset, user=mocks["user"])
+            submit.submit_dataset_push(dataset)
         assert mocks["launched"] is None
 
 
@@ -302,12 +304,38 @@ def test_prep_and_push_use_same_configured_destination(dataset, mocks, cluster_o
     else:
         PathType.objects.filter(data_kind=kind, cluster=None).update(overlay_path=destination + "/")
 
-    job = submit.submit_dataset_prep(dataset, user=mocks["user"])
+    job = submit.submit_dataset_prep(dataset)
     assert mocks["sync_destination"] == destination
     DatasetJob.objects.filter(pk=job.pk).update(state="prep_completed")
     dataset.refresh_from_db()
-    submit.submit_dataset_push(dataset, user=mocks["user"])
+    submit.submit_dataset_push(dataset)
     assert mocks["launched"]["params"]["s3_dest"] == destination + "/1/2"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "staging_template",
+    [
+        "/shared/service-user/depositions/{deposition_id}/",
+        "/srv/portal/staging/{deposition_id}/",
+    ],
+)
+def test_prep_and_push_use_configured_cluster_staging_path(dataset, mocks, staging_template):
+    kind = DataKind.objects.get(data_type="deposition_staging")
+    cluster = Cluster.objects.get(cluster_id="bruno")
+    PathType.objects.update_or_create(data_kind=kind, cluster=cluster, defaults={"overlay_path": staging_template})
+    output_dir = staging_template.format(deposition_id=dataset.deposition.deposition_id).rstrip("/")
+
+    job = submit.submit_dataset_prep(dataset)
+    assert mocks["launched"]["params"]["output_dir"] == output_dir + "/"
+    assert mocks["launched"]["params"]["config_path"] == output_dir + "/dataprep_config.yaml"
+    destination = mocks["sync_destination"]
+    DatasetJob.objects.filter(pk=job.pk).update(state="prep_completed")
+    dataset.refresh_from_db()
+
+    submit.submit_dataset_push(dataset)
+    assert mocks["launched"]["params"]["staged_dir"] == output_dir + f"/{dataset.dataset_id}"
+    assert mocks["launched"]["params"]["s3_dest"] == destination + f"/1/{dataset.dataset_id}"
 
 
 @pytest.mark.django_db
@@ -317,39 +345,34 @@ def test_push_rejects_invalid_configured_destination(dataset, mocks):
     )
     DatasetJob.objects.create(dataset=dataset, state="prep_completed", prep_slurm_job_id="p1")
     with pytest.raises(SubmissionValidationError, match="S3 destination"):
-        submit.submit_dataset_push(dataset, user=mocks["user"])
+        submit.submit_dataset_push(dataset)
     assert mocks["launched"] is None
     assert DatasetJob.objects.get(dataset=dataset).state == "prep_completed"
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("phase", ["prep", "push"])
-def test_missing_credentials_does_not_claim_or_launch(dataset, mocks, monkeypatch, phase):
+def test_runs_as_the_service_account(dataset, mocks, phase):
+    # Deposition jobs use the configured service credentials.
     if phase == "push":
-        DatasetJob.objects.create(dataset=dataset, state="prep_completed", cluster_id="bruno")
-
-    def missing(user, cluster_id):
-        assert user is mocks["user"]
-        assert cluster_id == "bruno"
-        raise MissingClusterCredentialsError(user.pk, cluster_id)
-
-    monkeypatch.setattr(submit.clusterio, "get_auth_for_user", missing)
-    with pytest.raises(MissingClusterCredentialsError):
-        getattr(submit, f"submit_dataset_{phase}")(dataset, user=mocks["user"])
-    assert mocks["launched"] is None
-    if phase == "prep":
-        assert not DatasetJob.objects.filter(dataset=dataset).exists()
-    else:
-        assert DatasetJob.objects.get(dataset=dataset).state == "prep_completed"
+        DatasetJob.objects.create(dataset=dataset, state="prep_completed", prep_slurm_job_id="p1")
+    getattr(submit, f"submit_dataset_{phase}")(dataset)
+    assert mocks["launched"]["auth"] is mocks["auth"]
 
 
 @pytest.mark.django_db
-def test_invalid_cluster_auth_never_falls_back_to_service_account(dataset, mocks, monkeypatch):
-    monkeypatch.setattr(submit.clusterio, "get_auth_for_user", lambda *args: (None, {"error": "invalid cluster"}))
-    with pytest.raises(SubmissionValidationError, match="cluster is unavailable"):
-        submit.submit_dataset_prep(dataset, user=mocks["user"])
+@pytest.mark.parametrize("phase", ["prep", "push"])
+def test_missing_service_credentials_does_not_claim_or_launch(dataset, mocks, monkeypatch, phase):
+    # Auth resolves before the job is claimed/launched, so a missing service key strands nothing.
+    monkeypatch.setattr(submit.clusterio, "get_auth_service_user", _raise_no_creds)
+    if phase == "push":
+        DatasetJob.objects.create(dataset=dataset, state="prep_completed", prep_slurm_job_id="p1")
+    with pytest.raises(RuntimeError, match="service credentials"):
+        getattr(submit, f"submit_dataset_{phase}")(dataset)
     assert mocks["launched"] is None
-    assert not DatasetJob.objects.filter(dataset=dataset).exists()
+    job = DatasetJob.objects.filter(dataset=dataset).first()
+    # Prep never created a row; push left the prepared one untouched (not stranded mid-submit).
+    assert (job.state if job else None) == (None if phase == "prep" else "prep_completed")
 
 
 @pytest.mark.django_db
@@ -361,7 +384,7 @@ def test_sibling_prep_blocks_submission_before_config_is_frozen(dataset, mocks, 
         dataset=sibling, state=state, staged_at=timezone.now() if staged else None, prep_slurm_job_id=""
     )
     with pytest.raises(SubmissionValidationError, match="queued or running prep"):
-        submit.submit_dataset_prep(dataset, user=mocks["user"])
+        submit.submit_dataset_prep(dataset)
     assert mocks["launched"] is None
     assert mocks["required_ids"] is None
     assert not DatasetJob.objects.filter(dataset=dataset).exists()
@@ -370,7 +393,7 @@ def test_sibling_prep_blocks_submission_before_config_is_frozen(dataset, mocks, 
 @pytest.mark.django_db
 def test_second_dataset_waits_for_first_prep_then_config_includes_both(dataset, mocks, monkeypatch):
     monkeypatch.setattr(submit, "dataprep_config_yaml", dataprep_config_yaml)
-    first_job = submit.submit_dataset_prep(dataset, user=mocks["user"])
+    first_job = submit.submit_dataset_prep(dataset)
     first_launch = mocks["launched"]
     assert set(yaml.safe_load(first_launch["params"]["config_yaml"])["datasets"]) == {"dataset_2"}
     second = Dataset.objects.create(deposition=dataset.deposition, title="B", dataset_id=3)
@@ -379,10 +402,10 @@ def test_second_dataset_waits_for_first_prep_then_config_includes_both(dataset, 
         session=session, autofill_metadata={"paths": {"aretomo3": "/b"}, "acquisition": {}}
     )
     with pytest.raises(SubmissionValidationError, match="queued or running prep"):
-        submit.submit_dataset_prep(second, user=mocks["user"])
+        submit.submit_dataset_prep(second)
     assert mocks["launched"] is first_launch
     on_prep_complete(first_job, True, job_id=first_job.prep_slurm_job_id)
-    submit.submit_dataset_prep(second, user=mocks["user"])
+    submit.submit_dataset_prep(second)
     config = yaml.safe_load(mocks["launched"]["params"]["config_yaml"])
     assert set(config["datasets"]) == {"dataset_2", "dataset_3"}
     assert config["datasets"]["dataset_2"]["sessions"]
@@ -394,7 +417,7 @@ def test_active_prep_in_another_deposition_does_not_block(dataset, mocks):
     other_dep = Deposition.objects.create(title="Other", deposition_id=10)
     other_ds = Dataset.objects.create(deposition=other_dep, title="Other", dataset_id=20)
     DatasetJob.objects.create(dataset=other_ds, state="prep_submitted")
-    assert submit.submit_dataset_prep(dataset, user=mocks["user"]).state == "prep_submitted"
+    assert submit.submit_dataset_prep(dataset).state == "prep_submitted"
 
 
 @pytest.mark.django_db
@@ -408,7 +431,7 @@ def test_unconfirmed_cancellation_keeps_deposition_blocked(dataset, mocks, monke
     monkeypatch.setattr(submit.tasks, "start_deposition_job_syncer", unavailable)
     monkeypatch.setattr(submit, "cancel_deposition_job", cannot_cancel)
     with pytest.raises(OSError, match="cancellation not confirmed"):
-        submit.submit_dataset_prep(dataset, user=mocks["user"])
+        submit.submit_dataset_prep(dataset)
     first_launch = mocks["launched"]
     second = Dataset.objects.create(deposition=dataset.deposition, title="Sibling", dataset_id=3)
     session = DepositionSession.objects.create(dataset=second, msi_session=dataset.sessions.get().msi_session)
@@ -416,7 +439,7 @@ def test_unconfirmed_cancellation_keeps_deposition_blocked(dataset, mocks, monke
         session=session, autofill_metadata={"paths": {"aretomo3": "/b"}, "acquisition": {}}
     )
     with pytest.raises(SubmissionValidationError, match="queued or running prep"):
-        submit.submit_dataset_prep(second, user=mocks["user"])
+        submit.submit_dataset_prep(second)
     assert mocks["launched"] is first_launch
     assert DatasetJob.objects.get(dataset=dataset).state == "prep_submitted"
 

@@ -1,8 +1,7 @@
-"""Read a deposition job's SLURM log tail over SSH, as the requesting user."""
+"""Read a deposition job's SLURM log tail over SSH, as the service account."""
 
 import logging
 
-from accounts.cluster_usernames import MissingClusterCredentialsError
 from django.core.cache import cache
 from workflow.processors import get_processor
 
@@ -32,8 +31,8 @@ def _read_slurm_tail(cluster_id, auth, phase, slurm_job_id):
     return clusterio.read_remote_file_tail(cluster_id, path, max_bytes=MAX_LOG_BYTES, auth=auth)
 
 
-def fetch_job_logs(dataset, *, user):
-    """Live SLURM .out tail for the dataset's current job"""
+def fetch_job_logs(dataset):
+    """Live SLURM .out tail for the dataset's current job, read as the service account."""
     job = getattr(dataset, "job", None)
     if job is None:
         return {"logs": "", "state": None, "source": "none"}
@@ -44,20 +43,19 @@ def fetch_job_logs(dataset, *, user):
     if not slurm_job_id or not cluster_id:
         return stored
 
-    # Check cluster credentials before serving cached logs.
-    try:
-        auth, error = clusterio.get_auth_for_user(user, cluster_id)
-    except MissingClusterCredentialsError:
-        return stored
-    if error or not auth:
-        return stored
-
-    # Cache reads and failures per user and cluster for 15 seconds.
-    cache_key = f"deposition-log:{getattr(user, 'pk', '')}:{cluster_id}:{job.pk}:{slurm_job_id}"
+    # Cache reads and failures per cluster + job for 15 seconds (reads are as one service account).
+    cache_key = f"deposition-log:{cluster_id}:{job.pk}:{slurm_job_id}"
     cached = cache.get(cache_key)
     if cached is not None:
         # Overlay the current state so a job that finished mid-cooldown isn't reported stale.
         return {**cached, "state": job.state}
+
+    try:
+        auth = clusterio.get_auth_service_user()
+    except Exception:
+        # No service credentials (SSH disabled / missing key) — fall back, don't 500.
+        logger.warning("No service credentials to read the SLURM log for dataset %s", dataset.pk, exc_info=True)
+        return stored
 
     try:
         text = _read_slurm_tail(cluster_id, auth, phase, slurm_job_id)
