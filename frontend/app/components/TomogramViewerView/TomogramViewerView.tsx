@@ -18,6 +18,7 @@ import { getRequestURLWithPathParams, getRequestURL } from '@app/common/queries/
 import { DJANGO_URL } from '@app/common/constants/api';
 import { useIsNarrowViewport } from '@app/common/hooks/useIsNarrowViewport';
 import { usePinchZoom } from './hooks/usePinchZoom';
+import { useSelectedTomogram } from './hooks/useSelectedTomogram';
 import { QualityValue, Review, ReviewTomogramDetail, SaveState } from './types';
 
 // Wrapper component - provider is now inside the inner component to allow remounting
@@ -33,7 +34,6 @@ interface TomogramViewerProps {
 }
 
 interface TomogramState {
-  selectedTomogramId: string;
   detail: ReviewTomogramDetail | null;
   quality: QualityValue;
   objectLabels: string[];
@@ -43,8 +43,7 @@ interface TomogramState {
   contrastRange: [number, number]; // Dynamic range for the slider
 }
 
-const initialState = (firstTomogramId: string): TomogramState => ({
-  selectedTomogramId: firstTomogramId,
+const initialState: TomogramState = {
   detail: null,
   quality: 'pending',
   objectLabels: [],
@@ -52,7 +51,7 @@ const initialState = (firstTomogramId: string): TomogramState => ({
   saveState: 'idle',
   contrastLimits: [-0.05, 0.05],
   contrastRange: [-0.05, 0.05],
-});
+};
 
 type TomogramAction =
   | { type: 'SET_DETAIL'; payload: ReviewTomogramDetail | null }
@@ -61,8 +60,7 @@ type TomogramAction =
   | { type: 'SET_REJECTION_REASONS'; payload: string[] }
   | { type: 'SET_SAVE_STATE'; payload: SaveState }
   | { type: 'SET_CONTRAST_LIMITS'; payload: [number, number] }
-  | { type: 'SET_CONTRAST_RANGE'; payload: [number, number] }
-  | { type: 'SET_SELECTED_TOMOGRAM'; payload: string };
+  | { type: 'SET_CONTRAST_RANGE'; payload: [number, number] };
 
 function reducer(state: TomogramState, action: TomogramAction): TomogramState {
   switch (action.type) {
@@ -90,24 +88,29 @@ function reducer(state: TomogramState, action: TomogramAction): TomogramState {
         return state;
       }
       return { ...state, contrastRange: action.payload };
-    case 'SET_SELECTED_TOMOGRAM':
-      return { ...state, selectedTomogramId: action.payload };
     default:
       return state;
   }
 }
 
 const TomogramViewerViewInner = ({ review, onReviewUpdate }: TomogramViewerProps) => {
-  const firstTomogramId = review.tomograms?.[0]?.tomogramId ?? '';
-  const [state, dispatch] = useReducer(reducer, initialState(firstTomogramId));
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const { selectedTomogramId, selectTomogram } = useSelectedTomogram(review.tomograms ?? []);
 
   // Key the provider to the selected tomogram ID so it remounts when switching
   // This resets the provider's isReady state, allowing the new canvas to initialize
-  const providerKey = state.selectedTomogramId;
+  const providerKey = selectedTomogramId;
 
   return (
     <IdetikProvider key={providerKey}>
-      <TomogramViewerContent review={review} onReviewUpdate={onReviewUpdate} state={state} dispatch={dispatch} />
+      <TomogramViewerContent
+        review={review}
+        onReviewUpdate={onReviewUpdate}
+        state={state}
+        dispatch={dispatch}
+        selectedTomogramId={selectedTomogramId}
+        selectTomogram={selectTomogram}
+      />
     </IdetikProvider>
   );
 };
@@ -118,7 +121,14 @@ const TomogramViewerContent = ({
   onReviewUpdate,
   state,
   dispatch,
-}: TomogramViewerProps & { state: TomogramState; dispatch: React.Dispatch<TomogramAction> }) => {
+  selectedTomogramId,
+  selectTomogram,
+}: TomogramViewerProps & {
+  state: TomogramState;
+  dispatch: React.Dispatch<TomogramAction>;
+  selectedTomogramId: string;
+  selectTomogram: (tomogramId: string) => void;
+}) => {
   const isNarrow = useIsNarrowViewport();
   const [menuOpen, setMenuOpen] = useState(false);
   // Idetik has no multi-touch gesture support; this translates pinches into the wheel
@@ -142,7 +152,7 @@ const TomogramViewerContent = ({
   }, []);
 
   const userCanReview = true; // Everyone can review now
-  const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
+  const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === selectedTomogramId);
   const reviewedTomograms = review.tomograms.filter((tomo) => tomo.status !== 'pending').length;
 
   // Calculate z prop object - will be recalculated when switching tomograms
@@ -226,12 +236,12 @@ const TomogramViewerContent = ({
     dispatch({ type: 'SET_SAVE_STATE', payload: 'saving' });
     const url = getRequestURLWithPathParams(DJANGO_URL, '/api/reviews/:reviewId/tomograms/:tomogramId', {
       reviewId: review.reviewId,
-      tomogramId: state.selectedTomogramId,
+      tomogramId: selectedTomogramId,
     });
 
     try {
       await postResource(url, {
-        tomogramId: state.selectedTomogramId,
+        tomogramId: selectedTomogramId,
         quality: state.quality,
         objectLabels: state.objectLabels,
         rejectionReasons: state.rejectionReasons,
@@ -252,7 +262,7 @@ const TomogramViewerContent = ({
     await saveTomogram();
     const nextIndex = currentIndex + indexDelta;
     if (!review.tomograms || nextIndex < 0 || nextIndex >= review.tomograms.length) return;
-    dispatch({ type: 'SET_SELECTED_TOMOGRAM', payload: review.tomograms[nextIndex].tomogramId });
+    selectTomogram(review.tomograms[nextIndex].tomogramId);
   };
 
   // Function to download review results
@@ -307,7 +317,7 @@ const TomogramViewerContent = ({
     const loadDetail = async () => {
       const url = getRequestURLWithPathParams(DJANGO_URL, '/api/reviews/:reviewId/tomograms/:tomogramId', {
         reviewId: review.reviewId,
-        tomogramId: state.selectedTomogramId,
+        tomogramId: selectedTomogramId,
       });
       const res = await fetchResource(url);
       if (cancelled) return;
@@ -351,7 +361,7 @@ const TomogramViewerContent = ({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.selectedTomogramId, review.reviewId]);
+  }, [selectedTomogramId, review.reviewId]);
 
   useHotkeys('a', () => dispatch({ type: 'SET_QUALITY', payload: 'accepted' }));
   useHotkeys('r', () => dispatch({ type: 'SET_QUALITY', payload: 'rejected' }));
@@ -375,11 +385,11 @@ const TomogramViewerContent = ({
     tomogramDetail: state.detail,
     reviewName: review.reviewName,
     tomograms: review.tomograms,
-    selectedTomogram: state.selectedTomogramId,
+    selectedTomogram: selectedTomogramId,
     currentIndex,
     onPrevious: () => changeTomogram(-1),
     onNext: () => changeTomogram(1),
-    onSelectTomogram: (id: string) => dispatch({ type: 'SET_SELECTED_TOMOGRAM', payload: id }),
+    onSelectTomogram: selectTomogram,
     currentZIndex,
     zAxisMetadata: zAxisMetadata || undefined,
     onZIndexChange: handleZIndexChange,
@@ -427,7 +437,7 @@ const TomogramViewerContent = ({
         >
           {isStableMount && state.detail?.zarrPath !== undefined && zAxisMetadata !== null && zProp !== undefined ? (
             <OmeZarrChunkedImageViewer
-              key={`${state.detail.zarrPath}-${state.selectedTomogramId}`}
+              key={`${state.detail.zarrPath}-${selectedTomogramId}`}
               sourceUrl={state.detail.zarrPath}
               z={zProp}
               fallbackContrastLimits={fallbackContrastLimits}
