@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from processes.models import PipeExecution, PipeInPlan, ProcPlan, ProcRun, ProcSoftware
 from processes.services.cluster_resolver import active_cluster_ids, get_default_cluster_id
 from rest_framework.decorators import api_view
@@ -26,6 +26,16 @@ from common import clusterio
 from workflow.defaults import resolve_defaults
 from workflow.execution import PipelineExecutor, ValidationError
 from workflow.processors import get_processor, list_processors
+
+# OpenAPI shapes shared by the processor list and schema endpoints.
+_CLUSTER_FIELDS = {
+    "default_cluster": {"type": "string", "description": "Preselected cluster id"},
+    "allowed_clusters": {"type": "array", "items": {"type": "string"}, "description": "Selectable cluster ids"},
+}
+_ERROR_RESPONSE = {
+    "type": "object",
+    "properties": {"success": {"type": "boolean"}, "error": {"type": "string"}},
+}
 
 
 def _is_known_cluster(cluster_id) -> bool:
@@ -70,8 +80,35 @@ def _pipe_in_plan_for(processor_name: str):
     )
 
 
-@require_http_methods(["GET"])
-@login_required
+@extend_schema(
+    summary="List processors",
+    description="Registered processors shown in the launch dropdown, with their cluster options.",
+    responses={
+        200: OpenApiResponse(
+            description="Processors",
+            response={
+                "type": "object",
+                "properties": {
+                    "success": {"type": "boolean"},
+                    "processors": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "display_name": {"type": "string"},
+                                "version": {"type": "string"},
+                                **_CLUSTER_FIELDS,
+                            },
+                        },
+                    },
+                },
+            },
+        ),
+        500: OpenApiResponse(description="Server error", response=_ERROR_RESPONSE),
+    },
+)
+@api_view(["GET"])
 def list_available_processors(request):
     """
     List all registered processors.
@@ -133,8 +170,32 @@ def list_available_processors(request):
         )
 
 
-@require_http_methods(["GET"])
-@login_required
+@extend_schema(
+    summary="Get processor schema",
+    description="Parameter JSON schema and cluster options for one processor; drives the launch form.",
+    parameters=[
+        OpenApiParameter("processor_name", OpenApiTypes.STR, OpenApiParameter.PATH, description="e.g. aretomo3")
+    ],
+    responses={
+        200: OpenApiResponse(
+            description="Processor schema",
+            response={
+                "type": "object",
+                "properties": {
+                    "success": {"type": "boolean"},
+                    "processor": {"type": "string"},
+                    "display_name": {"type": "string"},
+                    "version": {"type": "string"},
+                    **_CLUSTER_FIELDS,
+                    "schema": {"type": "object", "description": "JSON schema of the processor parameters"},
+                },
+            },
+        ),
+        404: OpenApiResponse(description="Unknown processor", response=_ERROR_RESPONSE),
+        500: OpenApiResponse(description="Server error", response=_ERROR_RESPONSE),
+    },
+)
+@api_view(["GET"])
 def get_processor_schema(request, processor_name: str):
     """
     Get parameter schema for a specific processor.
