@@ -32,8 +32,6 @@ class CopickProcessor(BaseProcessor):
     name = "copick"
     display_name = "Copick"
     version = "1.0.1"
-    cluster = "bruno"
-    allowed_clusters = ["bruno", "czii"]
     task_name = "copick_project"
 
     # Schema is now loaded from schema.yaml file

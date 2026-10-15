@@ -16,6 +16,7 @@ from django.views.decorators.http import require_http_methods
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from processes.models import PipeExecution, PipeInPlan, ProcPlan, ProcRun, ProcSoftware
+from processes.services.cluster_resolver import active_cluster_ids, get_default_cluster_id
 from rest_framework.decorators import api_view
 from stores.models import Cluster
 from tem.models import MsiSession
@@ -29,6 +30,15 @@ from workflow.processors import get_processor, list_processors
 
 def _is_known_cluster(cluster_id) -> bool:
     return Cluster.objects.filter(cluster_id=cluster_id, is_active=True).exists()
+
+
+def _cluster_options(processor_name: str) -> tuple[str, list[str]]:
+    """(default, allowed) clusters for a processor. Empty DB values fall back to site config."""
+    software = ProcSoftware.objects.filter(processor_class=processor_name, active=True).first()
+    default_cluster = (software and software.default_cluster) or get_default_cluster_id()
+    allowed_clusters = (software and software.allowed_clusters) or active_cluster_ids()
+
+    return default_cluster, allowed_clusters
 
 
 def _int_param(request, name):
@@ -93,15 +103,7 @@ def list_available_processors(request):
             if getattr(instance, "hidden_from_list", False):
                 continue
 
-            # Try to get cluster info from database
-            try:
-                software = ProcSoftware.objects.get(processor_class=name, active=True)
-                default_cluster = software.default_cluster
-                allowed_clusters = software.allowed_clusters if software.allowed_clusters else ["czii", "bruno"]
-            except ProcSoftware.DoesNotExist:
-                # Fallback to processor class attributes
-                default_cluster = instance.cluster or "czii"
-                allowed_clusters = ["czii", "bruno"]
+            default_cluster, allowed_clusters = _cluster_options(name)
 
             processor_list.append(
                 {
@@ -158,15 +160,7 @@ def get_processor_schema(request, processor_name: str):
     try:
         processor = get_processor(processor_name)
 
-        # Try to get cluster info from database
-        try:
-            software = ProcSoftware.objects.get(processor_class=processor_name, active=True)
-            default_cluster = software.default_cluster
-            allowed_clusters = software.allowed_clusters if software.allowed_clusters else ["czii", "bruno"]
-        except ProcSoftware.DoesNotExist:
-            # Fallback to processor class attributes
-            default_cluster = processor.cluster or "czii"
-            allowed_clusters = ["czii", "bruno"]
+        default_cluster, allowed_clusters = _cluster_options(processor_name)
 
         return JsonResponse(
             {

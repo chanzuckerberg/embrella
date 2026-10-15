@@ -25,8 +25,7 @@ from processes.models import (
     ProcSoftware,
     RunPipeData,
 )
-from processes.services.cluster_resolver import get_default_cluster_id
-from stores.models import Cluster
+from processes.services.cluster_resolver import active_cluster_ids, get_default_cluster_id
 from umbrella_logger import logger
 
 from .agent import RemoteJobSubmitter
@@ -58,10 +57,6 @@ class PreparedRun:
     context: RunContext
     parameters: Dict[str, Any]
     script: str
-
-
-def _active_cluster_ids() -> List[str]:
-    return list(Cluster.objects.filter(is_active=True).values_list("cluster_id", flat=True))
 
 
 class PipelineExecutor:
@@ -246,10 +241,6 @@ class PipelineExecutor:
         if errors:
             raise ValidationError(errors)
 
-        slurm_errors = processor.validate_slurm_resources(parameters, context.cluster_id)
-        if slurm_errors:
-            raise ValidationError(slurm_errors)
-
         try:
             script = processor.render_script(parameters, context)
         except Exception as e:
@@ -273,7 +264,7 @@ class PipelineExecutor:
         if not cluster_id:
             return
 
-        allowed = software.allowed_clusters or _active_cluster_ids()
+        allowed = software.allowed_clusters or active_cluster_ids()
         if cluster_id in allowed:
             return
 

@@ -21,8 +21,6 @@ class DepositionPrepProcessor(BaseProcessor):
     name = "deposition-prep"
     display_name = "Deposition Prep"
     version = "0.1.0"
-    cluster = "bruno"
-    allowed_clusters = ["bruno", "czii"]
     task_name = "deposition_prep"
     hidden_from_list = True
 
