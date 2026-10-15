@@ -193,6 +193,49 @@ instead:
     podman system connection default embrella
     ```
 
+## Deposition staging and uploads {#deposition-staging}
+
+Deposition prep, upload, monitoring, cancellation and log reads all run as the
+configured cluster service account. Set `SLURM_USER` and provide its SSH key to
+both the backend and worker, the same key as the `slurm_key` mount above.
+Submitters do not need their own SSH or AWS credentials; Embrella still records
+the submitting user.
+
+#### Setup
+
+1.  Create a staging directory the service account can write to. It must also be
+    able to read the source data and follow the staged symlinks. The enclosing
+    directory need not be group-writable.
+
+2.  In Django admin, under **Stores → Path types**, add a `deposition_staging`
+    row for the target cluster. Set its `overlay_path` to an absolute directory
+    template containing `{deposition_id}`, for example:
+
+    ```text
+    /srv/portal/staging/{deposition_id}/
+    ```
+
+3.  Make approved AWS credentials available on the compute node. Directory
+    permissions do not grant AWS access; the upload job needs them to reach S3.
+    The S3 target is configured separately through `deposition_sync_destination`.
+
+Prep writes its config and dataset subdirectories beneath the staging path, and
+push reads those same subdirectories.
+
+!!! note
+
+    Check for an existing cluster-specific `deposition_staging` row before
+    adding one. Edit that override if present; otherwise add a new row for the
+    target cluster. Editing the cluster-agnostic seed changes the default for
+    every cluster without its own override.
+
+!!! warning
+
+    Before switching accounts or changing the path, finish existing deposition
+    jobs and uploads, or arrange migration of their staged data and permissions.
+    Updating a PathType does not move existing data. Verify a small prep and
+    upload from the deployed backend and worker before enabling the flow.
+
 ## Bare Metal Install {#bare-metal-legacy}
 
 Runs Django, Next.js and the task worker directly on the host, against a MariaDB/MySQL

@@ -24,13 +24,13 @@ def _exit_ok(exit_code):
     return not exit_code or exit_code.split(":")[0] == "0"
 
 
-def _submitter_auth(job, cluster_id):
-    """The submission owner's cluster auth, so sacct/scancel run as the user who launched the job."""
+def _job_auth():
+    """Deposition jobs run as the shared service account; sacct/scancel use its auth."""
     try:
-        auth, error = clusterio.get_auth_for_user(job.dataset.deposition.submitter_user, cluster_id)
+        return clusterio.get_auth_service_user()
     except Exception:
+        logger.warning("Service account credentials unavailable for the deposition syncer.", exc_info=True)
         return None
-    return None if error else auth
 
 
 def _give_up(job, phase, cluster_id, slurm_job_id, reason):
@@ -39,9 +39,9 @@ def _give_up(job, phase, cluster_id, slurm_job_id, reason):
     logger.warning("Deposition %s syncer giving up on DatasetJob %s: %s", phase, job.pk, reason)
     if slurm_job_id:
         try:
-            auth = _submitter_auth(job, cluster_id)
+            auth = _job_auth()
             if not auth:
-                raise RuntimeError("Unable to resolve the submission owner's cluster credentials.")
+                raise RuntimeError("Unable to resolve the service account's cluster credentials.")
             cancel_deposition_job(cluster_id=cluster_id, job_id=slurm_job_id, auth=auth)
         except Exception:
             logger.exception(
@@ -101,7 +101,7 @@ def run_deposition_job_syncer(dataset_job_id, phase, cluster_id, expected_job_id
         _reschedule(dataset_job_id, phase, cluster_id, expected_job_id, attempts + 1, NOT_LISTED_DELAY)
         return {"status": "waiting_id"}
 
-    syncer = JobStatusSyncer(job_id=slurm_job_id, cluster_id=cluster_id, auth=_submitter_auth(job, cluster_id))
+    syncer = JobStatusSyncer(job_id=slurm_job_id, cluster_id=cluster_id, auth=_job_auth())
     try:
         info = syncer.get_job_info_from_sacct()
         if info is None:

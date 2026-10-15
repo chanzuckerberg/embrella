@@ -30,11 +30,13 @@ def _cluster_for_dataset(dataset):
     return cluster_id_for_run(session.msi_session.name, run_number)
 
 
-def _user_auth(user, cluster_id):
-    auth, error = clusterio.get_auth_for_user(user, cluster_id)
-    if error or not auth:
-        raise SubmissionValidationError("The configured cluster is unavailable for submission.")
-    return auth
+def _service_auth():
+    """Deposition jobs run as the configured service account."""
+    try:
+        return clusterio.get_auth_service_user()
+    except Exception as error:
+        logger.error("Deposition service account credentials unavailable: %s", error)
+        raise SubmissionValidationError("Deposition submission isn't configured on this server.") from error
 
 
 def _required_dataset_ids(deposition, dataset, *, db):
@@ -48,7 +50,7 @@ def _required_dataset_ids(deposition, dataset, *, db):
     return set(staged) | {dataset.dataset_id}
 
 
-def submit_dataset_prep(dataset, *, user):
+def submit_dataset_prep(dataset):
     """Write the deposition config and launch this dataset's prep job. Returns the DatasetJob."""
     deposition = dataset.deposition
     if deposition.deposition_id is None or dataset.dataset_id is None:
@@ -63,7 +65,7 @@ def submit_dataset_prep(dataset, *, user):
         )
 
     cluster_id = _cluster_for_dataset(dataset)
-    auth = _user_auth(user, cluster_id)
+    auth = _service_auth()
     db = dataset._state.db
     # Claim one queued/running prep per deposition before freezing the shared config.
     # Otherwise an older queued job could overwrite a newer sibling's config.
@@ -153,7 +155,7 @@ def submit_dataset_prep(dataset, *, user):
     return job
 
 
-def submit_dataset_push(dataset, *, user):
+def submit_dataset_push(dataset):
     """Launch this dataset's push job from a prep_completed state"""
     deposition = dataset.deposition
     if deposition.deposition_id is None or dataset.dataset_id is None:
@@ -165,7 +167,7 @@ def submit_dataset_push(dataset, *, user):
 
     # Use the cluster prep staged on, not one re-derived from (mutable) metadata.
     cluster_id = job.cluster_id or _cluster_for_dataset(dataset)
-    auth = _user_auth(user, cluster_id)
+    auth = _service_auth()
     output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
     base = output_dir.rstrip("/")
     staged_dir = f"{base}/{dataset.dataset_id}"

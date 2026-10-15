@@ -17,11 +17,8 @@ import type {
 import type { StepProps } from '../wizardTypes';
 import { isActiveJobState, useSubmitFlow } from '../../hooks/useSubmitFlow';
 import { useDatasetLogs } from '../../hooks/useDatasetLogs';
-import { checkSshSetup, isSshSetupRequired } from '../../services/depositionApi';
-import { SSHSetupModal } from '@app/common/components/SSHSetupModal';
 
 type PhaseStatus = 'idle' | 'active' | 'done' | 'warning' | 'error';
-type SubmitPhase = 'prep' | 'push';
 
 const DEFAULT_SYNC_COMMAND = 'cryoetportalprep sync ./dataprep_config.yaml';
 const DEFAULT_PUSH_COMMAND = 'aws s3 sync <staged dir> <s3 bucket> --follow-symlinks';
@@ -265,7 +262,6 @@ function LiveLog({ data, active }: { data?: JobLogs; active: boolean }) {
 export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
   const { dataset, submit, push } = useSubmitFlow(initial);
   const [showPreview, setShowPreview] = useState(false);
-  const [ssh, setSsh] = useState<{ cluster: string; username: string; phase: SubmitPhase } | null>(null);
   const started = useRef(false);
 
   const job = dataset.job;
@@ -277,21 +273,13 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
 
   const sync = syncStatus(state, hasPushId);
 
-  const openSshIfNeeded = (err: unknown, phase: SubmitPhase) => {
-    if (!isSshSetupRequired(err)) return;
-    const cluster = err.clusterId;
-    checkSshSetup(cluster)
-      .then(({ username }) => setSsh({ cluster, username, phase }))
-      .catch(() => setSsh({ cluster, username: '', phase }));
-  };
-
   const runSync = () => {
     submit.reset();
-    submit.mutate(undefined, { onError: (e) => openSshIfNeeded(e, 'prep') });
+    submit.mutate();
   };
   const runPush = () => {
     push.reset();
-    push.mutate(undefined, { onError: (e) => openSshIfNeeded(e, 'push') });
+    push.mutate();
   };
 
   // Landing on this step kicks off the sync — no manual start button (matches the mock).
@@ -312,9 +300,7 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
   const warnings = job?.validation?.warnings ?? [];
   const canPush = !job?.validation || job.validation.passed;
 
-  const submitError = isSshSetupRequired(submit.error) ? null : (submit.error as Error | null)?.message;
-  const pushError = isSshSetupRequired(push.error) ? null : (push.error as Error | null)?.message;
-  const actionError = submitError || pushError;
+  const actionError = (submit.error as Error | null)?.message || (push.error as Error | null)?.message;
   const errorMessage = job?.error_message;
 
   const sessionCount = dataset.session_count ?? dataset.sessions?.length ?? 0;
@@ -490,21 +476,6 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
           <LiveLog data={logs.data} active={isActiveJobState(state)} />
         </Stack>
       </Box>
-
-      {ssh && (
-        <SSHSetupModal
-          open
-          cluster={ssh.cluster}
-          defaultUsername={ssh.username}
-          onClose={() => setSsh(null)}
-          onSuccess={() => {
-            const { phase } = ssh;
-            setSsh(null);
-            if (phase === 'push') runPush();
-            else runSync();
-          }}
-        />
-      )}
     </Stack>
   );
 }
