@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { fetchDatasetLogs } from '../services/depositionApi';
 import { depositionKeys } from '../queryKeys';
-import { isActiveJobState } from './useSubmitFlow';
+import { isActiveJobPhase } from '../submitPhases';
 import type { JobLogs, JobState } from '../types';
 
 // Gentler than the dataset poll; /logs reads over SSH.
@@ -25,9 +25,7 @@ export function useDatasetLogs(
   id: number,
   { state, phase, enabled = true, pollIntervalMs = DEFAULT_LOG_POLL_INTERVAL_MS }: DatasetLogsOptions = {}
 ) {
-  let active = isActiveJobState(state);
-  if (phase === 'prep') active = state === 'prep_submitted' || state === 'prep_running';
-  if (phase === 'push') active = state === 'push_submitted' || state === 'push_running';
+  const active = isActiveJobPhase(state, phase);
   const query = useQuery<JobLogs>({
     queryKey: depositionKeys.logs(id, phase),
     queryFn: () => fetchDatasetLogs(id, phase),
@@ -40,11 +38,16 @@ export function useDatasetLogs(
   useEffect(() => {
     const prev = previous.current;
     previous.current = { id, state, phase, enabled, active };
-    // useQuery already covers mount, dataset change, and enabling.
-    if (!enabled || !prev.enabled || prev.id !== id || prev.phase !== phase || prev.state === state) return;
-    // Interval only stops the timer; fetch on the transition itself.
+    if (!enabled) return;
+    const opened = !prev.enabled || prev.id !== id || prev.phase !== phase;
+    const changed = prev.state !== state;
+    if (!opened && !changed) return;
+    if (opened) {
+      if (changed && prev.id === id && prev.phase === phase) refetch();
+      return;
+    }
     const request = refetch();
-    if (!prev.active || active) return;
+    if (active || !prev.active) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     // Backend's cooldown starts after the read, so chain off it.

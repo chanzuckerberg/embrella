@@ -225,3 +225,66 @@ it('fetches the selected phase without polling a completed prep during an active
     jest.useRealTimers();
   }
 });
+
+it.each(['prep', 'push'] as const)('reads %s logs once after reopening a completed phase', async (phase) => {
+  jest.useFakeTimers();
+  try {
+    const running = phase === 'prep' ? 'prep_running' : 'push_running';
+    const finished = phase === 'prep' ? 'prep_completed' : 'completed';
+    const { result, rerender, unmount } = renderHook(
+      ({ state, enabled }: { state: JobState; enabled: boolean }) => {
+        const query = useDatasetLogs(7, { state, enabled, phase });
+        return { data: query.data };
+      },
+      { wrapper: wrapperFor(newClient()), initialProps: { state: running as JobState, enabled: true } }
+    );
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(0);
+    });
+    rerender({ state: finished, enabled: false });
+    (api.fetchDatasetLogs as jest.Mock).mockResolvedValue({ logs: 'final output', source: 'live' });
+    const beforeReopen = calls();
+    rerender({ state: finished, enabled: true });
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(0);
+    });
+    expect(calls()).toBe(beforeReopen + 1);
+    await waitFor(() => expect(result.current.data?.logs).toBe('final output'));
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(SERVER_LOG_COOLDOWN_MS + 100);
+    });
+    expect(calls()).toBe(beforeReopen + 1);
+    unmount();
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+it('replaces an in-flight running poll immediately when the job finishes', async () => {
+  const { result, rerender, unmount } = renderHook(
+    ({ state }: { state: JobState }) => {
+      const query = useDatasetLogs(7, { state, phase: 'prep' });
+      return { data: query.data, refetch: query.refetch };
+    },
+    { wrapper: wrapperFor(newClient()), initialProps: { state: 'prep_running' as JobState } }
+  );
+  await waitFor(() => expect(result.current.data?.logs).toBe('tail'));
+  let resolvePoll!: (value: { logs: string; source: string }) => void;
+  (api.fetchDatasetLogs as jest.Mock).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        resolvePoll = resolve;
+      })
+  );
+  act(() => {
+    result.current.refetch();
+  });
+  (api.fetchDatasetLogs as jest.Mock).mockResolvedValue({ logs: 'completed output', source: 'live' });
+  rerender({ state: 'prep_completed' });
+  await waitFor(() => expect(result.current.data?.logs).toBe('completed output'));
+  await act(async () => {
+    resolvePoll({ logs: 'old running poll', source: 'live' });
+  });
+  expect(result.current.data?.logs).toBe('completed output');
+  unmount();
+});

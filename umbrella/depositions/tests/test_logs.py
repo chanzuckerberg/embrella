@@ -117,15 +117,16 @@ def test_failed_read_is_cached_to_throttle_a_down_cluster():
     read.assert_called_once()  # second poll served the cached failure - no new SSH attempt
 
 
-def test_cache_hit_reflects_current_state_not_the_cooldown_snapshot():
+def test_completion_refreshes_the_tail_during_the_cooldown():
     job = _job(state="prep_running")
-    with mock.patch.object(logs, "_read_slurm_tail", return_value="log") as read:
+    with mock.patch.object(logs, "_read_slurm_tail", side_effect=["running tail", "final tail"]) as read:
         first = logs.fetch_job_logs(_dataset(job))
         job.state = "prep_completed"  # job finished during the cooldown
         second = logs.fetch_job_logs(_dataset(job))
     assert first["state"] == "prep_running"
     assert second["state"] == "prep_completed"  # fresh state, not the frozen cached snapshot
-    read.assert_called_once()  # still served from cache
+    assert second["logs"] == "final tail"
+    assert read.call_count == 2
 
 
 def test_read_slurm_tail_delegates_to_clusterio():
@@ -217,3 +218,17 @@ def test_cache_separates_phases_even_if_job_ids_match():
         push = logs.fetch_job_logs(_dataset(job), phase="push")
     assert prep["logs"] == "prep output"
     assert push["logs"] == "push output"
+
+
+@pytest.mark.parametrize("cached_failure", [False, True])
+def test_terminal_read_does_not_mask_captured_failure_excerpt(cached_failure):
+    job = _job(state="prep_running", log_excerpt="")
+    first_read = OSError("not ready") if cached_failure else "running tail"
+    with mock.patch.object(logs, "_read_slurm_tail", side_effect=[first_read, OSError("log removed")]) as read:
+        logs.fetch_job_logs(_dataset(job))
+        job.state = "failed"
+        job.log_excerpt = "captured final failure"
+        result = logs.fetch_job_logs(_dataset(job))
+    assert result["state"] == "failed"
+    assert result["logs"] == "captured final failure"
+    assert read.call_count == 2

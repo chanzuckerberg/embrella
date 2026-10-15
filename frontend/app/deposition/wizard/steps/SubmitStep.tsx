@@ -6,8 +6,6 @@ import { Alert, Box, ButtonBase, CircularProgress, LinearProgress, Stack, Typogr
 
 import type {
   DatasetJob,
-  JobLogs,
-  JobLogsSource,
   JobState,
   JobValidation,
   SyncChecklistItem,
@@ -19,25 +17,17 @@ import type { StepProps } from '../wizardTypes';
 import { useSubmitFlow } from '../../hooks/useSubmitFlow';
 import { useDatasetLogs } from '../../hooks/useDatasetLogs';
 
-type SubmitPhase = 'prep' | 'push';
-
-type PhaseStatus = 'idle' | 'active' | 'done' | 'warning' | 'error';
+import { isActiveJobPhase, submissionPhases, type PhaseStatus, type SubmitPhase } from '../../submitPhases';
+import { SubmissionLogPanel } from './SubmissionLogPanel';
 
 const SYNC_TIMER_INTERVAL_MS = 1000;
 
 const DEFAULT_SYNC_COMMAND = 'cryoetportalprep sync ./dataprep_config.yaml';
 const DEFAULT_PUSH_COMMAND = 'aws s3 sync <staged dir> <s3 bucket> --follow-symlinks';
 
-function syncStatus(state: JobState | undefined, hasPushId: boolean): PhaseStatus {
-  if (!state || state === 'pending') return 'idle';
-  if (state === 'prep_submitted' || state === 'prep_running') return 'active';
-  if (state === 'failed' && !hasPushId) return 'error';
-  return 'done';
-}
-
 function SyncTiming({ job }: { job: DatasetJob | null | undefined }) {
   const [now, setNow] = useState(() => Date.now());
-  const active = job?.state === 'prep_submitted' || job?.state === 'prep_running';
+  const active = isActiveJobPhase(job?.state, 'prep');
   const start = job?.started_at ? Date.parse(job.started_at) : NaN;
   const end = job?.prep_completed_at ?? (job?.state === 'failed' && !job.push_slurm_job_id ? job.completed_at : null);
 
@@ -62,25 +52,6 @@ function SyncTiming({ job }: { job: DatasetJob | null | undefined }) {
       · {label}: {minutes}m {seconds % 60}s
     </span>
   );
-}
-
-function validationStatus(validation: JobValidation | null | undefined): PhaseStatus {
-  if (!validation) return 'idle';
-  if (!validation.passed) return 'error';
-  return validation.warnings.length ? 'warning' : 'done';
-}
-
-function pushStatus(state: JobState | undefined, hasPushId: boolean): PhaseStatus {
-  if (state === 'push_submitted' || state === 'push_running') return 'active';
-  if (state === 'completed') return 'done';
-  if (state === 'failed' && hasPushId) return 'error';
-  return 'idle';
-}
-
-function focusPhase(sync: PhaseStatus, push: PhaseStatus): 1 | 2 | 3 {
-  if (push !== 'idle') return 3;
-  if (sync === 'done') return 2;
-  return 1;
 }
 
 function toPct(done: number, total: number): number {
@@ -123,7 +94,7 @@ function validationTitle(validation: JobValidation): string {
 
 function validationBody(validation: JobValidation): string {
   if (!validation.passed) return 'These issues must be resolved before the deposition can be pushed.';
-  return validation.warnings.length ? 'You can submit — review the warnings below before you do.' : 'You can submit.';
+  return validation.warnings.length ? 'You can submit - review the warnings below before you do.' : 'You can submit.';
 }
 
 const PUSH_SUB: Record<PhaseStatus, string> = {
@@ -267,69 +238,6 @@ function WarningsList({ warnings, blocking }: { warnings: ValidationWarning[]; b
   );
 }
 
-function logNote(source: JobLogsSource | undefined, hasLines: boolean, active: boolean): string {
-  // Only promise a retry while still polling.
-  if (source === 'unavailable') {
-    return active ? "Couldn't read the live log right now — retrying." : "Couldn't read the log.";
-  }
-  if (hasLines) return '';
-  if (!source || source === 'none') return 'No log yet — it appears once the job starts.';
-  return 'No output yet.';
-}
-
-function LiveLog({ data, active, phase }: { data?: JobLogs; active: boolean; phase: SubmitPhase }) {
-  const text = data?.logs ?? '';
-  const lines = text.split('\n').filter(Boolean);
-  const note = logNote(data?.source, lines.length > 0, active);
-  const copy = () => {
-    if (text && navigator.clipboard) navigator.clipboard.writeText(text).catch(() => undefined);
-  };
-  return (
-    <Box
-      sx={{
-        bgcolor: 'grey.900',
-        borderRadius: 2,
-        p: 2,
-        height: 320,
-        minWidth: 0,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, flexShrink: 0 }}>
-        <Typography variant="body2" sx={{ color: 'grey.100', fontWeight: 700 }}>
-          {phase === 'prep' ? 'Sync log (tail)' : 'Upload log (tail)'}
-        </Typography>
-        <Button sdsType="secondary" sdsStyle="minimal" size="small" onClick={copy} disabled={!lines.length}>
-          Copy
-        </Button>
-      </Box>
-      <Box
-        sx={{
-          fontFamily: 'monospace',
-          fontSize: 12,
-          color: 'grey.300',
-          whiteSpace: 'pre-wrap',
-          overflowWrap: 'anywhere',
-          overflow: 'auto',
-          minHeight: 0,
-          flex: 1,
-        }}
-      >
-        {lines.map((line, i) => (
-          <div key={i}>{line}</div>
-        ))}
-        {note && (
-          <Typography variant="caption" sx={{ color: 'grey.500' }}>
-            {note}
-          </Typography>
-        )}
-      </Box>
-    </Box>
-  );
-}
-
 export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
   const { dataset, submit, push } = useSubmitFlow(initial);
   const [selection, setSelection] = useState<{ datasetId: number; phase: 1 | 2 | 3 } | null>(null);
@@ -338,16 +246,10 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
 
   const job = dataset.job;
   const state = job?.state;
-  const hasPushId = !!job?.push_slurm_job_id;
-
-  const sync = syncStatus(state, hasPushId);
-  const pushed = pushStatus(state, hasPushId);
-  const focus = selection?.datasetId === dataset.id ? selection.phase : focusPhase(sync, pushed);
+  const { sync, pushed, validation, focus: defaultFocus } = submissionPhases(job);
+  const focus = selection?.datasetId === dataset.id ? selection.phase : defaultFocus;
   const logPhase: SubmitPhase = focus === 3 ? 'push' : 'prep';
-  const logActive =
-    logPhase === 'prep'
-      ? state === 'prep_submitted' || state === 'prep_running'
-      : state === 'push_submitted' || state === 'push_running';
+  const logActive = isActiveJobPhase(state, logPhase);
   // focus === 2 is pre-flight validation; its log panel isn't rendered, so don't fetch (SSH read).
   const logs = useDatasetLogs(dataset.id, { state, phase: logPhase, enabled: !!job && focus !== 2 });
 
@@ -364,7 +266,7 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
     push.mutate();
   };
 
-  // Landing on this step kicks off the sync — no manual start button (matches the mock).
+  // Landing on this step kicks off the sync - no manual start button (matches the mock).
   useEffect(() => {
     if (!readOnly && sync === 'idle' && !submit.isPending && !started.current) {
       started.current = true;
@@ -372,8 +274,6 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fire once on first idle render
   }, [readOnly, sync]);
-
-  const validation = validationStatus(job?.validation);
 
   const progress = job?.sync_progress ?? null;
   const summary = job?.sync_summary ?? null;
@@ -383,6 +283,8 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
   const actionError = (submit.error as Error | null)?.message || (push.error as Error | null)?.message;
   const errorMessage =
     actionError || (state === 'failed' ? job?.error_message || 'Submission failed. You can try again.' : null);
+
+  const retryLabel = pushed === 'error' ? 'Restart preparation' : 'Retry sync';
 
   const sessionCount = dataset.session_count ?? dataset.sessions?.length ?? 0;
   const datasetLabel = dataset.dataset_id ? `${dataset.title} (#${dataset.dataset_id})` : dataset.title;
@@ -432,6 +334,26 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
         />
       </Box>
 
+      {!readOnly && state === 'prep_completed' && (
+        <Box>
+          <Button sdsType="primary" sdsStyle="solid" disabled={push.isPending || !canPush} onClick={runPush}>
+            {push.isPending ? 'Submitting…' : 'Submit deposition'}
+          </Button>
+        </Box>
+      )}
+      {!readOnly && (sync === 'error' || pushed === 'error' || submit.isError) && (
+        <Box>
+          {pushed === 'error' && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              Recovery restarts from preparation - the upload becomes available again once prep completes.
+            </Typography>
+          )}
+          <Button sdsType="primary" sdsStyle="solid" disabled={submit.isPending} onClick={runSync}>
+            {submit.isPending ? 'Retrying…' : retryLabel}
+          </Button>
+        </Box>
+      )}
+
       <Box
         sx={{
           display: 'grid',
@@ -467,13 +389,6 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
                     Per-object progress and the symlink/deposit breakdown aren&apos;t available yet.
                   </Typography>
                 </>
-              )}
-              {!readOnly && (sync === 'error' || submit.isError) && (
-                <Box sx={{ mt: 2 }}>
-                  <Button sdsType="primary" sdsStyle="solid" disabled={submit.isPending} onClick={runSync}>
-                    {submit.isPending ? 'Retrying…' : 'Retry sync'}
-                  </Button>
-                </Box>
               )}
             </Box>
           )}
@@ -513,9 +428,6 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
 
               {!readOnly && state === 'prep_completed' && (
                 <Box sx={{ display: 'flex', gap: 2, mt: 2.5 }}>
-                  <Button sdsType="primary" sdsStyle="solid" disabled={push.isPending || !canPush} onClick={runPush}>
-                    {push.isPending ? 'Submitting…' : 'Submit deposition'}
-                  </Button>
                   <Button sdsType="secondary" sdsStyle="outline" onClick={() => setShowPreview((v) => !v)}>
                     Preview slurm command
                   </Button>
@@ -531,7 +443,7 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
                 <Box component="span" sx={{ fontFamily: 'monospace' }}>
                   {job?.push_command ?? DEFAULT_PUSH_COMMAND}
                 </Box>{' '}
-                — submits a SLURM job to upload files to S3.
+                - submits a SLURM job to upload files to S3.
               </Typography>
             </Box>
           )}
@@ -552,27 +464,17 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
                   {uploadNote(state)}
                 </Typography>
               )}
-              {!readOnly && pushed === 'error' && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-                    Recovery restarts from preparation - the upload becomes available again once prep completes.
-                  </Typography>
-                  <Button sdsType="primary" sdsStyle="solid" disabled={submit.isPending} onClick={runSync}>
-                    {submit.isPending ? 'Restarting…' : 'Restart preparation'}
-                  </Button>
-                </Box>
-              )}
             </Box>
           )}
 
           {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
-          {pushed === 'done' && <Alert severity="success">Submitted — uploaded to the data portal.</Alert>}
+          {pushed === 'done' && <Alert severity="success">Submitted - uploaded to the data portal.</Alert>}
         </Stack>
 
         {/* Right: live log */}
         {focus !== 2 && (
           <Stack spacing={2}>
-            <LiveLog data={logs.data} active={logActive} phase={logPhase} />
+            <SubmissionLogPanel data={logs.data} active={logActive} phase={logPhase} />
           </Stack>
         )}
       </Box>

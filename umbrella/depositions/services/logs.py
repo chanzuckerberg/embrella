@@ -61,14 +61,14 @@ def fetch_job_logs(dataset, *, live=True, phase=None):
     # Cache reads and failures per cluster + job for 15 seconds (reads are as one service account).
     cache_key = f"deposition-log:{cluster_id}:{job.pk}:{phase}:{slurm_job_id}"
     cached = cache.get(cache_key)
-    if cached is not None:
-        # Overlay the current state so a job that finished mid-cooldown isn't reported stale.
-        return {**cached, "state": job.state}
+    if cached is not None and cached["state"] == job.state:
+        return cached
+    # State changed: re-read, since a cached running tail can hide the final output or failure excerpt.
 
     try:
         auth = clusterio.get_auth_service_user()
     except Exception:
-        # No service credentials (SSH disabled / missing key) — fall back, don't 500.
+        # No service credentials (SSH disabled / missing key) - fall back, don't 500.
         logger.warning("No service credentials to read the SLURM log for dataset %s", dataset.pk, exc_info=True)
         return stored
 

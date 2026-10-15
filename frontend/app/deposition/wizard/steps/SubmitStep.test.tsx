@@ -2,18 +2,16 @@ import '@testing-library/jest-dom';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 
 import { SubmitStep } from './SubmitStep';
-import { isActiveJobState, useSubmitFlow } from '../../hooks/useSubmitFlow';
+import { useSubmitFlow } from '../../hooks/useSubmitFlow';
 import { useDatasetLogs } from '../../hooks/useDatasetLogs';
 import type { Dataset, DatasetJob, JobLogs } from '../../types';
 
 jest.mock('../../hooks/useSubmitFlow', () => ({
   useSubmitFlow: jest.fn(),
-  isActiveJobState: jest.fn(() => false),
 }));
 jest.mock('../../hooks/useDatasetLogs', () => ({ useDatasetLogs: jest.fn(() => ({ data: undefined })) }));
 const mockFlow = useSubmitFlow as jest.Mock;
 const mockLogs = useDatasetLogs as jest.Mock;
-const mockActive = isActiveJobState as jest.Mock;
 
 function setLogs(data: JobLogs | undefined) {
   mockLogs.mockReturnValue({ data });
@@ -31,7 +29,6 @@ function setup(job: DatasetJob | null, { readOnly = false } = {}) {
 beforeEach(() => {
   jest.clearAllMocks();
   mockLogs.mockReturnValue({ data: undefined });
-  mockActive.mockReturnValue(false);
 });
 
 it('auto-starts sync on arrival with no manual start button', () => {
@@ -134,14 +131,12 @@ it('shows the live log tail from the logs endpoint', () => {
 });
 
 it('promises a retry when an active job log is temporarily unavailable', () => {
-  mockActive.mockReturnValue(true);
   setLogs({ logs: '', source: 'unavailable' });
   setup({ id: 1, state: 'prep_running' });
   expect(screen.getByText(/retrying/i)).toBeInTheDocument();
 });
 
 it('does not promise a retry once a finished job log is unavailable', () => {
-  mockActive.mockReturnValue(false);
   setLogs({ logs: '', source: 'unavailable' });
   setup({ id: 1, state: 'failed' });
   expect(screen.queryByText(/retrying/i)).toBeNull();
@@ -270,4 +265,46 @@ it('does not offer an upload action when viewing validation before sync complete
   expect(screen.queryByRole('button', { name: 'Submit deposition' })).toBeNull();
   expect(submit.mutate).not.toHaveBeenCalled();
   expect(push.mutate).not.toHaveBeenCalled();
+});
+
+it('keeps a manually selected sync log open when prep completes', () => {
+  const job: DatasetJob = { id: 1, state: 'prep_running' };
+  const dataset = { id: 1, title: 'DS', status: 'syncing', job } as Dataset;
+  mockFlow.mockReturnValue({ dataset, submit: { isPending: false }, push: {} });
+  const props = { dataset, readOnly: false, reportSave: jest.fn() };
+  const view = render(<SubmitStep {...props} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Sync on cluster' }));
+  job.state = 'prep_completed';
+  view.rerender(<SubmitStep {...props} />);
+  expect(screen.getByRole('button', { name: 'Sync on cluster' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByText('Sync log (tail)')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Pre-flight validation' }));
+  expect(screen.getByRole('button', { name: 'Submit deposition' })).toBeInTheDocument();
+});
+
+it.each(['Sync on cluster', 'Pre-flight validation', 'Push to S3'])(
+  'keeps submit accessible while viewing %s',
+  (tile) => {
+    const { push } = setup({ id: 1, state: 'prep_completed' });
+    fireEvent.click(screen.getByRole('button', { name: tile }));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit deposition' }));
+    expect(push.mutate).toHaveBeenCalledTimes(1);
+  }
+);
+
+it.each(['Sync on cluster', 'Pre-flight validation', 'Push to S3'])(
+  'keeps retry accessible while viewing %s',
+  (tile) => {
+    const { submit } = setup({ id: 1, state: 'failed' });
+    fireEvent.click(screen.getByRole('button', { name: tile }));
+    fireEvent.click(screen.getByRole('button', { name: 'Retry sync' }));
+    expect(submit.mutate).toHaveBeenCalledTimes(1);
+  }
+);
+
+it('labels the saved excerpt when the live log is unavailable', () => {
+  setLogs({ logs: 'saved failure output', source: 'unavailable' });
+  setup({ id: 1, state: 'failed' });
+  expect(screen.getByText('saved failure output')).toBeInTheDocument();
+  expect(screen.getByText('Showing the saved output; the live log is unavailable.')).toBeInTheDocument();
 });

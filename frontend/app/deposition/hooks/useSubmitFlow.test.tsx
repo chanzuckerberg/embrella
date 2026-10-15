@@ -91,7 +91,7 @@ it('shows upload completion and invalidates both cached submissions scopes', asy
   });
 
   fireEvent.click(screen.getByRole('button', { name: 'Submit deposition' }));
-  expect(await screen.findByText('Submitted — uploaded to the data portal.')).toBeInTheDocument();
+  expect(await screen.findByText('Submitted - uploaded to the data portal.')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Submit deposition' })).not.toBeInTheDocument();
   expect(client.getQueryState(depositionKeys.submissions())?.isInvalidated).toBe(true);
   expect(client.getQueryState(depositionKeys.submissions('mine'))?.isInvalidated).toBe(true);
