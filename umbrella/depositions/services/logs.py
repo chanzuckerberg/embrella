@@ -31,19 +31,35 @@ def _read_slurm_tail(cluster_id, auth, phase, slurm_job_id):
     return clusterio.read_remote_file_tail(cluster_id, path, max_bytes=MAX_LOG_BYTES, auth=auth)
 
 
-def fetch_job_logs(dataset, *, live=True):
+def capture_failure_tail(cluster_id, auth, phase, slurm_job_id):
+    """Best-effort SLURM .out tail to snapshot onto a failed job, so the UI can show why
+    even once live reads stop. Returns None if the read can't be made."""
+    if not (cluster_id and slurm_job_id and auth):
+        return None
+    try:
+        return _read_slurm_tail(cluster_id, auth, phase, slurm_job_id)
+    except Exception:
+        logger.warning("Couldn't capture SLURM log tail for %s job %s", phase, slurm_job_id, exc_info=True)
+        return None
+
+
+def fetch_job_logs(dataset, *, live=True, phase=None):
+    """SLURM tail for prep or push; omit phase to read the current attempt."""
     job = getattr(dataset, "job", None)
     if job is None:
         return {"logs": "", "state": None, "source": "none"}
 
-    phase, slurm_job_id = _active_attempt(job)
-    stored = {"logs": job.log_excerpt or "", "state": job.state, "phase": phase, "source": "stored"}
+    current_phase, _ = _active_attempt(job)
+    phase = phase or current_phase
+    slurm_job_id = getattr(job, f"{phase}_slurm_job_id")
+    excerpt = job.log_excerpt if phase == current_phase else ""
+    stored = {"logs": excerpt or "", "state": job.state, "phase": phase, "source": "stored"}
     cluster_id = job.cluster_id
     if not live or not slurm_job_id or not cluster_id:
         return stored
 
     # Cache reads and failures per cluster + job for 15 seconds (reads are as one service account).
-    cache_key = f"deposition-log:{cluster_id}:{job.pk}:{slurm_job_id}"
+    cache_key = f"deposition-log:{cluster_id}:{job.pk}:{phase}:{slurm_job_id}"
     cached = cache.get(cache_key)
     if cached is not None:
         # Overlay the current state so a job that finished mid-cooldown isn't reported stale.

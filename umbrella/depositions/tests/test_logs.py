@@ -92,7 +92,20 @@ def test_live_read_is_cached_within_cooldown():
         first = logs.fetch_job_logs(_dataset(_job()))
         second = logs.fetch_job_logs(_dataset(_job()))
     assert first == second
-    read.assert_called_once()  # second request served from cache — no new SSH
+    read.assert_called_once()  # second request served from cache - no new SSH
+
+
+@pytest.mark.parametrize("phase", ["prep", "push"])
+def test_non_owner_cannot_receive_a_cached_live_tail(phase):
+    job = _job(state="push_running", push_slurm_job_id="222")
+    with mock.patch.object(logs, "_read_slurm_tail", return_value="live service output") as read:
+        owner = logs.fetch_job_logs(_dataset(job), phase=phase)
+        viewer = logs.fetch_job_logs(_dataset(job), live=False, phase=phase)
+    assert owner["source"] == "live"
+    assert viewer["source"] == "stored"
+    assert viewer["logs"] != "live service output"
+    assert viewer["phase"] == phase
+    read.assert_called_once()
 
 
 def test_failed_read_is_cached_to_throttle_a_down_cluster():
@@ -101,7 +114,7 @@ def test_failed_read_is_cached_to_throttle_a_down_cluster():
         second = logs.fetch_job_logs(_dataset(_job()))
     assert first["source"] == "unavailable"
     assert second["source"] == "unavailable"
-    read.assert_called_once()  # second poll served the cached failure — no new SSH attempt
+    read.assert_called_once()  # second poll served the cached failure - no new SSH attempt
 
 
 def test_cache_hit_reflects_current_state_not_the_cooldown_snapshot():
@@ -129,6 +142,27 @@ def test_read_slurm_tail_delegates_to_clusterio():
     assert out == "tail"
 
 
+def test_capture_failure_tail_returns_the_tail():
+    with mock.patch.object(logs, "_read_slurm_tail", return_value="boom traceback") as read:
+        out = logs.capture_failure_tail("bruno", {"username": "a"}, "prep", "111")
+    read.assert_called_once_with("bruno", {"username": "a"}, "prep", "111")
+    assert out == "boom traceback"
+
+
+def test_capture_failure_tail_swallows_read_errors():
+    # A failed read must not mask the job failure; the row just keeps whatever excerpt it had.
+    with mock.patch.object(logs, "_read_slurm_tail", side_effect=OSError("no such file")):
+        assert logs.capture_failure_tail("bruno", {"username": "a"}, "prep", "111") is None
+
+
+@pytest.mark.parametrize(
+    "cluster_id,auth,job_id", [("", {"u": 1}, "111"), ("bruno", None, "111"), ("bruno", {"u": 1}, "")]
+)
+def test_capture_failure_tail_skips_when_unresolvable(cluster_id, auth, job_id):
+    with mock.patch.object(logs, "_read_slurm_tail", side_effect=AssertionError("should not read")):
+        assert logs.capture_failure_tail(cluster_id, auth, "prep", job_id) is None
+
+
 def test_push_phase_selects_push_job():
     job = _job(state="push_running", push_slurm_job_id="222")
     with mock.patch.object(logs, "_read_slurm_tail", return_value="push log") as read:
@@ -143,4 +177,43 @@ def test_failed_push_selects_push_log_over_prep():
 
 def test_failed_prep_selects_prep_log():
     job = _job(state="failed", prep_slurm_job_id="111", push_slurm_job_id="")
-    assert logs._active_attempt(job) == ("prep", "111")
+    phase, job_id = logs._active_attempt(job)
+    assert (phase, job_id) == ("prep", "111")
+
+
+def test_prep_log_can_be_read_after_push_starts():
+    job = _job(state="push_running", push_slurm_job_id="222")
+    with (
+        mock.patch.object(logs, "_read_slurm_tail", return_value="prep output") as read,
+    ):
+        out = logs.fetch_job_logs(_dataset(job), phase="prep")
+    read.assert_called_once_with("bruno", SVC_AUTH, "prep", "111")
+    assert out["phase"] == "prep"
+    assert out["logs"] == "prep output"
+
+
+def test_previous_phase_does_not_fall_back_to_current_failure_excerpt():
+    job = _job(state="failed", push_slurm_job_id="222", log_excerpt="push failure")
+    with (
+        mock.patch.object(logs, "_read_slurm_tail", side_effect=OSError("missing prep log")),
+    ):
+        out = logs.fetch_job_logs(_dataset(job), phase="prep")
+    assert out["source"] == "unavailable"
+    assert out["logs"] == ""
+
+
+def test_unstarted_push_has_no_prep_excerpt():
+    out = logs.fetch_job_logs(_dataset(_job()), phase="push")
+    assert out["phase"] == "push"
+    assert out["logs"] == ""
+
+
+def test_cache_separates_phases_even_if_job_ids_match():
+    job = _job(state="push_running", push_slurm_job_id="111")
+    with (
+        mock.patch.object(logs, "_read_slurm_tail", side_effect=["prep output", "push output"]),
+    ):
+        prep = logs.fetch_job_logs(_dataset(job), phase="prep")
+        push = logs.fetch_job_logs(_dataset(job), phase="push")
+    assert prep["logs"] == "prep output"
+    assert push["logs"] == "push output"

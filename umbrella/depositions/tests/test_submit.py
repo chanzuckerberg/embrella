@@ -139,11 +139,15 @@ class TestSubmitDatasetPrep:
             push_slurm_job_id="999",
             error_message="push boom",
             log_excerpt="old upload log",
+            prep_completed_at="2026-10-14T12:00:00Z",
+            completed_at="2026-10-14T12:01:00Z",
         )
         job = submit.submit_dataset_prep(dataset)
         assert job.state == "prep_submitted"
         assert job.push_slurm_job_id == ""
         assert job.log_excerpt == ""  # old attempt's output cleared too
+        assert job.prep_completed_at is None
+        assert job.completed_at is None
 
     def test_path_resolution_failure_fails_row_without_launching(self, dataset, mocks, monkeypatch):
         def boom(*a, **k):

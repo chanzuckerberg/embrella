@@ -7,7 +7,7 @@ import time
 
 from django.http import HttpResponse
 from django.utils import timezone
-from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema, extend_schema_view
 from processes.services.cluster_resolver import cluster_id_for_run
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -244,6 +244,16 @@ class DatasetViewSet(viewsets.ModelViewSet):
             return Response({"detail": "This dataset hasn't been submitted yet."}, status=status.HTTP_404_NOT_FOUND)
         return Response(DatasetJobSerializer(job).data)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="phase",
+                type=str,
+                enum=["prep", "push"],
+                description="Read this phase instead of the current job attempt.",
+            )
+        ]
+    )
     @action(detail=True, methods=["get"])
     def logs(self, request, pk=None):
         from .permissions import deposition_owner_id
@@ -251,7 +261,10 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
         dataset = self.get_object()
         is_owner = deposition_owner_id(dataset) == request.user.id
-        return Response(fetch_job_logs(dataset, live=is_owner))
+        phase = request.query_params.get("phase")
+        if phase is not None and phase not in ("prep", "push"):
+            return Response({"detail": "phase must be prep or push."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(fetch_job_logs(dataset, live=is_owner, phase=phase))
 
     @action(detail=True, methods=["get"], url_path="config.yaml")
     def config_yaml(self, request, pk=None):

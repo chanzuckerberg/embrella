@@ -19,7 +19,7 @@ import {
   TOMOGRAM_FIELDS,
 } from '../../components/autofill/fields';
 import type { Dataset, TomogramFlavor, TomogramMetadata } from '../../types';
-import { TOMOGRAM_FLAVORS } from '../../types';
+import { TOMOGRAM_FLAVORS, isEditableStatus } from '../../types';
 import type { StepProps } from '../wizardTypes';
 
 function toTomograms(list?: TomogramMetadata[] | null): Record<TomogramFlavor, TomogramMetadata> {
@@ -63,7 +63,7 @@ export function AutofillStep({
   onManualAutofillEntry,
 }: StepProps) {
   const queryClient = useQueryClient();
-  const readOnly = readOnlyProp || dataset.status !== 'draft';
+  const readOnly = readOnlyProp || !isEditableStatus(dataset.status);
   const [sessions, setSessions] = useState<SessionMeta[]>(() => toSessionMeta(dataset));
   const [activeKey, setActiveKey] = useState<string>(
     () => (sessions.find((s) => s.aretomoRun) ?? sessions[0])?.key ?? ''

@@ -1190,6 +1190,38 @@ class TestLogsEndpoint:
         assert r.json()["source"] == "stored"
         assert r.json()["logs"] == "stored tail"
 
+    def test_invalid_log_phase_is_rejected(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        response = auth_client.get(f"{DATASETS}{ds['id']}/logs/?phase=validation")
+        assert response.status_code == 400
+
+    def test_owner_can_read_prep_log_during_push(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        job = self._running_job(ds)
+        job.state = "push_running"
+        job.push_slurm_job_id = "456"
+        job.save()
+        auth = {"username": "svc"}
+        with (
+            mock.patch("depositions.services.logs.clusterio.get_auth_service_user", return_value=auth),
+            mock.patch("depositions.services.logs._read_slurm_tail", return_value="prep output") as read,
+        ):
+            response = auth_client.get(f"{DATASETS}{ds['id']}/logs/?phase=prep")
+        assert response.status_code == 200
+        assert response.json()["phase"] == "prep"
+        assert response.json()["logs"] == "prep output"
+        read.assert_called_once_with("bruno", auth, "prep", "123")
+
+    def test_requested_push_without_an_attempt_does_not_show_prep_excerpt(self, auth_client):
+        from depositions.models import Dataset, DatasetJob
+
+        ds = self._owned_dataset(auth_client)
+        DatasetJob.objects.create(dataset=Dataset.objects.get(pk=ds["id"]), state="prep_completed", log_excerpt="prep")
+        response = auth_client.get(f"{DATASETS}{ds['id']}/logs/?phase=push")
+        assert response.status_code == 200
+        assert response.json()["phase"] == "push"
+        assert response.json()["logs"] == ""
+
 
 @pytest.mark.django_db
 class TestConfigYamlEndpoint:

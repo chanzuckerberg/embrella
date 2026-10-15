@@ -4,6 +4,7 @@ import { Alert, Box, CircularProgress } from '@mui/material';
 
 import type { StepProps } from '../wizardTypes';
 import { useDeposition } from '../../hooks/useDeposition';
+import { isEditableStatus } from '../../types';
 import { DepositionForm } from '../../depositions/DepositionForm';
 
 export function DepositionStep({ dataset, reportSave, readOnly }: StepProps) {
@@ -20,5 +21,11 @@ export function DepositionStep({ dataset, reportSave, readOnly }: StepProps) {
     return <Alert severity="error">Could not load the deposition for this dataset.</Alert>;
   }
 
-  return <DepositionForm deposition={data} reportSave={reportSave} readOnly={readOnly || dataset.status !== 'draft'} />;
+  return (
+    <DepositionForm
+      deposition={data}
+      reportSave={reportSave}
+      readOnly={readOnly || !isEditableStatus(dataset.status)}
+    />
+  );
 }

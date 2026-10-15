@@ -196,3 +196,32 @@ it('cancels the pending final read when prep restarts', async () => {
     jest.useRealTimers();
   }
 });
+
+it('fetches the selected phase without polling a completed prep during an active push', async () => {
+  jest.useFakeTimers();
+  try {
+    const { rerender, unmount } = renderHook(
+      ({ phase }: { phase: 'prep' | 'push' }) =>
+        useDatasetLogs(7, { state: 'push_running', phase, pollIntervalMs: 50 }),
+      { wrapper: wrapperFor(newClient()), initialProps: { phase: 'prep' as 'prep' | 'push' } }
+    );
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(200);
+    });
+    expect(api.fetchDatasetLogs).toHaveBeenCalledTimes(1);
+    expect(api.fetchDatasetLogs).toHaveBeenLastCalledWith(7, 'prep');
+    rerender({ phase: 'push' });
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(0);
+    });
+    expect(calls()).toBe(2);
+    expect(api.fetchDatasetLogs).toHaveBeenLastCalledWith(7, 'push');
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(100);
+    });
+    expect(calls()).toBeGreaterThan(2);
+    unmount();
+  } finally {
+    jest.useRealTimers();
+  }
+});

@@ -15,6 +15,7 @@ export const SERVER_LOG_COOLDOWN_MS = 15000;
 
 interface DatasetLogsOptions {
   state?: JobState | null;
+  phase?: 'prep' | 'push';
   enabled?: boolean;
   pollIntervalMs?: number;
 }
@@ -22,23 +23,25 @@ interface DatasetLogsOptions {
 /** Job log tail from GET /logs: polls while active, and refetches on each state change. */
 export function useDatasetLogs(
   id: number,
-  { state, enabled = true, pollIntervalMs = DEFAULT_LOG_POLL_INTERVAL_MS }: DatasetLogsOptions = {}
+  { state, phase, enabled = true, pollIntervalMs = DEFAULT_LOG_POLL_INTERVAL_MS }: DatasetLogsOptions = {}
 ) {
-  const active = isActiveJobState(state);
+  let active = isActiveJobState(state);
+  if (phase === 'prep') active = state === 'prep_submitted' || state === 'prep_running';
+  if (phase === 'push') active = state === 'push_submitted' || state === 'push_running';
   const query = useQuery<JobLogs>({
-    queryKey: depositionKeys.logs(id),
-    queryFn: () => fetchDatasetLogs(id),
+    queryKey: depositionKeys.logs(id, phase),
+    queryFn: () => fetchDatasetLogs(id, phase),
     enabled,
     refetchInterval: active ? pollIntervalMs : false,
   });
 
   const { refetch } = query;
-  const previous = useRef({ id, state, enabled, active });
+  const previous = useRef({ id, state, phase, enabled, active });
   useEffect(() => {
     const prev = previous.current;
-    previous.current = { id, state, enabled, active };
+    previous.current = { id, state, phase, enabled, active };
     // useQuery already covers mount, dataset change, and enabling.
-    if (!enabled || !prev.enabled || prev.id !== id || prev.state === state) return;
+    if (!enabled || !prev.enabled || prev.id !== id || prev.phase !== phase || prev.state === state) return;
     // Interval only stops the timer; fetch on the transition itself.
     const request = refetch();
     if (!prev.active || active) return;
@@ -52,7 +55,7 @@ export function useDatasetLogs(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [id, state, enabled, active, refetch]);
+  }, [id, state, phase, enabled, active, refetch]);
 
   return query;
 }
