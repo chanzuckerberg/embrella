@@ -8,6 +8,7 @@ import { Alert, Box, Chip, CircularProgress, Container, Link, Typography } from 
 import { useDataset } from '../../hooks/useDataset';
 import { STATUS_META } from '../../submissions/constants';
 import { softChipSx } from '../../submissions/utils';
+import { isEditableStatus } from '../../types';
 import { DatasetForm } from './DatasetForm';
 
 export default function DatasetDetailPage() {
@@ -32,7 +33,7 @@ export default function DatasetDetailPage() {
 
     const label = dataset.dataset_id ? `ds-${dataset.dataset_id}` : dataset.title || '(untitled draft)';
     const meta = STATUS_META[dataset.status];
-    const readOnly = dataset.status !== 'draft';
+    const readOnly = !isEditableStatus(dataset.status);
 
     return (
       <>
@@ -49,7 +50,7 @@ export default function DatasetDetailPage() {
         )}
         {readOnly && (
           <Alert severity="info" sx={{ mb: 3 }}>
-            This dataset is {meta.label.toLowerCase()} and is read-only. Resume editing is only available for drafts.
+            This dataset is {meta.label.toLowerCase()} and is read-only.
           </Alert>
         )}
         <DatasetForm dataset={dataset} />

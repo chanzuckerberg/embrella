@@ -12,6 +12,7 @@ const mockUseDataset = useDataset as jest.Mock;
 
 const DRAFT = { id: 5, deposition: 1, dataset_id: 100, title: 'My dataset', status: 'draft', funding: [] };
 const PUSHED = { ...DRAFT, status: 'pushed' };
+const FAILED = { ...DRAFT, status: 'failed' };
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -48,5 +49,12 @@ describe('DatasetDetailPage', () => {
     renderPage();
     expect(screen.getByText(/read-only/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Title/)).toBeDisabled();
+  });
+
+  it('renders an editable form with no banner for a failed dataset', () => {
+    mockUseDataset.mockReturnValue({ data: FAILED, isPending: false, isError: false });
+    renderPage();
+    expect(screen.getByLabelText(/Title/)).not.toBeDisabled();
+    expect(screen.queryByText(/read-only/i)).not.toBeInTheDocument();
   });
 });

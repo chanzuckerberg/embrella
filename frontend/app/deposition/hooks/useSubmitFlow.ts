@@ -5,15 +5,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchDataset, pushDataset, submitDataset } from '../services/depositionApi';
 import { depositionKeys } from '../queryKeys';
 import type { Dataset, JobState } from '../types';
+import { isActiveJobPhase } from '../submitPhases';
 
-const ACTIVE_STATES: JobState[] = ['prep_submitted', 'prep_running', 'push_submitted', 'push_running'];
 export const DEFAULT_SUBMIT_POLL_INTERVAL_MS = 4000;
 
 interface SubmitFlowOptions {
   pollIntervalMs?: number;
 }
 
-export const isActiveJobState = (state?: JobState | null): boolean => !!state && ACTIVE_STATES.includes(state);
+export const isActiveJobState = (state?: JobState | null): boolean => isActiveJobPhase(state);
 
 /**
  * Live view of a dataset's submission: polls while a prep/push job is running and exposes

@@ -111,7 +111,8 @@ class DatasetJobSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DatasetJob
-        fields = "__all__"
+        # Raw cluster output is available only through the owner-gated logs endpoint.
+        exclude = ["log_excerpt"]
 
 
 class DepositionSessionLinkSerializer(serializers.ModelSerializer):

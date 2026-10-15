@@ -10,7 +10,7 @@ import { useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useMsiSessions } from '../../hooks/useSources';
 import { SourcesTable, type SourceRow } from '../../components/SourcesTable';
 import type { StepProps } from '../wizardTypes';
-import type { Dataset, TomogramSubsetMode } from '../../types';
+import { isEditableStatus, type Dataset, type TomogramSubsetMode } from '../../types';
 
 interface SourcesState {
   rows: SourceRow[];
@@ -46,7 +46,7 @@ function toRows(dataset: Dataset): SourceRow[] {
 
 export function SourcesStep({ dataset, reportSave, readOnly: readOnlyProp }: StepProps) {
   const queryClient = useQueryClient();
-  const readOnly = readOnlyProp || dataset.status !== 'draft';
+  const readOnly = readOnlyProp || !isEditableStatus(dataset.status);
   const [rows, setRows] = useState<SourceRow[]>(() => toRows(dataset));
   const [subsetMode, setSubsetMode] = useState<TomogramSubsetMode>(dataset.tomogram_subset_mode ?? 'all');
   const sessions = useMsiSessions();

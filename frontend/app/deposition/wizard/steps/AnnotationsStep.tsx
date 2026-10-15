@@ -32,7 +32,7 @@ import {
   staleAnnotationIds,
   stripIncompleteLinks,
 } from '../../components/annotations/scan';
-import type { Dataset, DepositionAnnotation } from '../../types';
+import { isEditableStatus, type Dataset, type DepositionAnnotation } from '../../types';
 import type { StepProps } from '../wizardTypes';
 
 interface SessionRef {
@@ -57,7 +57,7 @@ function toSessionRefs(dataset: Dataset): SessionRef[] {
 
 export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }: StepProps) {
   const queryClient = useQueryClient();
-  const readOnly = readOnlyProp || dataset.status !== 'draft';
+  const readOnly = readOnlyProp || !isEditableStatus(dataset.status);
   const sessions = useMemo(() => toSessionRefs(dataset), [dataset]);
   const [activeKey, setActiveKey] = useState(sessions[0]?.key ?? '');
   const active = useMemo(() => sessions.find((s) => s.key === activeKey) ?? sessions[0], [sessions, activeKey]);

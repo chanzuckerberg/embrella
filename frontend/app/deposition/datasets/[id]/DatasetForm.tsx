@@ -7,7 +7,14 @@ import { Box, IconButton, Stack, MenuItem, TextField, Tooltip, Typography } from
 
 import { updateDataset } from '../../services/depositionApi';
 import { depositionKeys } from '../../queryKeys';
-import type { AuthorRef, CrossRef, Dataset, DatasetFunding, DatasetSample } from '../../types';
+import {
+  isEditableStatus,
+  type AuthorRef,
+  type CrossRef,
+  type Dataset,
+  type DatasetFunding,
+  type DatasetSample,
+} from '../../types';
 import { type AutoSaveState, useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useDeposition } from '../../hooks/useDeposition';
 import { CrossReferencesEditor } from '../../depositions/CrossReferencesEditor';
@@ -112,7 +119,7 @@ export function DatasetForm({
   const { data: deposition } = useDeposition(dataset.deposition);
   const depositionAuthorCount = deposition?.authors_json?.length;
   const [form, setForm] = useState<FormState>(() => toForm(dataset));
-  const readOnly = readOnlyProp || dataset.status !== 'draft';
+  const readOnly = readOnlyProp || !isEditableStatus(dataset.status);
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
   const [active, setActive] = useState('basic');
   const [reusedFrom, setReusedFrom] = useState('');

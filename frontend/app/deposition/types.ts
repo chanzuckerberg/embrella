@@ -1,5 +1,8 @@
 export type DatasetStatus = 'draft' | 'syncing' | 'pushed' | 'failed';
 
+// Draft and failed datasets can be edited/resumed; syncing and pushed are locked.
+export const isEditableStatus = (status: DatasetStatus): boolean => status === 'draft' || status === 'failed';
+
 export interface AuthorRef {
   author_id: number; // soft-ref to People.Person
   is_primary: boolean;
@@ -62,12 +65,14 @@ export interface JobLogs {
 }
 
 export interface DatasetJob {
+  started_at?: string | null;
+  prep_completed_at?: string | null;
+  completed_at?: string | null;
   id: number;
   state: JobState;
   prep_slurm_job_id?: string | null;
   push_slurm_job_id?: string | null;
   error_message?: string | null;
-  log_excerpt?: string | null;
   sync_command?: string | null;
   push_command?: string | null;
   sync_progress?: SyncProgress | null;
