@@ -24,6 +24,7 @@ Can be run via cron for automated log collection:
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 from processes.models import PipeExecution
+from processes.services.cluster_resolver import is_active_cluster
 from umbrella_logger import logger
 
 from workflow.log_fetcher import fetch_job_logs
@@ -47,14 +48,17 @@ class Command(BaseCommand):
         parser.add_argument(
             "--cluster",
             type=str,
-            choices=["czii", "bruno"],
-            help="Only fetch logs from specific cluster",
+            help="Only fetch logs from specific cluster id",
         )
 
     def handle(self, *args, **options):
         limit = options["limit"]
         retry_failures = options["retry_failures"]
         cluster_filter = options.get("cluster")
+
+        if cluster_filter and not is_active_cluster(cluster_filter):
+            self.stderr.write(self.style.ERROR(f"Unknown or inactive cluster {cluster_filter!r}"))
+            return
 
         self.stdout.write(self.style.SUCCESS("Starting log fetch for completed jobs..."))
 
