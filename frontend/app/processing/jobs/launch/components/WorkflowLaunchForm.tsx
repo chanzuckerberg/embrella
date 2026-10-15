@@ -129,7 +129,7 @@ export default function WorkflowLaunchForm({
 
   // SSH setup
   const [sshModalOpen, setSshModalOpen] = useState(false);
-  const [sshCluster, setSshCluster] = useState<'czii' | 'bruno'>('czii');
+  const [sshCluster, setSshCluster] = useState(cluster);
   const [sshDefaultUsername, setSshDefaultUsername] = useState<string>('');
   const [currentUser, setCurrentUser] = useState<{ username: string } | null>(null);
 

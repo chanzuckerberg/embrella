@@ -32,7 +32,7 @@ interface ProcessorFormComponentProps {
     allowed_clusters: string[];
   };
   schema: ProcessorSchema;
-  cluster: 'czii' | 'bruno';
+  cluster: string;
 }
 const PROCESSOR_COMPONENTS: Record<string, React.ComponentType<ProcessorFormComponentProps>> = {
   aretomo3: AreTomo3LaunchForm,
@@ -48,7 +48,7 @@ export default function ProcessorLaunchPage() {
   const [schema, setSchema] = useState<ProcessorSchema | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCluster, setSelectedCluster] = useState<'czii' | 'bruno'>('czii');
+  const [selectedCluster, setSelectedCluster] = useState('');
 
   // Load processor schema
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function ProcessorLaunchPage() {
         setSchema(result);
         // Set default cluster from schema
         if (result.default_cluster) {
-          setSelectedCluster(result.default_cluster as 'czii' | 'bruno');
+          setSelectedCluster(result.default_cluster);
         }
         setIsLoading(false);
       } catch (err) {

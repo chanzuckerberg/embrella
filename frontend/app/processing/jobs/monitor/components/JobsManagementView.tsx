@@ -16,6 +16,7 @@ import { Job } from '../types';
 import { JOB_COLUMN_DEFS } from '../constants/columns';
 import { JOB_FILTER_CONFIGS } from '../constants/filters';
 import { ClusterSelector } from '@app/common/components/ClusterSelector';
+import { useClusters } from '@app/common/hooks/useClusters';
 import { JobLogsModal } from './JobLogsModal';
 import { SSHSetupModal } from '@app/common/components/SSHSetupModal';
 import { CancelJobButton } from './CancelJobButton';
@@ -23,7 +24,10 @@ import { API, DJANGO_URL, POST_API } from '@app/common/constants/api';
 import { postResource } from '@app/common/queries/fetchResource';
 
 export const JobsManagementView: React.FC = () => {
-  const [selectedCluster, setSelectedCluster] = useState<'czii' | 'bruno'>('czii');
+  // Site default cluster until the user picks one.
+  const { data: clusters = [] } = useClusters();
+  const [pickedCluster, setSelectedCluster] = useState('');
+  const selectedCluster = pickedCluster || (clusters.find((c) => c.is_default)?.cluster_id ?? '');
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -71,14 +75,14 @@ export const JobsManagementView: React.FC = () => {
   }, []);
 
   // Cluster change handler
-  const handleClusterChange = useCallback((cluster: 'czii' | 'bruno') => {
+  const handleClusterChange = useCallback((cluster: string) => {
     setSelectedCluster(cluster);
     setRowSelection({});
     setRefreshKey((prev) => prev + 1);
   }, []);
 
   // SSH setup required handler (called by ClusterSelector for "Check Access")
-  const handleSSHSetupRequired = useCallback((cluster: 'czii' | 'bruno', username: string) => {
+  const handleSSHSetupRequired = useCallback((cluster: string, username: string) => {
     setCurrentUsername(username);
     setSSHSetupContext('check_access');
     setSSHSetupModalOpen(true);

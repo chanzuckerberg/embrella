@@ -149,7 +149,7 @@ export const CancelJobButton: React.FC<CancelJobButtonProps> = ({ job, onCancel 
         open={sshModalOpen}
         onClose={() => setSshModalOpen(false)}
         onSuccess={handleSSHSetupSuccess}
-        cluster={job.cluster as 'czii' | 'bruno'}
+        cluster={job.cluster}
         defaultUsername={sshDefaultUsername}
         purpose="management"
       />

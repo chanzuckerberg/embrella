@@ -149,7 +149,6 @@ export const JOB_COLUMN_DEFS: ColumnDef<Job>[] = [
       <span
         style={{
           fontWeight: 600,
-          color: getValue() === 'czii' ? '#6E4FF9' : '#9c27b0',
           textTransform: 'uppercase',
         }}
       >

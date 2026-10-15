@@ -5,12 +5,14 @@ import { FormControl, InputLabel, Select, MenuItem, SelectChangeEvent, Box, Aler
 import { UserContext } from '@app/common/context/UserProvider';
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { postResource } from '@app/common/queries/fetchResource';
+import { useClusters } from '@app/common/hooks/useClusters';
 
 interface ClusterSelectorProps {
-  value: 'czii' | 'bruno';
-  onChange: (cluster: 'czii' | 'bruno') => void;
+  value: string;
+  onChange: (cluster: string) => void;
+  allowedClusters?: string[]; // Restrict choices; omit to offer every active cluster
   showCheckAccess?: boolean;
-  onSSHSetupRequired?: (cluster: 'czii' | 'bruno', username: string) => void;
+  onSSHSetupRequired?: (cluster: string, username: string) => void;
   disabled?: boolean;
   recheckTrigger?: number; // Increment this to trigger a re-check of SSH access
 }
@@ -18,17 +20,27 @@ interface ClusterSelectorProps {
 export const ClusterSelector: React.FC<ClusterSelectorProps> = ({
   value,
   onChange,
+  allowedClusters,
   showCheckAccess = false,
   onSSHSetupRequired,
   disabled = false,
   recheckTrigger,
 }) => {
   const user = useContext(UserContext);
+  const { data: clusters = [] } = useClusters();
   const [checkingAccess, setCheckingAccess] = useState(false);
   const [accessCheckResult, setAccessCheckResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  // Offer only allowed clusters, e.g. allowedClusters=['hpc-a'] hides 'hpc-b'.
+  const options = allowedClusters ? clusters.filter((c) => allowedClusters.includes(c.cluster_id)) : clusters;
+
+  const clusterName = useCallback(
+    (clusterId: string) => clusters.find((c) => c.cluster_id === clusterId)?.name ?? clusterId,
+    [clusters]
+  );
+
   const handleChange = (event: SelectChangeEvent) => {
-    onChange(event.target.value as 'czii' | 'bruno');
+    onChange(event.target.value);
   };
 
   const handleCheckAccess = useCallback(async () => {
@@ -62,7 +74,7 @@ export const ClusterSelector: React.FC<ClusterSelectorProps> = ({
         // Show success message
         setAccessCheckResult({
           success: true,
-          message: `SSH access configured for ${data.username} on ${value.toUpperCase()}`,
+          message: `SSH access configured for ${data.username} on ${clusterName(value)}`,
         });
         // Auto-dismiss after 5 seconds
         setTimeout(() => {
@@ -77,7 +89,7 @@ export const ClusterSelector: React.FC<ClusterSelectorProps> = ({
     } finally {
       setCheckingAccess(false);
     }
-  }, [user, value, onSSHSetupRequired]);
+  }, [user, value, onSSHSetupRequired, clusterName]);
 
   // Re-run the async access check when the parent bumps recheckTrigger (an external signal).
   useEffect(() => {
@@ -95,12 +107,16 @@ export const ClusterSelector: React.FC<ClusterSelectorProps> = ({
           <Select
             labelId="cluster-select-label"
             id="cluster-select"
-            value={value}
+            // MUI warns on values missing from the menu (e.g. before clusters load).
+            value={options.some((c) => c.cluster_id === value) ? value : ''}
             label="Cluster"
             onChange={handleChange}
           >
-            <MenuItem value="czii">CZII</MenuItem>
-            <MenuItem value="bruno">Bruno</MenuItem>
+            {options.map((c) => (
+              <MenuItem key={c.cluster_id} value={c.cluster_id}>
+                {c.name}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
 

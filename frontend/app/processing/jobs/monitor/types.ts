@@ -12,7 +12,7 @@ export interface Job {
   nodes: string;
   partition: string;
   nodeList: string;
-  cluster: 'czii' | 'bruno';
+  cluster: string;
   submittedAt: string | null;
   parameters: Record<string, unknown> | null;
   errorMessage: string | null;
@@ -97,7 +97,7 @@ export interface JobLog {
 export interface JobsResponse {
   jobs: Job[];
   total: number;
-  cluster: 'czii' | 'bruno';
+  cluster: string;
 }
 
 // Response from bulk cancel endpoint

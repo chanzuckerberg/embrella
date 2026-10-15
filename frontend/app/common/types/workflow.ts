@@ -294,6 +294,15 @@ export interface SessionSelectionConfig {
 }
 
 /**
+ * Compute cluster configured in the backend (stores.Cluster)
+ */
+export interface Cluster {
+  cluster_id: string;
+  name: string;
+  is_default: boolean;
+}
+
+/**
  * Props for WorkflowLaunchForm base component
  */
 /**
@@ -306,12 +315,21 @@ export interface HeaderActionsContext {
 }
 
 /**
+ * Compute cluster configured in the backend (stores.Cluster)
+ */
+export interface Cluster {
+  cluster_id: string;
+  name: string;
+  is_default: boolean;
+}
+
+/**
  * Props for WorkflowLaunchForm base component
  */
 export interface WorkflowLaunchFormProps {
   processor: Processor;
   schema: ProcessorSchema;
-  cluster: 'czii' | 'bruno';
+  cluster: string;
   sessionId?: string;
   onSubmit?: (params: ExecutionParams) => Promise<void>;
   // Session selection behavior configuration
