@@ -264,7 +264,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
         phase = request.query_params.get("phase")
         if phase is not None and phase not in ("prep", "push"):
             return Response({"detail": "phase must be prep or push."}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(fetch_job_logs(dataset, live=is_owner, phase=phase))
+        return Response(fetch_job_logs(dataset, is_owner=is_owner, phase=phase))
 
     @action(detail=True, methods=["get"], url_path="config.yaml")
     def config_yaml(self, request, pk=None):

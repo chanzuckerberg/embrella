@@ -30,6 +30,8 @@ export function useDatasetLogs(
     queryKey: depositionKeys.logs(id, phase),
     queryFn: () => fetchDatasetLogs(id, phase),
     enabled,
+    // Reopening must fetch the final tail; the server already throttles SSH reads.
+    staleTime: 0,
     refetchInterval: active ? pollIntervalMs : false,
   });
 

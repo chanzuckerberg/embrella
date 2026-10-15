@@ -15,7 +15,7 @@ function wrapperFor(client: QueryClient) {
 }
 
 function newClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 5 * 60 * 1000 } } });
 }
 
 const calls = () => (api.fetchDatasetLogs as jest.Mock).mock.calls.length;

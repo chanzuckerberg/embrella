@@ -43,8 +43,8 @@ def capture_failure_tail(cluster_id, auth, phase, slurm_job_id):
         return None
 
 
-def fetch_job_logs(dataset, *, live=True, phase=None):
-    """SLURM tail for prep or push; omit phase to read the current attempt."""
+def fetch_job_logs(dataset, *, is_owner, phase=None):
+    """Owner-only SLURM tail, live or saved; omit phase to read the current attempt."""
     job = getattr(dataset, "job", None)
     if job is None:
         return {"logs": "", "state": None, "source": "none"}
@@ -52,10 +52,10 @@ def fetch_job_logs(dataset, *, live=True, phase=None):
     current_phase, _ = _active_attempt(job)
     phase = phase or current_phase
     slurm_job_id = getattr(job, f"{phase}_slurm_job_id")
-    excerpt = job.log_excerpt if phase == current_phase else ""
+    excerpt = job.log_excerpt if is_owner and phase == current_phase else ""
     stored = {"logs": excerpt or "", "state": job.state, "phase": phase, "source": "stored"}
     cluster_id = job.cluster_id
-    if not live or not slurm_job_id or not cluster_id:
+    if not is_owner or not slurm_job_id or not cluster_id:
         return stored
 
     # Cache reads and failures per cluster + job for 15 seconds (reads are as one service account).

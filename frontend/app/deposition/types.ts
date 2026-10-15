@@ -73,7 +73,6 @@ export interface DatasetJob {
   prep_slurm_job_id?: string | null;
   push_slurm_job_id?: string | null;
   error_message?: string | null;
-  log_excerpt?: string | null;
   sync_command?: string | null;
   push_command?: string | null;
   sync_progress?: SyncProgress | null;
