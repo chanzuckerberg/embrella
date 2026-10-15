@@ -24,6 +24,8 @@ urlpatterns = [
         views.get_copick_aretomo_compat,
         name="get_copick_aretomo_compat",
     ),
+    # Cluster API
+    path("v1/clusters/", views.list_clusters, name="list_clusters"),
     # SSH Setup API
     path("v1/ssh/check_setup/", views.check_ssh_setup, name="check_ssh_setup"),
     path("v1/ssh/setup_key/", views.setup_ssh_key, name="setup_ssh_key"),
