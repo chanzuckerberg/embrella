@@ -146,13 +146,13 @@ it('does not promise a retry once a finished job log is unavailable', () => {
 it('shows queued uploads without claiming they are uploading', () => {
   setup({ id: 1, state: 'push_submitted', push_slurm_job_id: '99' });
   expect(screen.getByText('Waiting in queue')).toBeInTheDocument();
-  expect(screen.getByText('Upload job submitted. Detailed progress is unavailable.')).toBeInTheDocument();
+  expect(screen.getByText('Upload job submitted.')).toBeInTheDocument();
 });
 
 it('distinguishes a running upload from unavailable detailed progress', () => {
   setup({ id: 1, state: 'push_running', push_slurm_job_id: '99' });
   expect(screen.getByText('Upload job in progress')).toBeInTheDocument();
-  expect(screen.getByText('Upload job in progress. Detailed progress is unavailable.')).toBeInTheDocument();
+  expect(screen.getByText('Waiting for upload progress.')).toBeInTheDocument();
 });
 
 it('updates sync elapsed time, freezes on completion and resets on restart', () => {
@@ -307,4 +307,10 @@ it('labels the saved excerpt when the live log is unavailable', () => {
   setup({ id: 1, state: 'failed' });
   expect(screen.getByText('saved failure output')).toBeInTheDocument();
   expect(screen.getByText('Showing the saved output; the live log is unavailable.')).toBeInTheDocument();
+});
+
+it('shows measured upload bytes and ETA', () => {
+  setup({ id: 1, state: 'push_running', push_progress: { done: 1048576, total: 4194304, eta: '30s' } });
+  expect(screen.getByText('1.0 MiB / 4.0 MiB · 25% · ETA 30s')).toBeInTheDocument();
+  expect(screen.getByRole('progressbar', { name: 'Upload progress' })).toHaveAttribute('aria-valuenow', '25');
 });

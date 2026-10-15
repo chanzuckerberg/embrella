@@ -5,6 +5,7 @@
 import logging
 import os
 import shlex
+from pathlib import Path
 from typing import Any, Dict, List
 
 from jinja2 import Environment, FileSystemLoader
@@ -25,7 +26,11 @@ class DepositionPrepProcessor(BaseProcessor):
     hidden_from_list = True
 
     def validate_parameters(self, params: Dict[str, Any]) -> List[str]:
-        errors = [f"{key} is required" for key in ("output_dir", "config_path", "config_yaml") if not params.get(key)]
+        errors = [
+            f"{key} is required"
+            for key in ("output_dir", "config_path", "config_yaml", "dataset_id")
+            if not params.get(key)
+        ]
         if params.get("copick_flags") and not (params.get("copick_config") and params.get("target_dir")):
             errors.append("copick_config and target_dir are required when annotations are selected")
         return errors
@@ -42,6 +47,8 @@ class DepositionPrepProcessor(BaseProcessor):
         while config_delimiter in config_yaml.splitlines():
             config_delimiter += "_"
         return template.render(
+            progress_code=(Path(__file__).parent.parent / "deposition_progress.py").read_text(),
+            dataset_id=shlex.quote(str(params["dataset_id"])),
             output_dir=shlex.quote(params["output_dir"]),
             config_path=shlex.quote(params["config_path"]),
             config_yaml=config_yaml,

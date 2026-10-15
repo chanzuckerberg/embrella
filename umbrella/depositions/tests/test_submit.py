@@ -125,10 +125,18 @@ class TestSubmitDatasetPrep:
         assert mocks["launched"] is None
 
     def test_retry_after_failure(self, dataset, mocks):
-        DatasetJob.objects.create(dataset=dataset, state="failed", error_message="boom")
+        DatasetJob.objects.create(
+            dataset=dataset,
+            state="failed",
+            error_message="boom",
+            sync_progress={"done": 5},
+            sync_summary={"objects": 5},
+            push_progress={"done": 100},
+        )
         job = submit.submit_dataset_prep(dataset)
         assert job.state == "prep_submitted"
         assert not job.error_message
+        assert job.sync_progress is None and job.sync_summary is None and job.push_progress is None
 
     def test_restart_clears_prior_push_attempt(self, dataset, mocks):
         # A prep restart after a failed push must drop the stale push id so the log reader

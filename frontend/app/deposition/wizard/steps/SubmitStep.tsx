@@ -114,9 +114,19 @@ function pushHeading(status: PhaseStatus, state: JobState | undefined): string {
 }
 
 function uploadNote(state: JobState | undefined): string {
-  if (state === 'push_submitted') return 'Upload job submitted. Detailed progress is unavailable.';
-  if (state === 'push_running') return 'Upload job in progress. Detailed progress is unavailable.';
+  if (state === 'push_submitted') return 'Upload job submitted.';
+  if (state === 'push_running') return 'Waiting for upload progress.';
   return 'Upload complete.';
+}
+
+function byteLabel(value: number): string {
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
+  let index = 0;
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024;
+    index += 1;
+  }
+  return `${index ? value.toFixed(1) : value} ${units[index]}`;
 }
 
 function summaryLine(s: SyncSummary): string {
@@ -276,6 +286,7 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
   }, [readOnly, sync]);
 
   const progress = job?.sync_progress ?? null;
+  const uploadProgress = job?.push_progress ?? null;
   const summary = job?.sync_summary ?? null;
   const warnings = job?.validation?.warnings ?? [];
   const canPush = !job?.validation || job.validation.passed;
@@ -377,7 +388,8 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
                       {progress.done.toLocaleString()} / {progress.total.toLocaleString()} objects
                     </Typography>
                     <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700 }}>
-                      {toPct(progress.done, progress.total)}%{progress.eta ? ` · ETA ${progress.eta}` : ''}
+                      {toPct(progress.done, progress.total)}%
+                      {progress.eta && sync === 'active' ? ` · ETA ${progress.eta}` : ''}
                     </Typography>
                   </Box>
                   {progress.items && progress.items.length > 0 && <SyncChecklist items={progress.items} />}
@@ -386,7 +398,7 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
                 <>
                   {sync === 'active' && <LinearProgress sx={{ mt: 2 }} />}
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
-                    Per-object progress and the symlink/deposit breakdown aren&apos;t available yet.
+                    Waiting for preparation progress.
                   </Typography>
                 </>
               )}
@@ -453,7 +465,21 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
                 {pushHeading(pushed, state)}
               </Typography>
-              {pushed === 'active' && <LinearProgress sx={{ my: 1 }} />}
+              {pushed === 'active' && (
+                <LinearProgress
+                  aria-label="Upload progress"
+                  variant={uploadProgress && uploadProgress.total > 0 ? 'determinate' : 'indeterminate'}
+                  value={uploadProgress ? toPct(uploadProgress.done, uploadProgress.total) : undefined}
+                  sx={{ my: 1 }}
+                />
+              )}
+              {uploadProgress && uploadProgress.total > 0 && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  {byteLabel(uploadProgress.done)} / {byteLabel(uploadProgress.total)}
+                  {` · ${toPct(uploadProgress.done, uploadProgress.total)}%`}
+                  {uploadProgress.eta && pushed === 'active' ? ` · ETA ${uploadProgress.eta}` : ''}
+                </Typography>
+              )}
               {job?.push_slurm_job_id && (
                 <Typography variant="caption" color="text.secondary">
                   SLURM job {job.push_slurm_job_id}
@@ -461,7 +487,9 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
               )}
               {(pushed === 'active' || pushed === 'done') && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                  {uploadNote(state)}
+                  {uploadProgress && uploadProgress.total > 0 && pushed === 'active'
+                    ? 'Uploading to S3.'
+                    : uploadNote(state)}
                 </Typography>
               )}
             </Box>

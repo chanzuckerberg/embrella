@@ -25,6 +25,7 @@ from .models import (
 )
 from .permissions import deposition_owner_id
 from .services.autofill import TILTSERIES_PIPELINE_VALUES
+from .services.progress import serialize_progress, serialize_summary
 
 
 def validate_authors_json(value):
@@ -108,6 +109,19 @@ class DepositionAnnotationSerializer(serializers.ModelSerializer):
 
 class DatasetJobSerializer(serializers.ModelSerializer):
     """Read-only — job state is set by processors, not the API."""
+
+    sync_progress = serializers.SerializerMethodField()
+    sync_summary = serializers.SerializerMethodField()
+    push_progress = serializers.SerializerMethodField()
+
+    def get_sync_progress(self, obj):
+        return serialize_progress(obj.sync_progress)
+
+    def get_sync_summary(self, obj):
+        return serialize_summary(obj)
+
+    def get_push_progress(self, obj):
+        return serialize_progress(obj.push_progress)
 
     class Meta:
         model = DatasetJob

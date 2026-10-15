@@ -49,6 +49,7 @@ def patched(monkeypatch):
     monkeypatch.setattr(launch_mod, "cancel_deposition_job", lambda **kw: None)
     # Don't open SSH in unit tests; a failure captures this stub tail onto the row.
     monkeypatch.setattr(tasks.logs, "capture_failure_tail", lambda *a: "captured tail")
+    monkeypatch.setattr(tasks.progress, "collect", lambda *a: None)
     reschedules = []
     monkeypatch.setattr(tasks, "_reschedule", lambda *a: reschedules.append(a))
     return reschedules

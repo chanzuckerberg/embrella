@@ -5,6 +5,7 @@
 import logging
 import os
 import shlex
+from pathlib import Path
 from typing import Any, Dict, List
 
 from jinja2 import Environment, FileSystemLoader
@@ -46,6 +47,7 @@ class DepositionPushProcessor(BaseProcessor):
         env = Environment(loader=FileSystemLoader(template_dir))
         template = env.get_template("deposition_push.sh.j2")
         return template.render(
+            progress_code=(Path(__file__).parent.parent / "deposition_progress.py").read_text(),
             staged_dir=shlex.quote(params["staged_dir"]),
             s3_dest=shlex.quote(params["s3_dest"]),
             prologue=params.get("prologue", DEFAULT_PROLOGUE),

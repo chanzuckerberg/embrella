@@ -61,7 +61,7 @@ def _record_completion(job, *, active_states, attempt_field, job_id, fields, req
     return job
 
 
-def on_prep_complete(job, success, *, job_id=None, error_message=None, log_excerpt=None):
+def on_prep_complete(job, success, *, job_id=None, error_message=None, log_excerpt=None, sync_summary=None):
     """Mark a finished prep job prep_completed, or failed. Ignored unless the row is still an active prep attempt."""
     if success:
         # Drop any failure left from an earlier attempt.
@@ -80,6 +80,8 @@ def on_prep_complete(job, success, *, job_id=None, error_message=None, log_excer
         }
         if log_excerpt is not None:
             fields["log_excerpt"] = log_excerpt
+    if sync_summary is not None:
+        fields["sync_summary"] = sync_summary
     return _record_completion(
         job, active_states=PREP_ACTIVE, attempt_field="prep_slurm_job_id", job_id=job_id, fields=fields
     )
@@ -89,7 +91,7 @@ def start_push(job, *, launch, cancel=None):
     """Claim prep_completed -> push_submitted, launch the job, and store its id."""
     with transaction.atomic():
         claimed = DatasetJob.objects.filter(pk=job.pk, state="prep_completed").update(
-            state="push_submitted", error_message="", completed_at=None, push_slurm_job_id=""
+            state="push_submitted", error_message="", completed_at=None, push_slurm_job_id="", push_progress=None
         )
         job.refresh_from_db()
         if claimed:

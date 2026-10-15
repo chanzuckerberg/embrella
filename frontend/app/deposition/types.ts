@@ -76,6 +76,7 @@ export interface DatasetJob {
   sync_command?: string | null;
   push_command?: string | null;
   sync_progress?: SyncProgress | null;
+  push_progress?: SyncProgress | null;
   sync_summary?: SyncSummary | null;
   validation?: JobValidation | null;
 }

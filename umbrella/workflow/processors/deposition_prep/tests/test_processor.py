@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from workflow.processors.deposition_prep.processor import DepositionPrepProcessor
 
 PARAMS = {
+    "dataset_id": 2,
     "output_dir": "/staged/dep_1/ds_2",
     "config_yaml": "deposition_id: 1\n",
     "config_path": "/staged/dep_1/ds_2/dataprep_config.yaml",

@@ -7,11 +7,12 @@ from django_q.tasks import async_task
 
 from common import clusterio
 from depositions.models import DatasetJob
-from depositions.services import logs, submission
+from depositions.services import logs, progress, submission
 
 logger = logging.getLogger(__name__)
 
-POLL_INTERVAL = timedelta(seconds=60)
+# Keep live progress reasonably fresh without reading the cluster on each API request.
+POLL_INTERVAL = timedelta(seconds=15)
 NOT_LISTED_DELAY = timedelta(seconds=30)
 ERROR_BACKOFF = timedelta(seconds=120)
 MAX_WAIT_ATTEMPTS = 20
@@ -125,6 +126,7 @@ def run_deposition_job_syncer(dataset_job_id, phase, cluster_id, expected_job_id
         if not syncer.is_job_terminal(info):
             if info["state"] == "RUNNING":
                 submission.on_job_running(job, phase, job_id=slurm_job_id)
+                progress.collect(job, phase, cluster_id, slurm_job_id, auth)
             # Job is live: reset the no-progress counter and keep polling.
             _reschedule(dataset_job_id, phase, cluster_id, expected_job_id, 0, POLL_INTERVAL)
             return {"status": "running", "state": info["state"]}
@@ -135,7 +137,11 @@ def run_deposition_job_syncer(dataset_job_id, phase, cluster_id, expected_job_id
             error_message = f"Deposition {phase} job ended {info['state']} (exit {info.get('exit_code')})."
             # Snapshot the SLURM tail so the failure's cause survives after live reads stop.
             log_excerpt = logs.capture_failure_tail(cluster_id, auth, phase, slurm_job_id)
-        _COMPLETION[phase](job, success, job_id=slurm_job_id, error_message=error_message, log_excerpt=log_excerpt)
+        summary = progress.collect(job, phase, cluster_id, slurm_job_id, auth)
+        extra = {"sync_summary": summary} if phase == "prep" else {}
+        _COMPLETION[phase](
+            job, success, job_id=slurm_job_id, error_message=error_message, log_excerpt=log_excerpt, **extra
+        )
         return {"status": "terminal", "state": info["state"], "success": success}
     except Exception as e:
         logger.error("Deposition syncer error (%s job %s): %s", phase, slurm_job_id, e)

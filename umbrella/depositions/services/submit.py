@@ -91,6 +91,9 @@ def submit_dataset_prep(dataset):
                 push_slurm_job_id="",
                 error_message="",
                 log_excerpt="",
+                sync_progress=None,
+                sync_summary=None,
+                push_progress=None,
                 started_at=timezone.now(),
                 prep_completed_at=None,
                 completed_at=None,
@@ -115,6 +118,7 @@ def submit_dataset_prep(dataset):
             required_dataset_ids=required_ids,
         )
         params = {
+            "dataset_id": dataset.dataset_id,
             "output_dir": output_dir,
             "config_path": config_path,
             "config_yaml": config_yaml,
