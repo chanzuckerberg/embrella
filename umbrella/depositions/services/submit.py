@@ -32,7 +32,11 @@ def _cluster_for_dataset(dataset):
 
 def _service_auth():
     """Deposition jobs run as the configured service account."""
-    return clusterio.get_auth_service_user()
+    try:
+        return clusterio.get_auth_service_user()
+    except Exception as error:
+        logger.error("Deposition service account credentials unavailable: %s", error)
+        raise SubmissionValidationError("Deposition submission isn't configured on this server.") from error
 
 
 def _required_dataset_ids(deposition, dataset, *, db):

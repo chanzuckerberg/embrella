@@ -7,6 +7,7 @@ from unittest import mock
 
 import pytest
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 
@@ -1128,6 +1129,13 @@ class TestJobStatusEndpoint:
 class TestLogsEndpoint:
     """GET .../logs/ — live tail is covered in test_logs.py; here we check the view wiring."""
 
+    @pytest.fixture(autouse=True)
+    def _clear_log_cache(self):
+        # The live-read cooldown uses the process-wide cache; isolate it from other tests.
+        cache.clear()
+        yield
+        cache.clear()
+
     def _owned_dataset(self, client):
         dep = _make_deposition(client)
         return _make_dataset(client, dep["id"])
@@ -1146,6 +1154,41 @@ class TestLogsEndpoint:
         r = auth_client.get(f"{DATASETS}{ds['id']}/logs/")
         assert r.status_code == 200, r.content
         assert r.json() == {"logs": "line1\nline2", "state": "pending", "phase": "prep", "source": "stored"}
+
+    def _running_job(self, ds):
+        from depositions.models import Dataset, DatasetJob
+
+        return DatasetJob.objects.create(
+            dataset=Dataset.objects.get(pk=ds["id"]),
+            state="prep_running",
+            prep_slurm_job_id="123",
+            cluster_id="bruno",
+            log_excerpt="stored tail",
+        )
+
+    def test_owner_gets_a_live_read(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        self._running_job(ds)
+        with (
+            mock.patch("depositions.services.logs.clusterio.get_auth_service_user", return_value={"username": "svc"}),
+            mock.patch("depositions.services.logs._read_slurm_tail", return_value="live!") as read,
+        ):
+            r = auth_client.get(f"{DATASETS}{ds['id']}/logs/")
+        assert r.json()["source"] == "live"
+        read.assert_called_once()
+
+    def test_non_owner_gets_stored_excerpt_not_a_live_read(self, auth_client):
+        # Any logged-in user can view a deposition, but only the owner triggers a service-account read.
+        ds = self._owned_dataset(auth_client)
+        self._running_job(ds)
+        other = User.objects.create_user(username="nonowner@example.com", password="pw")
+        client = APIClient()
+        client.force_login(other)
+        with mock.patch("depositions.services.logs._read_slurm_tail", side_effect=AssertionError("no live read")):
+            r = client.get(f"{DATASETS}{ds['id']}/logs/")
+        assert r.status_code == 200, r.content
+        assert r.json()["source"] == "stored"
+        assert r.json()["logs"] == "stored tail"
 
 
 @pytest.mark.django_db

@@ -367,7 +367,7 @@ def test_missing_service_credentials_does_not_claim_or_launch(dataset, mocks, mo
     monkeypatch.setattr(submit.clusterio, "get_auth_service_user", _raise_no_creds)
     if phase == "push":
         DatasetJob.objects.create(dataset=dataset, state="prep_completed", prep_slurm_job_id="p1")
-    with pytest.raises(RuntimeError, match="service credentials"):
+    with pytest.raises(SubmissionValidationError, match="isn't configured"):
         getattr(submit, f"submit_dataset_{phase}")(dataset)
     assert mocks["launched"] is None
     job = DatasetJob.objects.filter(dataset=dataset).first()

@@ -57,6 +57,14 @@ def test_missing_cluster_id_falls_back_to_stored():
     assert out["source"] == "stored"
 
 
+def test_non_owner_gets_stored_without_a_live_read():
+    # A non-owner must not trigger a service-account SSH read.
+    with mock.patch.object(logs, "_read_slurm_tail", side_effect=AssertionError("should not read")) as read:
+        out = logs.fetch_job_logs(_dataset(_job()), live=False)
+    assert out == {"logs": "stored tail", "state": "prep_running", "phase": "prep", "source": "stored"}
+    read.assert_not_called()
+
+
 def test_service_auth_failure_falls_back_to_stored_without_erroring():
     # A missing service key must not 500 the logs endpoint.
     with mock.patch.object(logs.clusterio, "get_auth_service_user", side_effect=RuntimeError("ssh disabled")):

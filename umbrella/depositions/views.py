@@ -246,9 +246,12 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"])
     def logs(self, request, pk=None):
+        from .permissions import deposition_owner_id
         from .services.logs import fetch_job_logs
 
-        return Response(fetch_job_logs(self.get_object()))
+        dataset = self.get_object()
+        is_owner = deposition_owner_id(dataset) == request.user.id
+        return Response(fetch_job_logs(dataset, live=is_owner))
 
     @action(detail=True, methods=["get"], url_path="config.yaml")
     def config_yaml(self, request, pk=None):

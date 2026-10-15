@@ -29,6 +29,7 @@ def _job_auth():
     try:
         return clusterio.get_auth_service_user()
     except Exception:
+        logger.warning("Service account credentials unavailable for the deposition syncer.", exc_info=True)
         return None
 
 

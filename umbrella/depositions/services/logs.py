@@ -31,8 +31,7 @@ def _read_slurm_tail(cluster_id, auth, phase, slurm_job_id):
     return clusterio.read_remote_file_tail(cluster_id, path, max_bytes=MAX_LOG_BYTES, auth=auth)
 
 
-def fetch_job_logs(dataset):
-    """Live SLURM .out tail for the dataset's current job, read as the service account."""
+def fetch_job_logs(dataset, *, live=True):
     job = getattr(dataset, "job", None)
     if job is None:
         return {"logs": "", "state": None, "source": "none"}
@@ -40,7 +39,7 @@ def fetch_job_logs(dataset):
     phase, slurm_job_id = _active_attempt(job)
     stored = {"logs": job.log_excerpt or "", "state": job.state, "phase": phase, "source": "stored"}
     cluster_id = job.cluster_id
-    if not slurm_job_id or not cluster_id:
+    if not live or not slurm_job_id or not cluster_id:
         return stored
 
     # Cache reads and failures per cluster + job for 15 seconds (reads are as one service account).
