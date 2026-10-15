@@ -490,9 +490,11 @@ class JobStatusSyncer:
     # Terminal states that indicate job has finished
     TERMINAL_STATES = {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY", "NODE_FAIL", "PREEMPTED"}
 
-    def __init__(self, job_id: str, cluster_id: str = "czii", auth=None):
+    def __init__(self, job_id: str, cluster_id: str | None = None, auth=None):
+        from processes.services.cluster_resolver import get_default_cluster_id
+
         self.job_id = job_id
-        self.cluster_id = cluster_id
+        self.cluster_id = cluster_id or get_default_cluster_id()
         self.auth = auth
         self._pipe_execution = None
 
