@@ -13,9 +13,13 @@ at submission time. These helpers read it consistently with a shared default.
 - `get_default_cluster_id()` — the shared fallback, resolved from
   stores.Cluster.get_default() and cached per-process.
   Raises NoDefaultClusterError when none is set.
+- `is_active_cluster(id)` / `active_cluster_ids()` / `active_clusters()` —
+  validate or list against stores.Cluster instead of hardcoding cluster ids.
 """
 
 from functools import lru_cache
+
+from stores.models import Cluster
 
 
 class NoDefaultClusterError(RuntimeError):
@@ -25,8 +29,6 @@ class NoDefaultClusterError(RuntimeError):
 @lru_cache(maxsize=1)
 def _cached_default_cluster_id():
     """Resolve and cache the default cluster id (or None). Cleared by clear_default_cluster_cache()."""
-    from stores.models import Cluster
-
     default = Cluster.get_default()
     return default.cluster_id if default is not None else None
 
@@ -44,7 +46,6 @@ def connect_cache_invalidation():
     this once at startup from ProcessesConfig.ready().
     """
     from django.db.models.signals import post_delete, post_save
-    from stores.models import Cluster
 
     uid = "processes.clear_default_cluster_cache"
     post_save.connect(clear_default_cluster_cache, sender=Cluster, dispatch_uid=uid)
@@ -63,6 +64,27 @@ def get_default_cluster_id() -> str:
             "No default cluster is configured. Set one in the admin (Stores → Clusters → is_default)."
         )
     return cluster_id
+
+
+def is_active_cluster(cluster_id: str) -> bool:
+    """True if `cluster_id` names an active stores.Cluster row."""
+    return Cluster.objects.filter(cluster_id=cluster_id, is_active=True).exists()
+
+
+def active_cluster_ids() -> list[str]:
+    """Ids of all active clusters, e.g. ["hpc-a", "hpc-b"]."""
+    return list(Cluster.objects.filter(is_active=True).values_list("cluster_id", flat=True))
+
+
+def active_clusters() -> list[dict]:
+    """Active clusters for pickers, e.g. [{"cluster_id": "hpc-a", "name": "HPC A", "is_default": True}].
+
+    `is_default` mirrors get_default_cluster_id(), so exactly one row is flagged
+    even when no Cluster has is_default set.
+    """
+    default_id = _cached_default_cluster_id()
+    rows = Cluster.objects.filter(is_active=True).order_by("name").values("cluster_id", "name")
+    return [{**row, "is_default": row["cluster_id"] == default_id} for row in rows]
 
 
 def cluster_id_from_parameters(parameters, default: str = None) -> str:

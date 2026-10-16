@@ -12,13 +12,14 @@ from django_q.tasks import async_task
 from umbrella_logger import logger
 
 from common import clusterio
+from processes.services.cluster_resolver import get_default_cluster_id
 from processes.tasks._setup import *  # noqa: F401,F403 - Django setup
 
 # survey ingestion is slow, needs custom timeout.
 SURVEY_INGEST_TIMEOUT = 3600
 
 
-def run_survey_status_syncer(survey_id: int, cluster_id: str = "czii"):
+def run_survey_status_syncer(survey_id: int, cluster_id: str | None = None):
     """
     Single iteration of filesystem survey status syncer.
 
@@ -31,11 +32,13 @@ def run_survey_status_syncer(survey_id: int, cluster_id: str = "czii"):
 
     Args:
         survey_id: FilesystemSurvey ID to track
-        cluster_id: Cluster to query (czii or bruno)
+        cluster_id: Cluster to query (default: site default cluster)
 
     Returns:
         dict with status and survey_id
     """
+    cluster_id = cluster_id or get_default_cluster_id()
+
     from django_q.models import Schedule
     from workflow.syncers import JobStatusSyncer
 
@@ -138,7 +141,7 @@ def run_survey_status_syncer(survey_id: int, cluster_id: str = "czii"):
         return {"status": "error", "survey_id": survey_id, "error": str(e)}
 
 
-def start_survey_status_syncer(survey_id: int, cluster_id: str = "czii"):
+def start_survey_status_syncer(survey_id: int, cluster_id: str | None = None):
     """
     Start the survey status syncer for a newly submitted survey job.
 
@@ -148,11 +151,13 @@ def start_survey_status_syncer(survey_id: int, cluster_id: str = "czii"):
 
     Args:
         survey_id: FilesystemSurvey ID to track
-        cluster_id: Cluster to query (czii or bruno)
+        cluster_id: Cluster to query (default: site default cluster)
 
     Returns:
         str: Django-Q schedule name
     """
+    cluster_id = cluster_id or get_default_cluster_id()
+
     from django_q.models import Schedule
 
     schedule_name = f"survey_status_{survey_id}"
@@ -165,7 +170,7 @@ def start_survey_status_syncer(survey_id: int, cluster_id: str = "czii"):
     schedule = Schedule.objects.create(
         name=schedule_name,
         func="processes.tasks.run_survey_status_syncer",
-        args=repr((survey_id, cluster_id)),  # e.g. "(1, 'czii')"
+        args=repr((survey_id, cluster_id)),  # e.g. "(1, 'hpc-a')"
         schedule_type=Schedule.MINUTES,
         minutes=1,
         repeats=-1,  # Run indefinitely until deleted
@@ -186,7 +191,7 @@ def start_survey_status_syncer(survey_id: int, cluster_id: str = "czii"):
     return schedule_name
 
 
-def process_survey_results(survey_id: int, cluster_id: str = "czii"):
+def process_survey_results(survey_id: int, cluster_id: str | None = None):
     """
     Process the Parquet file from a completed filesystem survey.
 
@@ -200,6 +205,8 @@ def process_survey_results(survey_id: int, cluster_id: str = "czii"):
     Returns:
         dict with processing results
     """
+    cluster_id = cluster_id or get_default_cluster_id()
+
     import duckdb
 
     from processes.models import DirectorySummary, FilesystemSurvey

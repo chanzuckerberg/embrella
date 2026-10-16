@@ -17,8 +17,8 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from processes.models import PipeExecution, PipeInPlan, ProcPlan, ProcRun
-from processes.services.cluster_resolver import cluster_id_for_run
+from processes.models import PipeExecution, PipeInPlan, ProcPlan, ProcRun, ProcSoftware
+from processes.services.cluster_resolver import cluster_id_for_run, get_default_cluster_id
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from stores.models import Cluster, resolve_review_path
@@ -34,7 +34,13 @@ logger = logging.getLogger(__name__)
 
 COPICK_PLAN_NAME = "czii-copick"
 COPICK_SCAN_PROCESSOR = "copick-scan"
-COPICK_DEFAULT_CLUSTER_ID = CopickProcessor.cluster
+
+
+def _copick_default_cluster_id() -> str:
+    """Copick's admin-set default cluster, else the site default."""
+    # FIXME: Issue #1339 have it work with other clusters
+    software = ProcSoftware.objects.filter(processor_class=CopickProcessor.name, active=True).first()
+    return (software and software.default_cluster) or get_default_cluster_id()
 
 
 def _empty_scan() -> dict:
@@ -43,7 +49,7 @@ def _empty_scan() -> dict:
 
 def _copick_root_url(session, run_name: str) -> str:
     """Caddy root URL for a copick project (session, run) — where config.json / scan.json live."""
-    cluster_id = cluster_id_for_run(session.name, run_name, default=COPICK_DEFAULT_CLUSTER_ID)
+    cluster_id = cluster_id_for_run(session.name, run_name, default=_copick_default_cluster_id())
     cluster = Cluster.objects.get(cluster_id=cluster_id)
     return resolve_review_path("copick_url", cluster=cluster, msi_session=session, copick_run=run_name)
 
@@ -755,13 +761,14 @@ def _list_cluster_copick_runs(session_id: str) -> set[str]:
     Complements the DB ProcRun list with configs created outside Embrella.
     """
     try:
-        ssh = clusterio.get_cluster_ssh_connection(cluster_id=COPICK_DEFAULT_CLUSTER_ID)
+        cluster_id = _copick_default_cluster_id()
+        ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster_id)
     except Exception:
         return set()
     try:
         from workflow.processors import get_processor
 
-        base = f"{get_processor('copick').get_processing_base_path(cluster=COPICK_DEFAULT_CLUSTER_ID)}/{session_id}"
+        base = f"{get_processor('copick').get_processing_base_path(cluster=cluster_id)}/{session_id}"
         _, stdout, _ = ssh.exec_command(f"ls -d {shlex.quote(base)}/*/config.json 2>/dev/null", timeout=20)
         out = stdout.read().decode("utf-8", "replace")
         runs = set()
@@ -786,7 +793,7 @@ def _latest_pipe_status(proc_run) -> str:
 
 def _build_copick_project(proc_run) -> dict:
     session = proc_run.msi_session
-    cluster_id = cluster_id_for_run(session.name, proc_run.name, default=COPICK_DEFAULT_CLUSTER_ID)
+    cluster_id = cluster_id_for_run(session.name, proc_run.name, default=_copick_default_cluster_id())
     cluster = Cluster.objects.get(cluster_id=cluster_id)
     root_url = resolve_review_path(
         "copick_url",
@@ -982,7 +989,7 @@ def trigger_copick_scan(request, session_name: str, run_name: str) -> JsonRespon
     # Wrap cluster-resolve → submit so any failure is a clean error, not a 500.
     cluster_id = None
     try:
-        cluster_id = cluster_id_for_run(session_name, run_name, default=COPICK_DEFAULT_CLUSTER_ID)
+        cluster_id = cluster_id_for_run(session_name, run_name, default=_copick_default_cluster_id())
 
         # Mark the old result pending BEFORE submit so polling can tell a running job from the last one.
         _invalidate_scan_json(cluster_id, session_name, run_name)

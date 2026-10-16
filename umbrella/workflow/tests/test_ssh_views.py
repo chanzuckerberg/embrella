@@ -155,3 +155,46 @@ class TestCheckSshSetupReturnsResolvedUsername:
         assert body["setup_required"] is False
         assert body["username"] == "dora-bruno"
         mock_test.assert_called_once_with("dora-bruno", "bruno")
+
+
+@pytest.mark.django_db
+class TestCheckSshSetupValidatesClusterAgainstDb:
+    def _check(self, factory, user, cluster_id):
+        request = factory.post(
+            "/workflow/v1/ssh/check_setup/",
+            data=json.dumps({"cluster_id": cluster_id}),
+            content_type="application/json",
+        )
+        force_authenticate(request, user=user)
+        return check_ssh_setup(request)
+
+    def test_accepts_db_only_cluster(self, factory, user):
+        Cluster.objects.update_or_create(
+            cluster_id="site-x",
+            defaults={"name": "Site X", "http_base_url": "https://site-x.example/", "ssh_hostname": "x"},
+        )
+
+        response = self._check(factory, user, "site-x")
+
+        assert response.status_code == 200
+        assert json.loads(response.content)["setup_required"] is True
+
+    def test_rejects_unknown_cluster(self, factory, user):
+        response = self._check(factory, user, "nope")
+
+        assert response.status_code == 400
+
+    def test_rejects_inactive_cluster(self, factory, user):
+        Cluster.objects.update_or_create(
+            cluster_id="site-off",
+            defaults={
+                "name": "Off",
+                "http_base_url": "https://off.example/",
+                "ssh_hostname": "x",
+                "is_active": False,
+            },
+        )
+
+        response = self._check(factory, user, "site-off")
+
+        assert response.status_code == 400

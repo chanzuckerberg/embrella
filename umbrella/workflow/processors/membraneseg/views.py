@@ -16,6 +16,7 @@ from typing import Any, Dict
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from processes.models import ProcPlan, ProcRun
+from processes.services.cluster_resolver import get_default_cluster_id
 from tem.models import MsiSession
 from umbrella_logger import logger
 
@@ -29,7 +30,7 @@ def _copick_root(cluster_id: str) -> str:
     return get_processor("copick").get_processing_base_path(cluster=cluster_id)
 
 
-def _get_tomo_combos(session: str, procrun: str, cluster_id: str = "bruno") -> Dict[str, Any]:
+def _get_tomo_combos(session: str, procrun: str, cluster_id: str | None = None) -> Dict[str, Any]:
     """
     Get available tomogram type and voxel size combinations from the remote filesystem.
 
@@ -42,7 +43,7 @@ def _get_tomo_combos(session: str, procrun: str, cluster_id: str = "bruno") -> D
     Args:
         session: Copick session name (e.g., "25oct28b")
         procrun: Copick processing run name (e.g., "run001")
-        cluster_id: Cluster to connect to (default: 'bruno')
+        cluster_id: Cluster to connect to (default: site default cluster)
 
     Returns:
         Dict with structure:
@@ -56,6 +57,8 @@ def _get_tomo_combos(session: str, procrun: str, cluster_id: str = "bruno") -> D
             }
         }
     """
+    cluster_id = cluster_id or get_default_cluster_id()
+
     base_dir = f"{_copick_root(cluster_id)}/{session}/{procrun}"
     expt_dir = f"{base_dir}/ExperimentRuns"
 

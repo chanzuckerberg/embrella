@@ -6,7 +6,7 @@ import { FilterConfig } from '@app/common/types/filter';
  */
 export interface FilesystemSurvey {
   id: number;
-  cluster: 'czii' | 'bruno';
+  cluster: string;
   base_path: string;
   status: 'pending' | 'submitted' | 'running' | 'processing' | 'completed' | 'failed';
   job_id: string | null;
@@ -39,7 +39,7 @@ export interface LinkedEntity {
 export interface DirectorySummary {
   id: number;
   survey_id: number;
-  cluster: 'czii' | 'bruno';
+  cluster: string;
   path: string;
   file_count: number;
   total_size_bytes: number;

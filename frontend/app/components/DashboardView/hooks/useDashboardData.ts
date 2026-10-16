@@ -48,7 +48,7 @@ export const useDashboardData = (): DashboardData => {
           recentJobsQueryArr.push({ category: 'user', value: [user.username] });
         }
         const recentJobsQuery = encodeURIComponent(JSON.stringify(recentJobsQueryArr));
-        const recentJobsUrl = `${DJANGO_URL}/workflow/v1/jobs/?cluster_id=czii&q=${recentJobsQuery}`;
+        const recentJobsUrl = `${DJANGO_URL}/workflow/v1/jobs/?q=${recentJobsQuery}`;
         const recentJobsResponse = await fetchResource(recentJobsUrl);
         const recentJobsData = await recentJobsResponse.json();
 

@@ -4,6 +4,7 @@ Workflow views submodule.
 - constants.py: Module-level constants and configuration
 - utils.py: Utility functions used across views
 - ssh_views.py: SSH key setup and verification views
+- cluster_views.py: Active cluster listing
 - metadata_views.py: Metadata processing and visualization views
 - session_views.py: Session lookup endpoints kept at their pre-v1 paths
 - job_views.py: Job log retrieval
@@ -20,6 +21,9 @@ from workflow.processors.copick.views import (
 from workflow.processors.copick.views import (
     get_template_maps as get_copick_template_maps,
 )
+
+# Import and re-export cluster views
+from .cluster_views import list_clusters
 
 # Import and re-export constants
 from .constants import (
@@ -82,6 +86,8 @@ __all__ = [
     "compute_stats",
     "format_job_output",
     "track_jobs_internal",
+    # Cluster views
+    "list_clusters",
     # SSH views
     "check_ssh_setup",
     "setup_ssh_key",

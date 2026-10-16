@@ -11,6 +11,7 @@ import json
 
 from django.http import JsonResponse
 from drf_spectacular.utils import OpenApiResponse, extend_schema
+from processes.services.cluster_resolver import is_active_cluster
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from umbrella_logger import logger
@@ -18,8 +19,6 @@ from umbrella_logger import logger
 from common import clusterio
 
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
 @extend_schema(
     summary="Check SSH setup status",
     description="Check if SSH setup is required for the user on the specified cluster",
@@ -27,7 +26,7 @@ from common import clusterio
         "application/json": {
             "type": "object",
             "properties": {
-                "cluster_id": {"type": "string", "description": "Cluster ID (czii or bruno)"},
+                "cluster_id": {"type": "string", "description": "Cluster ID (an active stores.Cluster)"},
                 "username": {"type": "string", "description": "Username to check (defaults to current user)"},
             },
             "required": ["cluster_id"],
@@ -39,6 +38,8 @@ from common import clusterio
         500: OpenApiResponse(description="Server error"),
     },
 )
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def check_ssh_setup(request):
     """
     Check if SSH setup is required for the user on the specified cluster.
@@ -59,8 +60,8 @@ def check_ssh_setup(request):
         if not cluster_id:
             return JsonResponse({"error": "cluster_id is required"}, status=400)
 
-        if cluster_id not in ["czii", "bruno"]:
-            return JsonResponse({"error": 'cluster_id must be "czii" or "bruno"'}, status=400)
+        if not is_active_cluster(cluster_id):
+            return JsonResponse({"error": f'Unknown cluster_id "{cluster_id}"'}, status=400)
 
         if explicit_username:
             username = explicit_username
@@ -104,8 +105,6 @@ def check_ssh_setup(request):
         return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
 
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
 @extend_schema(
     summary="Setup SSH key for user",
     description="Add service user's SSH public key to user's authorized_keys on the specified cluster",
@@ -113,7 +112,7 @@ def check_ssh_setup(request):
         "application/json": {
             "type": "object",
             "properties": {
-                "cluster_id": {"type": "string", "description": "Cluster ID (czii or bruno)"},
+                "cluster_id": {"type": "string", "description": "Cluster ID (an active stores.Cluster)"},
                 "username": {"type": "string", "description": "Username to setup SSH for"},
                 "password": {"type": "string", "description": "User password (base64 encoded)"},
             },
@@ -137,6 +136,8 @@ def check_ssh_setup(request):
         500: OpenApiResponse(description="Server error"),
     },
 )
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def setup_ssh_key(request):
     """
     Setup SSH key access for a user on the specified cluster.
@@ -158,8 +159,8 @@ def setup_ssh_key(request):
         if not all([cluster_id, username, encoded_password]):
             return JsonResponse({"error": "cluster_id, username, and password are required"}, status=400)
 
-        if cluster_id not in ["czii", "bruno"]:
-            return JsonResponse({"error": 'cluster_id must be "czii" or "bruno"'}, status=400)
+        if not is_active_cluster(cluster_id):
+            return JsonResponse({"error": f'Unknown cluster_id "{cluster_id}"'}, status=400)
 
         # Decode password
         try:
