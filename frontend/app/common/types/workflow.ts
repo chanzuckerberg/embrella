@@ -294,18 +294,6 @@ export interface SessionSelectionConfig {
 }
 
 /**
- * Compute cluster configured in the backend (stores.Cluster)
- */
-export interface Cluster {
-  cluster_id: string;
-  name: string;
-  is_default: boolean;
-}
-
-/**
- * Props for WorkflowLaunchForm base component
- */
-/**
  * Context provided to headerActions render function
  */
 export interface HeaderActionsContext {
