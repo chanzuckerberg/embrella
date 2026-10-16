@@ -23,7 +23,6 @@ def test_processor_class():
         name = "test_processor"
         display_name = "Test Processor"
         version = "1.0.0"
-        cluster = "czii"
 
         def get_parameter_schema(self):
             return {
@@ -111,7 +110,6 @@ class TestProcessorRegistry:
         assert processor.name == "test_processor"
         assert processor.display_name == "Test Processor"
         assert processor.version == "1.0.0"
-        assert processor.cluster == "czii"
 
     def test_get_nonexistent_processor_fails(self):
         """Test that getting a non-existent processor raises ValueError."""

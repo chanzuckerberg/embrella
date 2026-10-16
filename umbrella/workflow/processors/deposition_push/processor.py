@@ -35,8 +35,6 @@ class DepositionPushProcessor(BaseProcessor):
     name = "deposition-push"
     display_name = "Deposition Push"
     version = "0.1.0"
-    cluster = "bruno"
-    allowed_clusters = ["bruno", "czii"]
     task_name = "deposition_push"
     hidden_from_list = True
 

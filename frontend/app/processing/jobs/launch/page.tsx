@@ -90,12 +90,12 @@ export default function WorkflowLaunchPage() {
   };
 
   // Handle cluster selection
-  const handleClusterChange = (cluster: 'czii' | 'bruno') => {
+  const handleClusterChange = (cluster: string) => {
     setSelectedCluster(cluster);
   };
 
   // SSH setup required handler (called by ClusterSelector)
-  const handleSSHSetupRequired = (cluster: 'czii' | 'bruno', username: string) => {
+  const handleSSHSetupRequired = (cluster: string, username: string) => {
     setCurrentUsername(username);
     setSSHSetupModalOpen(true);
   };
@@ -114,7 +114,7 @@ export default function WorkflowLaunchPage() {
     const commonProps = {
       processor: selectedProcessorData,
       schema,
-      cluster: selectedCluster as 'czii' | 'bruno',
+      cluster: selectedCluster,
 
       onSubmit: async (_params: ExecutionParams) => {
         // Success handled by individual forms
@@ -201,8 +201,9 @@ export default function WorkflowLaunchPage() {
           {selectedProcessorData && selectedProcessorData.allowed_clusters.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <ClusterSelector
-                value={selectedCluster as 'czii' | 'bruno'}
+                value={selectedCluster}
                 onChange={handleClusterChange}
+                allowedClusters={selectedProcessorData.allowed_clusters}
                 showCheckAccess={true}
                 onSSHSetupRequired={handleSSHSetupRequired}
                 disabled={selectedProcessorData.allowed_clusters.length === 1}
@@ -239,7 +240,7 @@ export default function WorkflowLaunchPage() {
         open={sshSetupModalOpen}
         onClose={() => setSSHSetupModalOpen(false)}
         onSuccess={handleSSHSetupSuccess}
-        cluster={selectedCluster as 'czii' | 'bruno'}
+        cluster={selectedCluster}
         defaultUsername={currentUsername}
       />
     </PageContainer>

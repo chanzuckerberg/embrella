@@ -28,8 +28,6 @@ class DenoisETProcessor(BaseProcessor):
     name = "denoiset"
     display_name = "DenoisET"
     version = "1.0"
-    cluster = "czii"
-    allowed_clusters = ["czii", "bruno"]
     task_name = "denoising"
 
     # Schema is now loaded from schema.yaml file

@@ -13,6 +13,7 @@ from django_q.tasks import async_task
 from umbrella_logger import logger
 
 from processes.tasks.job_tasks import check_job_status
+from processes.services.cluster_resolver import get_default_cluster_id
 
 OUTPUT_SYNC_INTERVAL = timedelta(minutes=5)
 SACCT_POLL_INTERVAL = timedelta(seconds=60)
@@ -87,13 +88,13 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
                 "job_id": job_id,
             }
 
-        # cluster_id is persisted in the parameters JSON field (default to 'czii' for legacy jobs)
+        # cluster_id is persisted in the parameters JSON field (site default for legacy jobs)
         from processes.services.cluster_resolver import cluster_id_from_parameters
 
         cluster_id = cluster_id_from_parameters(pipe_exec.parameters)
-        if cluster_id == "czii" and "cluster_id" not in (pipe_exec.parameters or {}):
+        if "cluster_id" not in (pipe_exec.parameters or {}):
             logger.warning(
-                f"Job {job_id} has no cluster_id in parameters - defaulting to 'czii' (legacy job)",
+                f"Job {job_id} has no cluster_id in parameters - defaulting to '{cluster_id}' (legacy job)",
             )
 
         logger.info(f"Job {job_id} uses cluster: {cluster_id}")
@@ -248,7 +249,7 @@ def start_syncer_monitoring(syncer_class_path, base_path, session_name, run_id, 
     return task_id
 
 
-def run_job_status_syncer(job_id: str, cluster_id: str = "czii"):
+def run_job_status_syncer(job_id: str, cluster_id: str | None = None):
     """
     Single iteration of job status syncer.
 
@@ -262,11 +263,13 @@ def run_job_status_syncer(job_id: str, cluster_id: str = "czii"):
 
     Args:
         job_id: SLURM job ID to track
-        cluster_id: Cluster to query (czii or bruno)
+        cluster_id: Cluster to query (default: site default cluster)
 
     Returns:
         dict with status and job_id
     """
+    cluster_id = cluster_id or get_default_cluster_id()
+
     from workflow.syncers import JobStatusSyncer
 
     syncer = JobStatusSyncer(job_id=job_id, cluster_id=cluster_id)
@@ -324,7 +327,7 @@ def run_job_status_syncer(job_id: str, cluster_id: str = "czii"):
         return {"status": "error", "job_id": job_id, "error": str(e)}
 
 
-def start_job_status_syncer(job_id: str, cluster_id: str = "czii"):
+def start_job_status_syncer(job_id: str, cluster_id: str | None = None):
     """
     Start the job status syncer for a newly submitted job.
 
@@ -333,11 +336,13 @@ def start_job_status_syncer(job_id: str, cluster_id: str = "czii"):
 
     Args:
         job_id: SLURM job ID to track
-        cluster_id: Cluster to query (czii or bruno)
+        cluster_id: Cluster to query (default: site default cluster)
 
     Returns:
         str: Django-Q task ID
     """
+    cluster_id = cluster_id or get_default_cluster_id()
+
     task_id = async_task(
         "processes.tasks.run_job_status_syncer",
         job_id,

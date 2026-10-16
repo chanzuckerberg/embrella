@@ -9,8 +9,11 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from processes.services.cluster_resolver import (
     NoDefaultClusterError,
+    active_cluster_ids,
+    active_clusters,
     clear_default_cluster_cache,
     get_default_cluster_id,
+    is_active_cluster,
 )
 from tem.models import Microscope, MsiSession
 
@@ -86,6 +89,35 @@ class DefaultClusterIdTests(TestCase):
         # which must clear the cache so the next call reflects the change.
         _make_cluster("demo2", is_default=True)
         self.assertEqual(get_default_cluster_id(), "demo2")
+
+
+class ActiveClusterTests(TestCase):
+    def setUp(self):
+        Cluster.objects.all().delete()
+        clear_default_cluster_cache()
+        _make_cluster("aaa")
+        _make_cluster("bbb", is_default=True)
+        _make_cluster("off", is_active=False)
+
+    def tearDown(self):
+        clear_default_cluster_cache()
+
+    def test_is_active_cluster(self):
+        self.assertTrue(is_active_cluster("aaa"))
+        self.assertFalse(is_active_cluster("off"))
+        self.assertFalse(is_active_cluster("missing"))
+
+    def test_active_cluster_ids_skip_inactive(self):
+        self.assertEqual(sorted(active_cluster_ids()), ["aaa", "bbb"])
+
+    def test_active_clusters_flag_default(self):
+        self.assertEqual(
+            active_clusters(),
+            [
+                {"cluster_id": "aaa", "name": "AAA", "is_default": False},
+                {"cluster_id": "bbb", "name": "BBB", "is_default": True},
+            ],
+        )
 
 
 class FileserverAllowlistTests(TestCase):
