@@ -108,6 +108,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "django_q",
     "guardian",
+    "simple_history",
 ]
 
 MIDDLEWARE = [
@@ -117,6 +118,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "simple_history.middleware.HistoryRequestMiddleware",  # Stamps history rows with request.user
     "allauth.account.middleware.AccountMiddleware",
     "umbrella.middleware.APIAuthenticationMiddleware",
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
