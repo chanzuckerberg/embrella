@@ -8,9 +8,10 @@ import type { Dataset } from '../types';
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
 
+let mockIsDirty = false;
 const mockSaveNow = jest.fn<Promise<boolean>, []>();
 jest.mock('../hooks/useDraftAutoSave', () => ({
-  useDraftAutoSave: () => ({ status: 'saved', lastSavedAt: null, saveNow: mockSaveNow }),
+  useDraftAutoSave: () => ({ status: 'saved', isDirty: mockIsDirty, lastSavedAt: null, saveNow: mockSaveNow }),
 }));
 
 const DATASET = { id: 5, deposition: 1, dataset_id: 100, title: 'My dataset', status: 'draft', funding: [] } as Dataset;
@@ -27,6 +28,7 @@ function renderWizard(dataset: Dataset = DATASET) {
 
 describe('WizardLayout', () => {
   beforeEach(() => {
+    mockIsDirty = false;
     mockPush.mockReset();
     mockSaveNow.mockReset().mockResolvedValue(true);
   });
@@ -36,12 +38,6 @@ describe('WizardLayout', () => {
     expect(screen.getByText('Step 1 of 6')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Sources' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();
-  });
-
-  it('advances to the next step via Next', async () => {
-    renderWizard();
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    expect(await screen.findByRole('heading', { name: 'Deposition' })).toBeInTheDocument();
   });
 
   it.each([true, false])('shows Saving… until the next-step save resolves with %s', async (success) => {
@@ -64,17 +60,6 @@ describe('WizardLayout', () => {
     expect(screen.queryByRole('button', { name: 'Saving…' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: success ? 'Deposition' : 'Sources' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
-  });
-
-  it('stays on the current step when saving before Next fails', async () => {
-    mockSaveNow.mockResolvedValueOnce(false);
-    renderWizard();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-
-    await waitFor(() => expect(mockSaveNow).toHaveBeenCalled());
-    expect(screen.getByRole('heading', { name: 'Sources' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Deposition' })).not.toBeInTheDocument();
   });
 
   it('jumps to a step from the stepper', async () => {
@@ -109,8 +94,40 @@ describe('WizardLayout', () => {
     expect(screen.getByText(/read-only/i)).toBeInTheDocument();
   });
 
-  it('shows no read-only notice for the owner', () => {
-    renderWizard({ ...DATASET, is_owner: true } as Dataset);
+  it('shows no read-only notice for an owner editing a draft', () => {
+    renderWizard({ ...DATASET, is_owner: true });
     expect(screen.queryByText(/read-only/i)).not.toBeInTheDocument();
+  });
+
+  it('asks to save unsaved changes before closing and stays open if saving fails', async () => {
+    mockIsDirty = true;
+    mockSaveNow.mockResolvedValueOnce(false);
+    renderWizard();
+    fireEvent.click(screen.getByRole('button', { name: 'Close wizard' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Save changes before closing?');
+    expect(mockPush).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft & close' }));
+    await waitFor(() => expect(mockSaveNow).toHaveBeenCalledTimes(1));
+    expect(mockPush).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('saves and closes after confirming unsaved changes', async () => {
+    mockIsDirty = true;
+    renderWizard();
+    fireEvent.click(screen.getByRole('button', { name: 'Close wizard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft & close' }));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/deposition/submissions'));
+    expect(mockSaveNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('locks metadata for an owner after preparation while keeping upload available', async () => {
+    renderWizard({ ...DATASET, status: 'syncing', is_owner: true, job: { id: 1, state: 'prep_completed' } });
+    expect(screen.queryByRole('button', { name: 'Save now' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: /Step 6:/ }));
+    expect(await screen.findByRole('button', { name: 'Submit deposition' })).toBeEnabled();
+    expect(mockSaveNow).not.toHaveBeenCalled();
   });
 });

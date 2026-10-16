@@ -10,6 +10,7 @@ import { STATUS_META } from '../../submissions/constants';
 import { softChipSx } from '../../submissions/utils';
 import { isEditableStatus } from '../../types';
 import { DatasetForm } from './DatasetForm';
+import { ReadOnlyNotice } from '../../components/ReadOnlyNotice';
 
 export default function DatasetDetailPage() {
   const params = useParams<{ id: string }>();
@@ -33,7 +34,7 @@ export default function DatasetDetailPage() {
 
     const label = dataset.dataset_id ? `ds-${dataset.dataset_id}` : dataset.title || '(untitled draft)';
     const meta = STATUS_META[dataset.status];
-    const readOnly = !isEditableStatus(dataset.status);
+    const readOnly = dataset.is_owner === false || !isEditableStatus(dataset.status);
 
     return (
       <>
@@ -48,11 +49,7 @@ export default function DatasetDetailPage() {
             {dataset.title}
           </Typography>
         )}
-        {readOnly && (
-          <Alert severity="info" sx={{ mb: 3 }}>
-            This dataset is {meta.label.toLowerCase()} and is read-only.
-          </Alert>
-        )}
+        {readOnly && <ReadOnlyNotice nonOwner={dataset.is_owner === false} />}
         <DatasetForm dataset={dataset} />
       </>
     );

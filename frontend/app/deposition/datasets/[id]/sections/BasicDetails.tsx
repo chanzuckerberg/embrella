@@ -28,7 +28,7 @@ export function BasicDetails({
         required
         fullWidth
         size="small"
-        disabled={readOnly}
+        InputProps={{ readOnly }}
       />
       <TextField
         label="Description"
@@ -39,7 +39,7 @@ export function BasicDetails({
         minRows={3}
         fullWidth
         size="small"
-        disabled={readOnly}
+        InputProps={{ readOnly }}
         helperText="2–3 sentences"
         sx={{ '& textarea': { resize: 'vertical' } }}
       />

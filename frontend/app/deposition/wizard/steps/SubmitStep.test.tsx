@@ -37,12 +37,6 @@ it('auto-starts sync on arrival with no manual start button', () => {
   expect(screen.queryByRole('button', { name: /submit for preparation/i })).toBeNull();
 });
 
-it('offers Submit deposition once prep is complete', () => {
-  const { push } = setup({ id: 1, state: 'prep_completed' });
-  fireEvent.click(screen.getByRole('button', { name: /submit deposition/i }));
-  expect(push.mutate).toHaveBeenCalled();
-});
-
 it('shows a retry action and the error when sync failed', () => {
   setup({ id: 1, state: 'failed', error_message: 'sync blew up' });
   expect(screen.getByText('sync blew up')).toBeInTheDocument();
@@ -51,13 +45,13 @@ it('shows a retry action and the error when sync failed', () => {
 
 it('shows success and no submit actions once pushed', () => {
   setup({ id: 1, state: 'completed', push_slurm_job_id: '99' });
-  expect(screen.getByText(/uploaded to the data portal/i)).toBeInTheDocument();
+  expect(screen.getByText(/Files have been uploaded to S3/i)).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /submit/i })).toBeNull();
 });
 
 it('hides submit actions and does not auto-start in read-only mode', () => {
   const { submit } = setup(null, { readOnly: true });
-  expect(screen.queryByRole('button', { name: /submit/i })).toBeNull();
+  expect(screen.queryByRole('button', { name: /submit deposition/i })).toBeNull();
   expect(submit.mutate).not.toHaveBeenCalled();
 });
 
@@ -94,6 +88,7 @@ it('renders live progress from the job payload', () => {
     },
   });
   expect(screen.getByText(/1,883 \/ 2,215 objects/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Sync on cluster/ })).toHaveTextContent('85% · ETA 0:05');
   expect(screen.getByText('Symlink tiltseries')).toBeInTheDocument();
   expect(screen.getByText('582 / 582')).toBeInTheDocument();
 });
@@ -244,16 +239,19 @@ it('lets users review each phase without launching another job', () => {
   }));
   const { submit, push } = setup({ id: 1, state: 'failed', prep_slurm_job_id: '11', push_slurm_job_id: '99' });
   expect(screen.getByText('Upload log (tail)')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Sync on cluster' }));
-  expect(screen.getByRole('button', { name: 'Sync on cluster' })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(screen.getByRole('button', { name: /Sync on cluster/ }));
+  expect(screen.getByRole('button', { name: /Sync on cluster/ })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByText('Sync log (tail)')).toBeInTheDocument();
   expect(screen.getByText('original prep output')).toBeInTheDocument();
   expect(screen.queryByText('push output')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Pre-flight validation' }));
-  expect(screen.getByText('Pre-flight validation is not available yet.')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /Pre-flight validation/ }));
+  expect(
+    screen.getByText('Pre-flight validation was not run for this submission. You can still submit.')
+  ).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Submit deposition' })).toBeNull();
-  expect(screen.queryByText('Sync log (tail)')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Push to S3' }));
+  expect(screen.getByText('Sync log (tail)')).toBeInTheDocument();
+  expect(screen.getByText('original prep output')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /Push to S3/ }));
   expect(screen.getByText('push output')).toBeInTheDocument();
   expect(submit.mutate).not.toHaveBeenCalled();
   expect(push.mutate).not.toHaveBeenCalled();
@@ -261,7 +259,7 @@ it('lets users review each phase without launching another job', () => {
 
 it('does not offer an upload action when viewing validation before sync completes', () => {
   const { submit, push } = setup({ id: 1, state: 'prep_running' });
-  fireEvent.click(screen.getByRole('button', { name: 'Pre-flight validation' }));
+  fireEvent.click(screen.getByRole('button', { name: /Pre-flight validation/ }));
   expect(screen.queryByRole('button', { name: 'Submit deposition' })).toBeNull();
   expect(submit.mutate).not.toHaveBeenCalled();
   expect(push.mutate).not.toHaveBeenCalled();
@@ -273,12 +271,12 @@ it('keeps a manually selected sync log open when prep completes', () => {
   mockFlow.mockReturnValue({ dataset, submit: { isPending: false }, push: {} });
   const props = { dataset, readOnly: false, reportSave: jest.fn() };
   const view = render(<SubmitStep {...props} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Sync on cluster' }));
+  fireEvent.click(screen.getByRole('button', { name: /Sync on cluster/ }));
   job.state = 'prep_completed';
   view.rerender(<SubmitStep {...props} />);
-  expect(screen.getByRole('button', { name: 'Sync on cluster' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: /Sync on cluster/ })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByText('Sync log (tail)')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Pre-flight validation' }));
+  fireEvent.click(screen.getByRole('button', { name: /Pre-flight validation/ }));
   expect(screen.getByRole('button', { name: 'Submit deposition' })).toBeInTheDocument();
 });
 
@@ -286,7 +284,7 @@ it.each(['Sync on cluster', 'Pre-flight validation', 'Push to S3'])(
   'keeps submit accessible while viewing %s',
   (tile) => {
     const { push } = setup({ id: 1, state: 'prep_completed' });
-    fireEvent.click(screen.getByRole('button', { name: tile }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(tile) }));
     fireEvent.click(screen.getByRole('button', { name: 'Submit deposition' }));
     expect(push.mutate).toHaveBeenCalledTimes(1);
   }
@@ -296,7 +294,7 @@ it.each(['Sync on cluster', 'Pre-flight validation', 'Push to S3'])(
   'keeps retry accessible while viewing %s',
   (tile) => {
     const { submit } = setup({ id: 1, state: 'failed' });
-    fireEvent.click(screen.getByRole('button', { name: tile }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(tile) }));
     fireEvent.click(screen.getByRole('button', { name: 'Retry sync' }));
     expect(submit.mutate).toHaveBeenCalledTimes(1);
   }
@@ -307,4 +305,15 @@ it('labels the saved excerpt when the live log is unavailable', () => {
   setup({ id: 1, state: 'failed' });
   expect(screen.getByText('saved failure output')).toBeInTheDocument();
   expect(screen.getByText('Showing the saved output; the live log is unavailable.')).toBeInTheDocument();
+});
+
+it('does not fetch or display logs for non-owners', () => {
+  setLogs({ logs: 'private output', source: 'stored' });
+  const dataset = { id: 1, title: 'DS', is_owner: false, job: { id: 1, state: 'failed' } } as Dataset;
+  mockFlow.mockReturnValue({ dataset, submit: {}, push: {} });
+  render(<SubmitStep dataset={dataset} readOnly reportSave={jest.fn()} />);
+  expect(screen.getByText('Logs are visible to the submitter only.')).toBeVisible();
+  expect(mockLogs).toHaveBeenCalledWith(1, expect.objectContaining({ enabled: false }));
+  expect(screen.queryByText('private output')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Copy' })).toBeDisabled();
 });

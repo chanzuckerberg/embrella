@@ -91,10 +91,10 @@ export function SourcesStep({ dataset, reportSave, readOnly: readOnlyProp }: Ste
 
   const validationError = sourceValidationError(rows);
   const formState = useMemo<SourcesState>(() => ({ rows, subsetMode }), [rows, subsetMode]);
-  const { status, lastSavedAt, saveNow } = useDraftAutoSave(formState, save, { enabled: !readOnly });
+  const { status, isDirty, lastSavedAt, saveNow } = useDraftAutoSave(formState, save, { enabled: !readOnly });
   useEffect(() => {
-    reportSave?.({ status, lastSavedAt, saveNow });
-  }, [status, lastSavedAt, saveNow, reportSave]);
+    reportSave?.({ status, isDirty, lastSavedAt, saveNow });
+  }, [status, isDirty, lastSavedAt, saveNow, reportSave]);
 
   const handleUploadSubset = async (row: SourceRow, file: File) => {
     if (!row.id) return;

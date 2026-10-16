@@ -44,12 +44,16 @@ describe('DatasetDetailPage', () => {
     expect(screen.queryByText(/read-only/i)).not.toBeInTheDocument();
   });
 
-  it('renders read-only with a banner for a pushed dataset', () => {
-    mockUseDataset.mockReturnValue({ data: PUSHED, isPending: false, isError: false });
-    renderPage();
-    expect(screen.getByText(/read-only/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Title/)).toBeDisabled();
-  });
+  it.each([PUSHED, { ...DRAFT, is_owner: false }])(
+    'renders selectable read-only values for a locked or non-owned dataset',
+    (data) => {
+      mockUseDataset.mockReturnValue({ data, isPending: false, isError: false });
+      renderPage();
+      expect(screen.getByText(/read-only/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Title/)).toHaveAttribute('readonly');
+      expect(screen.getByLabelText(/Title/)).not.toBeDisabled();
+    }
+  );
 
   it('renders an editable form with no banner for a failed dataset', () => {
     mockUseDataset.mockReturnValue({ data: FAILED, isPending: false, isError: false });

@@ -55,7 +55,7 @@ export function Funding({
             onChange={(e) => onChange(i, { funding_agency_name: e.target.value })}
             size="small"
             fullWidth
-            disabled={readOnly}
+            InputProps={{ readOnly }}
             InputLabelProps={{ sx: labelSx }}
           />
           <TextField
@@ -64,7 +64,7 @@ export function Funding({
             onChange={(e) => onChange(i, { grant_id: e.target.value })}
             size="small"
             fullWidth
-            disabled={readOnly}
+            InputProps={{ readOnly }}
             InputLabelProps={{ sx: labelSx }}
           />
           {!readOnly && (
