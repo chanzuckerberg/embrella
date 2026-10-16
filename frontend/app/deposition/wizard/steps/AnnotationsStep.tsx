@@ -142,10 +142,10 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
     [dataset.id, queryClient, sessions]
   );
 
-  const { status, lastSavedAt, saveNow } = useDraftAutoSave(bySession, save, { enabled: !readOnly });
+  const { status, isDirty, lastSavedAt, saveNow } = useDraftAutoSave(bySession, save, { enabled: !readOnly });
   useEffect(() => {
-    reportSave?.({ status, lastSavedAt, saveNow });
-  }, [status, lastSavedAt, saveNow, reportSave]);
+    reportSave?.({ status, isDirty, lastSavedAt, saveNow });
+  }, [status, isDirty, lastSavedAt, saveNow, reportSave]);
 
   const list = useMemo(() => bySession[active?.key ?? ''] ?? [], [bySession, active]);
   const activeAnn = list.find((a) => annId(a) === activeAnnId) ?? null;

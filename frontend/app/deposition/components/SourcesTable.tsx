@@ -161,6 +161,7 @@ export function SourcesTable({
                 value={subsetMode}
                 onChange={(_, v: TomogramSubsetMode | null) => v && onSubsetModeChange(v)}
                 disabled={readOnly}
+                aria-label={readOnly ? 'Deposit selection (read-only)' : 'Deposit selection'}
                 sx={{
                   bgcolor: 'grey.100',
                   '& .MuiToggleButtonGroup-grouped': {
@@ -170,8 +171,10 @@ export function SourcesTable({
                     textTransform: 'none',
                     fontWeight: 600,
                     fontSize: '0.8125rem',
-                    color: 'text.secondary',
+                    color: 'text.primary',
                     bgcolor: 'background.paper',
+                    '&.Mui-disabled': { color: 'text.primary', opacity: 1 },
+                    '&.Mui-selected.Mui-disabled': { bgcolor: 'primary.main', color: 'primary.contrastText' },
                     '&:not(:first-of-type)': { ml: 0 },
                     '&:hover': { bgcolor: 'grey.50' },
                     '&.Mui-selected': {
@@ -188,6 +191,7 @@ export function SourcesTable({
                 <ToggleButton value="annotated">{annotatedLabel}</ToggleButton>
                 <ToggleButton value="custom">Custom CSV</ToggleButton>
               </ToggleButtonGroup>
+              {readOnly && <Typography variant="caption">Read-only</Typography>}
             </Box>
           </Box>
 
@@ -197,9 +201,11 @@ export function SourcesTable({
         </Box>
 
         {rows.length === 0 && (
-          <Callout intent="info" sdsStyle="persistent">
-            No sessions yet. Add the imaging sessions this dataset was built from.
-          </Callout>
+          <Callout
+            intent="info"
+            sdsStyle="persistent"
+            body="No sessions yet. Add the imaging sessions this dataset was built from."
+          />
         )}
 
         {rows.map((row, i) => (

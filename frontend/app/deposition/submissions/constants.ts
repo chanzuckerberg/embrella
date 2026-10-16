@@ -17,8 +17,8 @@ export type ChipColor = 'default' | 'secondary' | 'info' | 'success' | 'warning'
 
 export const STATUS_META: Record<DatasetStatus, { label: string; color: ChipColor }> = {
   draft: { label: 'Draft', color: 'default' },
-  syncing: { label: 'Syncing', color: 'warning' },
-  pushed: { label: 'Pushed', color: 'success' },
+  syncing: { label: 'In progress', color: 'warning' },
+  pushed: { label: 'Upload complete', color: 'success' },
   failed: { label: 'Failed', color: 'error' },
 };
 
@@ -30,8 +30,8 @@ export const TYPE_META: Record<string, ChipColor> = {
 
 export const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'pushed', label: 'Pushed' },
-  { key: 'syncing', label: 'In progress' },
+  { key: 'pushed', label: STATUS_META.pushed.label },
+  { key: 'syncing', label: STATUS_META.syncing.label },
   { key: 'draft', label: 'Drafts' },
   { key: 'failed', label: 'Failed' },
 ];

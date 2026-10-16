@@ -189,7 +189,7 @@ export function SessionCard({
               </Typography>
               <Autocomplete
                 size="small"
-                disabled={readOnly}
+                readOnly={readOnly}
                 options={sessionOptions}
                 value={session || null}
                 onChange={(_, v) => selectSession(v ?? '')}
@@ -205,6 +205,7 @@ export function SessionCard({
               options={aretomo.data ?? []}
               loading={aretomo.isFetching}
               disabled={readOnly || !session}
+              readOnly={readOnly}
               placeholder="AreTomo run"
               onChange={(v) => set({ aretomo_run_name: v })}
             />
@@ -215,6 +216,7 @@ export function SessionCard({
               options={denoise.data ?? []}
               loading={denoise.isFetching}
               disabled={readOnly || !session}
+              readOnly={readOnly}
               placeholder="DenoisET run"
               allowNone
               noneLabel="None (raw tomograms)"

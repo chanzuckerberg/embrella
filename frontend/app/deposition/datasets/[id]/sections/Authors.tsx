@@ -24,6 +24,7 @@ function ChoiceCard({
     <Box
       role="radio"
       aria-checked={selected}
+      aria-disabled={disabled}
       onClick={disabled ? undefined : onSelect}
       sx={{
         display: 'flex',
@@ -35,7 +36,6 @@ function ChoiceCard({
         borderColor: selected ? 'primary.main' : 'divider',
         bgcolor: selected ? (t) => alpha(t.palette.primary.main, 0.06) : 'background.paper',
         cursor: disabled ? 'default' : 'pointer',
-        opacity: disabled ? 0.6 : 1,
       }}
     >
       <Radio size="small" checked={selected} disabled={disabled} sx={{ p: 0, mt: '2px' }} />
