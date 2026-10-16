@@ -38,7 +38,8 @@ COPICK_SCAN_PROCESSOR = "copick-scan"
 
 def _copick_default_cluster_id() -> str:
     """Copick's admin-set default cluster, else the site default."""
-    software = ProcSoftware.objects.filter(processor_class=CopickProcessor.name).first()
+    # FIXME: Issue #1339 have it work with other clusters
+    software = ProcSoftware.objects.filter(processor_class=CopickProcessor.name, active=True).first()
     return (software and software.default_cluster) or get_default_cluster_id()
 
 
