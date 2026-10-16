@@ -40,7 +40,7 @@ class AreTomo3Processor(BaseProcessor):
 
     name = "aretomo3"
     display_name = "AreTomo3"
-    version = "2.3.3"
+    version = "2.3.4"
     task_name = "tomographic_reconstruction"
 
     def _schema_default(self, key: str) -> Any:
