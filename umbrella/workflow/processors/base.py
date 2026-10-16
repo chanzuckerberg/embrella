@@ -36,7 +36,6 @@ class BaseProcessor(ABC):
         name: str - Unique identifier (e.g., "aretomo3")
         display_name: str - Human-readable name (e.g., "AreTomo3")
         version: str - Software version
-        cluster: str - Default cluster ("czii" or "bruno")
 
     Example:
         @register_processor
@@ -44,7 +43,6 @@ class BaseProcessor(ABC):
             name = "aretomo3"
             display_name = "AreTomo3"
             version = "2024-03-10"
-            cluster = "czii"
 
             def get_parameter_schema(self):
                 return {...}
@@ -57,7 +55,6 @@ class BaseProcessor(ABC):
     name: Optional[str] = None
     display_name: Optional[str] = None
     version: Optional[str] = None
-    cluster: Optional[str] = None
 
     # Set to True for processors that should not appear in processor dropdown
     # (e.g., copick-add-object which is accessed via Copick form's Add Object tab)
@@ -250,121 +247,6 @@ class BaseProcessor(ABC):
                 return errors
         """
         return []
-
-    def validate_slurm_resources(
-        self,
-        params: Dict[str, Any],
-        cluster_id: str,
-    ) -> List[str]:
-        """
-        Validate SLURM resource parameters against cluster-specific limits.
-
-        This method checks SLURM parameters from the schema (x-slurm-directive)
-        against known cluster limits to catch errors before submission.
-
-        Args:
-            params: User-provided parameters
-            cluster_id: Target cluster ('czii', 'bruno', etc.)
-
-        Returns:
-            List of error messages (empty if valid)
-
-        Example validation errors:
-            - "GPU count exceeds cluster maximum (requested: 16, max: 8)"
-            - "Time limit exceeds cluster maximum (requested: 200:00:00, max: 168:00:00)"
-            - "Partition 'himem' not available on cluster 'czii'"
-        """
-        # Define cluster-specific limits
-        CLUSTER_LIMITS = {
-            "czii": {
-                "max_gpus": 8,
-                "max_time_hours": 168,  # 7 days
-                "allowed_partitions": ["gpu", "cpu"],
-                "max_cpus_per_task": 64,
-            },
-            "bruno": {
-                "max_gpus": 4,
-                "max_time_hours": 168,  # 7 days
-                "allowed_partitions": ["gpu", "cpu"],
-                "max_cpus_per_task": 32,
-            },
-        }
-
-        errors = []
-        limits = CLUSTER_LIMITS.get(cluster_id, {})
-
-        if not limits:
-            # Unknown cluster, skip validation
-            return errors
-
-        schema = self.get_parameter_schema()
-
-        for param_name, prop in schema.get("properties", {}).items():
-            # Only validate SLURM directive parameters
-            if not prop.get("x-slurm-directive"):
-                continue
-
-            value = params.get(param_name)
-            if value is None:
-                value = prop.get("default")
-            if value is None:
-                continue
-
-            directive = prop.get("x-slurm-directive")
-            component = prop.get("x-hetjob-component")
-            component_label = f" (Component {component})" if component is not None else ""
-
-            # Validate GPU count
-            if directive == "--gpus":
-                max_gpus = limits.get("max_gpus", 999)
-                if int(value) > max_gpus:
-                    errors.append(
-                        f"GPU count exceeds cluster maximum{component_label}: "
-                        f"requested {value}, max {max_gpus} on {cluster_id}",
-                    )
-
-            # Validate CPUs per task
-            elif directive == "--cpus-per-task":
-                max_cpus = limits.get("max_cpus_per_task", 999)
-                if int(value) > max_cpus:
-                    errors.append(
-                        f"CPU count exceeds cluster maximum{component_label}: "
-                        f"requested {value}, max {max_cpus} on {cluster_id}",
-                    )
-
-            # Validate partition
-            elif directive == "--partition":
-                allowed_partitions = limits.get("allowed_partitions", [])
-                if allowed_partitions and value not in allowed_partitions:
-                    errors.append(
-                        f"Partition '{value}' not available{component_label} on {cluster_id}. "
-                        f"Allowed: {', '.join(allowed_partitions)}",
-                    )
-
-            # Validate time limit
-            elif directive == "--time":
-                max_hours = limits.get("max_time_hours")
-                if max_hours:
-                    # Parse HH:MM:SS format
-                    try:
-                        parts = value.split(":")
-                        hours = int(parts[0])
-                        if len(parts) > 1:
-                            hours += int(parts[1]) / 60
-                        if len(parts) > 2:
-                            hours += int(parts[2]) / 3600
-
-                        if hours > max_hours:
-                            errors.append(
-                                f"Time limit exceeds cluster maximum{component_label}: "
-                                f"requested {value} (~{hours:.1f}h), max {max_hours}h on {cluster_id}",
-                            )
-                    except (ValueError, IndexError):
-                        errors.append(
-                            f"Invalid time format{component_label}: {value} (expected HH:MM:SS)",
-                        )
-
-        return errors
 
     @abstractmethod
     def on_job_submit(self, run_context: "RunContext", job_id: str) -> None:
@@ -585,8 +467,6 @@ class BaseProcessor(ABC):
                 'name': 'aretomo3',
                 'version': '2.2.2_07-11-2025',
                 'processor_class': 'aretomo3',
-                'default_cluster': 'czii',
-                'allowed_clusters': ['czii', 'bruno'],
                 'task_name': 'tomographic_reconstruction'
             }
 
@@ -601,8 +481,6 @@ class BaseProcessor(ABC):
             "name": self.name,
             "version": self.version,
             "processor_class": self.name,
-            "default_cluster": self.cluster,
-            "allowed_clusters": getattr(self, "allowed_clusters", [self.cluster]),
             "task_name": getattr(self, "task_name", None),
         }
 

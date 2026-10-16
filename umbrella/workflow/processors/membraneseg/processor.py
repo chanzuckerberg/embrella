@@ -28,8 +28,6 @@ class MembranesegProcessor(BaseProcessor):
     name = "membraneseg"
     display_name = "Membrane Segmentation"
     version = "1.0"
-    cluster = "bruno"
-    allowed_clusters = ["bruno", "czii"]
     task_name = "membrane_segmentation"
 
     def validate_parameters(self, params: Dict[str, Any]) -> List[str]:

@@ -97,10 +97,9 @@ class WorkflowConfig(AppConfig):
                         logger.debug(f"  Task exists: {metadata['task_name']}")
 
                     # Updates ProcSoftware record every startup.
+                    # Cluster fields are left alone: admins own them per site.
                     software_fields = {
                         "version": metadata["version"],
-                        "default_cluster": metadata["default_cluster"],
-                        "allowed_clusters": metadata["allowed_clusters"],
                         "active": True,
                     }
                     proc_software, software_created = self._claim_software(metadata, software_fields)

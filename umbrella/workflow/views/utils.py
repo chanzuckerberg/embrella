@@ -6,21 +6,24 @@ including data processing, formatting, parsing, and sorting utilities.
 """
 
 import pandas as pd
+from processes.services.cluster_resolver import get_default_cluster_id
 from umbrella_logger import logger
 
 from common import clusterio
 
 
-def track_jobs_internal(cluster_id="czii"):
+def track_jobs_internal(cluster_id=None):
     """
     Fetch job status from SLURM for a specific cluster.
 
     Args:
-        cluster_id (str): Cluster to query ('czii' or 'bruno')
+        cluster_id (str): Cluster to query (default: site default cluster)
 
     Returns:
         dict: Dictionary with 'jobs' key containing list of job dicts
     """
+    cluster_id = cluster_id or get_default_cluster_id()
+
     from workflow.agent import StatusChecker
 
     try:

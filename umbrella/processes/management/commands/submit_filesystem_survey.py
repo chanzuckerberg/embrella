@@ -30,6 +30,7 @@ from umbrella_logger import logger
 
 from common import clusterio
 from processes.models import FilesystemSurvey
+from processes.services.cluster_resolver import is_active_cluster
 
 
 class Command(BaseCommand):
@@ -40,8 +41,7 @@ class Command(BaseCommand):
             "--cluster",
             type=str,
             required=True,
-            choices=["czii", "bruno"],
-            help="Cluster to run the survey on",
+            help="Cluster id to run the survey on (an active stores.Cluster)",
         )
         parser.add_argument(
             "--path",
@@ -105,6 +105,10 @@ class Command(BaseCommand):
         base_path = options["path"]
         dry_run = options["dry_run"]
         use_cache = not options["no_cache"]
+
+        if not is_active_cluster(cluster):
+            self.stderr.write(self.style.ERROR(f"Unknown or inactive cluster {cluster!r}"))
+            return
 
         # Validate base path
         if not base_path.startswith("/"):

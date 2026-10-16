@@ -126,7 +126,6 @@ export const SurveySelector = ({ selectedSurveyId, onSurveyChange, cluster }: Su
                 <span
                   style={{
                     fontWeight: 600,
-                    color: survey.cluster === 'czii' ? '#6E4FF9' : '#9c27b0',
                   }}
                 >
                   {survey.cluster}

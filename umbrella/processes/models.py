@@ -42,7 +42,7 @@ class ProcSoftware(models.Model):
 
     Fields:
     - processor_class: Python class name for execution (e.g., 'aretomo3')
-    - default_cluster: Default cluster for job submission ('czii' or 'bruno')
+    - default_cluster: Default cluster for job submission (empty = site default cluster)
     - allowed_clusters: List of clusters this software can run on
     - processing_root: Optional PathType to directory template
     - script_dir: Optional PathType to script location
@@ -71,14 +71,14 @@ class ProcSoftware(models.Model):
     )
     default_cluster = models.CharField(
         max_length=16,
-        choices=[("czii", "CZII"), ("bruno", "Bruno")],
-        default="czii",
-        help_text="Default cluster for job submission",
+        null=True,
+        blank=True,
+        help_text="Default cluster id for job submission. Empty means the site default cluster.",
     )
     allowed_clusters = models.JSONField(
         default=list,
         blank=True,
-        help_text='List of cluster IDs this software can run on (e.g., ["czii", "bruno"]). Empty means all clusters allowed.',
+        help_text='List of cluster IDs this software can run on (e.g., ["hpc-a", "hpc-b"]). Empty means all clusters allowed.',
     )
     storage_dirname = models.CharField(
         max_length=64,
@@ -871,11 +871,6 @@ class FilesystemSurvey(models.Model):
     and directory-level aggregates (via DirectorySummary) to avoid bloating the database.
     """
 
-    CLUSTER_CHOICES = [
-        ("czii", "CZII"),
-        ("bruno", "Bruno"),
-    ]
-
     STATUS_CHOICES = [
         ("pending", "Pending"),
         ("submitted", "Submitted"),
@@ -886,7 +881,7 @@ class FilesystemSurvey(models.Model):
     ]
 
     # Survey identification
-    cluster = models.CharField(max_length=16, choices=CLUSTER_CHOICES, db_index=True)
+    cluster = models.CharField(max_length=16, db_index=True)
     base_path = models.CharField(max_length=500, help_text="Root path that was surveyed")
 
     # SLURM job tracking

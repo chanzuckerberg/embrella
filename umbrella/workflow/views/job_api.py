@@ -16,7 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from processes.models import JobLog, PipeExecution, SyncerLog, SyncerProcess
-from processes.services.cluster_resolver import cluster_id_from_parameters, get_default_cluster_id
+from processes.services.cluster_resolver import cluster_id_from_parameters, get_default_cluster_id, is_active_cluster
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from stores.models import Cluster
@@ -60,7 +60,7 @@ def get_jobs_list(request):
     1. Fetches live job data from SLURM (squeue)
     2. Combines with historical data from PipeExecution model
     3. Supports filtering by user, status, job name, etc.
-    4. Supports cluster selection (czii/bruno)
+    4. Supports cluster selection
     5. Includes historical jobs (completed/failed) from PipeExecution
     """
     try:
@@ -520,9 +520,8 @@ def get_jobs_list(request):
             name="cluster_id",
             type=OpenApiTypes.STR,
             location=OpenApiParameter.QUERY,
-            description="Cluster to query (czii or bruno)",
+            description="Cluster to query. Defaults to the site default cluster.",
             required=False,
-            default="czii",
         ),
     ],
     responses={
@@ -535,7 +534,7 @@ def get_jobs_filterlist(request):
     Returns available filter options for job management:
     - Users (from live SLURM jobs)
     - Job statuses (from SLURM states + PipeExecution)
-    - Clusters (czii, bruno)
+    - Clusters
     - Job names (from PipeExecution)
     - Partitions (from live job data)
     - Date ranges
@@ -815,12 +814,12 @@ def bulk_cancel_jobs(request):
     try:
         data = request.data
         job_ids = data.get("job_ids", [])
-        cluster_id = data.get("cluster_id", "czii")
+        cluster_id = data.get("cluster_id") or get_default_cluster_id()
 
         if not job_ids:
             return JsonResponse({"error": "No job IDs provided"}, status=400)
 
-        if cluster_id not in ["czii", "bruno"]:
+        if not is_active_cluster(cluster_id):
             return JsonResponse({"error": "Invalid cluster_id"}, status=400)
 
         try:

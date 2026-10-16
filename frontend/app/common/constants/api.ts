@@ -41,6 +41,7 @@ export enum API {
   SYNCER_LOGS = '/workflow/v1/jobs/:jobId/syncer_logs/',
 
   // SSH Setup
+  CLUSTERS = '/workflow/v1/clusters/',
   SSH_CHECK_SETUP = '/workflow/v1/ssh/check_setup/',
 
   // Pipeline Execution
