@@ -20,7 +20,7 @@ const TOMO5_PLAN = {
   scope: 'krios1',
   software: 'tomo5',
   camera: 'Falcon4i',
-  acquisition_defaults: { super_resolution: false },
+  acquisition_defaults: { super_resolution: false, phase_plate_used: false, energy_filter_used: false },
 };
 const SERIALEM_PLAN = {
   id: 7,
@@ -29,7 +29,7 @@ const SERIALEM_PLAN = {
   scope: 'krios1',
   software: 'serialEM',
   camera: 'Falcon4i',
-  acquisition_defaults: { super_resolution: true },
+  acquisition_defaults: { super_resolution: true, phase_plate_used: true, energy_filter_used: false },
 };
 // What the backend does: the chosen plan's name_prefix in front of the date.
 const PLAN_PREFIX: Record<number, string> = { [TOMO5_PLAN.id]: '', [SERIALEM_PLAN.id]: 's' };
@@ -213,9 +213,12 @@ describe('useSessionForm dependent lists', () => {
 
     act(() => result.current.selectSessionPlan(SERIALEM_PLAN.id));
     expect(result.current.state.superResolution).toBe(true);
+    expect(result.current.state.phasePlateUsed).toBe(true); // SERIALEM has phase_plate_used: true
+    expect(result.current.state.energyFilterUsed).toBe(false);
 
     act(() => result.current.selectSessionPlan(TOMO5_PLAN.id));
     expect(result.current.state.superResolution).toBe(false);
+    expect(result.current.state.phasePlateUsed).toBe(false); // TOMO5 has phase_plate_used: false
   });
 
   it('selecting a user loads their grids and pre-selects the default one', async () => {

@@ -49,7 +49,11 @@ class TestFormOptions:
 
         plan = client.get("/tem/v1/sessions/form-options/").json()["session_plans"][0]
 
-        assert plan["acquisition_defaults"] == {"super_resolution": True}
+        assert plan["acquisition_defaults"] == {
+            "super_resolution": True,
+            "phase_plate_used": False,
+            "energy_filter_used": False,
+        }
 
     def test_filters_to_tomo_and_sngl_workflows(self, client, test_user, microscope, camera, software):
         client.force_login(test_user)
@@ -282,10 +286,25 @@ class TestCreateSession:
         response = self._create(client, session_plan, project, grid, super_resolution=False)
 
         assert response.status_code == 201
-        assert response.json()["acquisition"] == {"super_resolution": False}
+        assert response.json()["acquisition"] == {
+            "super_resolution": False,
+            "phase_plate_used": False,
+            "energy_filter_used": False,
+        }
         session = MsiSession.objects.get(name="26mar06f")
         assert session.super_resolution is False
         assert session.acquisition.pk != session_plan.acquisition_defaults.pk
+
+    def test_posted_phase_plate_used_wins_over_the_plan_profile(self, client, test_user, session_plan, project, grid):
+        session_plan.acquisition_defaults = AcquisitionSettings.objects.create(label="k2", phase_plate_used=False)
+        session_plan.save()
+        client.force_login(test_user)
+
+        response = self._create(client, session_plan, project, grid, phase_plate_used=True)
+
+        assert response.status_code == 201
+        assert response.json()["acquisition"]["phase_plate_used"] is True
+        assert MsiSession.objects.get(name="26mar06f").phase_plate_used is True
 
     def test_omitted_acquisition_copies_the_plan_profile(self, client, test_user, session_plan, project, grid):
         session_plan.acquisition_defaults = AcquisitionSettings.objects.create(label="k2", super_resolution=True)
@@ -303,7 +322,11 @@ class TestCreateSession:
         response = self._create(client, session_plan, project, grid)
 
         assert response.status_code == 201
-        assert response.json()["acquisition"] == {"super_resolution": False}
+        assert response.json()["acquisition"] == {
+            "super_resolution": False,
+            "phase_plate_used": False,
+            "energy_filter_used": False,
+        }
         assert str(MsiSession.objects.get(name="26mar06f").acquisition) == "snapshot 26mar06f"
 
     def test_rejects_duplicate_name(self, client, test_user, session_plan, project, grid):
