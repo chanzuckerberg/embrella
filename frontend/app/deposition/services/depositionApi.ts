@@ -124,8 +124,9 @@ export async function fetchDatasetJobStatus(id: number): Promise<unknown> {
   return parse(await fetchResource(url(`${API.DEPOSITION_DATASETS}${id}/job-status/`)));
 }
 
-export async function fetchDatasetLogs(id: number): Promise<JobLogs> {
-  return parse(await fetchResource(url(`${API.DEPOSITION_DATASETS}${id}/logs/`)));
+export async function fetchDatasetLogs(id: number, phase?: 'prep' | 'push'): Promise<JobLogs> {
+  const query = phase ? `?phase=${phase}` : '';
+  return parse(await fetchResource(url(`${API.DEPOSITION_DATASETS}${id}/logs/${query}`)));
 }
 
 export async function fetchSession(id: number): Promise<DepositionSession> {

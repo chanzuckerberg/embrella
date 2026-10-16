@@ -147,6 +147,7 @@ class DatasetJob(models.Model):
     # Cluster prep staged on; push reuses it so a later metadata edit can't send the upload elsewhere.
     cluster_id = models.CharField(max_length=64, blank=True, default="")
     started_at = models.DateTimeField(null=True, blank=True)
+    prep_completed_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     log_excerpt = models.TextField(null=True, blank=True)
     error_message = models.TextField(null=True, blank=True)

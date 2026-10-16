@@ -67,6 +67,7 @@ def on_prep_complete(job, success, *, job_id=None, error_message=None, log_excer
         # Drop any failure left from an earlier attempt.
         fields = {
             "state": "prep_completed",
+            "prep_completed_at": timezone.now(),
             "error_message": "",
             "completed_at": None,
             "log_excerpt": log_excerpt or "",

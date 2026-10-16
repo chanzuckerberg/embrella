@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { fetchDatasetLogs } from '../services/depositionApi';
 import { depositionKeys } from '../queryKeys';
-import { isActiveJobState } from './useSubmitFlow';
+import { isActiveJobPhase } from '../submitPhases';
 import type { JobLogs, JobState } from '../types';
 
 // Gentler than the dataset poll; /logs reads over SSH.
@@ -15,6 +15,7 @@ export const SERVER_LOG_COOLDOWN_MS = 15000;
 
 interface DatasetLogsOptions {
   state?: JobState | null;
+  phase?: 'prep' | 'push';
   enabled?: boolean;
   pollIntervalMs?: number;
 }
@@ -22,26 +23,33 @@ interface DatasetLogsOptions {
 /** Job log tail from GET /logs: polls while active, and refetches on each state change. */
 export function useDatasetLogs(
   id: number,
-  { state, enabled = true, pollIntervalMs = DEFAULT_LOG_POLL_INTERVAL_MS }: DatasetLogsOptions = {}
+  { state, phase, enabled = true, pollIntervalMs = DEFAULT_LOG_POLL_INTERVAL_MS }: DatasetLogsOptions = {}
 ) {
-  const active = isActiveJobState(state);
+  const active = isActiveJobPhase(state, phase);
   const query = useQuery<JobLogs>({
-    queryKey: depositionKeys.logs(id),
-    queryFn: () => fetchDatasetLogs(id),
+    queryKey: depositionKeys.logs(id, phase),
+    queryFn: () => fetchDatasetLogs(id, phase),
     enabled,
+    // Reopening must fetch the final tail; the server already throttles SSH reads.
+    staleTime: 0,
     refetchInterval: active ? pollIntervalMs : false,
   });
 
   const { refetch } = query;
-  const previous = useRef({ id, state, enabled, active });
+  const previous = useRef({ id, state, phase, enabled, active });
   useEffect(() => {
     const prev = previous.current;
-    previous.current = { id, state, enabled, active };
-    // useQuery already covers mount, dataset change, and enabling.
-    if (!enabled || !prev.enabled || prev.id !== id || prev.state === state) return;
-    // Interval only stops the timer; fetch on the transition itself.
+    previous.current = { id, state, phase, enabled, active };
+    if (!enabled) return;
+    const opened = !prev.enabled || prev.id !== id || prev.phase !== phase;
+    const changed = prev.state !== state;
+    if (!opened && !changed) return;
+    if (opened) {
+      if (changed && prev.id === id && prev.phase === phase) refetch();
+      return;
+    }
     const request = refetch();
-    if (!prev.active || active) return;
+    if (active || !prev.active) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     // Backend's cooldown starts after the read, so chain off it.
@@ -52,7 +60,7 @@ export function useDatasetLogs(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [id, state, enabled, active, refetch]);
+  }, [id, state, phase, enabled, active, refetch]);
 
   return query;
 }

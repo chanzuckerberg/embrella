@@ -6,7 +6,7 @@ import { Button, Icon } from '@czi-sds/components';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import { Box, Chip, CircularProgress, Link, TableCell, TableRow, Tooltip, Typography } from '@mui/material';
 
-import type { Dataset, DatasetStatus } from '../../types';
+import { isEditableStatus, type Dataset, type DatasetStatus } from '../../types';
 import { MAX_SESSION_NAMES, STATUS_META, TYPE_META } from '../constants';
 import { absDate, softChipSx, timeAgo } from '../utils';
 
@@ -32,7 +32,7 @@ export function DatasetRow({ dataset, isOwner = false }: { dataset: Dataset; isO
   const shownNames = showAllSessions ? sessionNames : sessionNames.slice(0, MAX_SESSION_NAMES);
   const meta = STATUS_META[dataset.status];
   // Only the deposition's owner can edit; everyone else gets a read-only View.
-  const action = isOwner && dataset.status === 'draft' ? 'Resume' : 'View';
+  const action = isOwner && isEditableStatus(dataset.status) ? 'Resume' : 'View';
   const typeLabel = dataset.type ?? 'Tomos only';
   const typeColor = TYPE_META[typeLabel] ?? 'default';
 

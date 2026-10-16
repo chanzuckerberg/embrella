@@ -7,7 +7,7 @@ from django_q.tasks import async_task
 
 from common import clusterio
 from depositions.models import DatasetJob
-from depositions.services import submission
+from depositions.services import logs, submission
 
 logger = logging.getLogger(__name__)
 
@@ -33,16 +33,19 @@ def _job_auth():
         return None
 
 
-def _give_up(job, phase, cluster_id, slurm_job_id, reason):
+def _give_up(job, phase, cluster_id, slurm_job_id, reason, *, capture_log=True):
     from depositions.services.launch import cancel_deposition_job
 
     logger.warning("Deposition %s syncer giving up on DatasetJob %s: %s", phase, job.pk, reason)
+    log_excerpt = None
     if slurm_job_id:
         try:
             auth = _job_auth()
             if not auth:
                 raise RuntimeError("Unable to resolve the service account's cluster credentials.")
             cancel_deposition_job(cluster_id=cluster_id, job_id=slurm_job_id, auth=auth)
+            if capture_log:
+                log_excerpt = logs.capture_failure_tail(cluster_id, auth, phase, slurm_job_id)
         except Exception:
             logger.exception(
                 "Could not cancel %s job %s on give-up; leaving DatasetJob %s for an operator.",
@@ -51,7 +54,7 @@ def _give_up(job, phase, cluster_id, slurm_job_id, reason):
                 job.pk,
             )
             return False
-    _COMPLETION[phase](job, False, job_id=slurm_job_id or None, error_message=reason)
+    _COMPLETION[phase](job, False, job_id=slurm_job_id or None, error_message=reason, log_excerpt=log_excerpt)
     return True
 
 
@@ -101,12 +104,21 @@ def run_deposition_job_syncer(dataset_job_id, phase, cluster_id, expected_job_id
         _reschedule(dataset_job_id, phase, cluster_id, expected_job_id, attempts + 1, NOT_LISTED_DELAY)
         return {"status": "waiting_id"}
 
-    syncer = JobStatusSyncer(job_id=slurm_job_id, cluster_id=cluster_id, auth=_job_auth())
+    auth = _job_auth()
+    syncer = JobStatusSyncer(job_id=slurm_job_id, cluster_id=cluster_id, auth=auth)
     try:
         info = syncer.get_job_info_from_sacct()
         if info is None:
             if attempts >= MAX_WAIT_ATTEMPTS:
-                _give_up(job, phase, cluster_id, slurm_job_id, f"Deposition {phase} job {slurm_job_id} never in sacct.")
+                # Never in sacct: no .out to read, so skip the (failing) log capture.
+                _give_up(
+                    job,
+                    phase,
+                    cluster_id,
+                    slurm_job_id,
+                    f"Deposition {phase} job never started on the cluster.",
+                    capture_log=False,
+                )
                 return {"status": "gave_up", "reason": "not_in_sacct"}
             _reschedule(dataset_job_id, phase, cluster_id, expected_job_id, attempts + 1, NOT_LISTED_DELAY)
             return {"status": "waiting"}
@@ -117,19 +129,20 @@ def run_deposition_job_syncer(dataset_job_id, phase, cluster_id, expected_job_id
             _reschedule(dataset_job_id, phase, cluster_id, expected_job_id, 0, POLL_INTERVAL)
             return {"status": "running", "state": info["state"]}
         success = info["state"] == "COMPLETED" and _exit_ok(info.get("exit_code"))
-        _COMPLETION[phase](
-            job,
-            success,
-            job_id=slurm_job_id,
-            error_message=None
-            if success
-            else f"Deposition {phase} job ended {info['state']} (exit {info.get('exit_code')}).",
-        )
+        error_message = None
+        log_excerpt = None
+        if not success:
+            error_message = f"Deposition {phase} job ended {info['state']} (exit {info.get('exit_code')})."
+            # Snapshot the SLURM tail so the failure's cause survives after live reads stop.
+            log_excerpt = logs.capture_failure_tail(cluster_id, auth, phase, slurm_job_id)
+        _COMPLETION[phase](job, success, job_id=slurm_job_id, error_message=error_message, log_excerpt=log_excerpt)
         return {"status": "terminal", "state": info["state"], "success": success}
     except Exception as e:
         logger.error("Deposition syncer error (%s job %s): %s", phase, slurm_job_id, e)
         if attempts >= MAX_WAIT_ATTEMPTS:
-            _give_up(job, phase, cluster_id, slurm_job_id, f"Deposition {phase} syncer kept erroring: {e}")
+            _give_up(
+                job, phase, cluster_id, slurm_job_id, f"Lost contact with the cluster while checking the {phase} job."
+            )
             return {"status": "gave_up", "reason": "error"}
         _reschedule(dataset_job_id, phase, cluster_id, expected_job_id, attempts + 1, ERROR_BACKOFF)
         return {"status": "error", "error": str(e)}

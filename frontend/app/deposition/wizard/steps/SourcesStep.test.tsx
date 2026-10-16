@@ -75,3 +75,23 @@ it('allows an unused blank new row without dropping existing sessions', async ()
     })
   );
 });
+
+it('allows removing a saved session after submission fails and saves the removal', async () => {
+  const failedDataset = { ...dataset, status: 'failed' } as Dataset;
+  (updateDataset as jest.Mock).mockResolvedValue({ ...failedDataset, sessions: [] });
+  render(<SourcesStep dataset={failedDataset} readOnly={false} reportSave={jest.fn()} />);
+  expect(tableProps().readOnly).toBe(false);
+  act(() => tableProps().onChange([]));
+  await act(async () => jest.advanceTimersByTime(5000));
+  expect(updateDataset).toHaveBeenCalledWith(1, expect.objectContaining({ sessions: [] }));
+});
+
+it.each(['syncing', 'pushed'])('keeps %s datasets read-only', (status) => {
+  render(<SourcesStep dataset={{ ...dataset, status } as Dataset} readOnly={false} reportSave={jest.fn()} />);
+  expect(tableProps().readOnly).toBe(true);
+});
+
+it('keeps a failed dataset read-only for a viewer without edit permission', () => {
+  render(<SourcesStep dataset={{ ...dataset, status: 'failed' }} readOnly reportSave={jest.fn()} />);
+  expect(tableProps().readOnly).toBe(true);
+});

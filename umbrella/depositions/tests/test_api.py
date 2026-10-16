@@ -1177,7 +1177,7 @@ class TestLogsEndpoint:
         assert r.json()["source"] == "live"
         read.assert_called_once()
 
-    def test_non_owner_gets_stored_excerpt_not_a_live_read(self, auth_client):
+    def test_non_owner_gets_no_excerpt_or_live_read(self, auth_client):
         # Any logged-in user can view a deposition, but only the owner triggers a service-account read.
         ds = self._owned_dataset(auth_client)
         self._running_job(ds)
@@ -1188,7 +1188,101 @@ class TestLogsEndpoint:
             r = client.get(f"{DATASETS}{ds['id']}/logs/")
         assert r.status_code == 200, r.content
         assert r.json()["source"] == "stored"
-        assert r.json()["logs"] == "stored tail"
+        assert r.json()["logs"] == ""
+
+    def test_invalid_log_phase_is_rejected(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        response = auth_client.get(f"{DATASETS}{ds['id']}/logs/?phase=validation")
+        assert response.status_code == 400
+
+    def test_owner_can_read_prep_log_during_push(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        job = self._running_job(ds)
+        job.state = "push_running"
+        job.push_slurm_job_id = "456"
+        job.save()
+        auth = {"username": "svc"}
+        with (
+            mock.patch("depositions.services.logs.clusterio.get_auth_service_user", return_value=auth),
+            mock.patch("depositions.services.logs._read_slurm_tail", return_value="prep output") as read,
+        ):
+            response = auth_client.get(f"{DATASETS}{ds['id']}/logs/?phase=prep")
+        assert response.status_code == 200
+        assert response.json()["phase"] == "prep"
+        assert response.json()["logs"] == "prep output"
+        read.assert_called_once_with("bruno", auth, "prep", "123")
+
+    def test_requested_push_without_an_attempt_does_not_show_prep_excerpt(self, auth_client):
+        from depositions.models import Dataset, DatasetJob
+
+        ds = self._owned_dataset(auth_client)
+        DatasetJob.objects.create(dataset=Dataset.objects.get(pk=ds["id"]), state="prep_completed", log_excerpt="prep")
+        response = auth_client.get(f"{DATASETS}{ds['id']}/logs/?phase=push")
+        assert response.status_code == 200
+        assert response.json()["phase"] == "push"
+        assert response.json()["logs"] == ""
+
+
+@pytest.mark.django_db
+class TestRawLogPrivacy:
+    @pytest.mark.parametrize("is_owner", [True, False])
+    @pytest.mark.parametrize("endpoint", ["deposition_list", "deposition", "dataset_list", "dataset", "job_status"])
+    def test_general_payloads_exclude_raw_logs(self, auth_client, is_owner, endpoint):
+        from depositions.models import Dataset, DatasetJob
+
+        dep = _make_deposition(auth_client)
+        ds = _make_dataset(auth_client, dep["id"])
+        raw_log = "private cluster failure /srv/user-data/private-run"
+        DatasetJob.objects.create(dataset=Dataset.objects.get(pk=ds["id"]), state="failed", log_excerpt=raw_log)
+        if not is_owner:
+            other = User.objects.create_user(username="viewer@example.com", password="pw")
+            auth_client.force_login(other)
+        endpoints = {
+            "deposition_list": DEPOSITIONS,
+            "deposition": f"{DEPOSITIONS}{dep['id']}/",
+            "dataset_list": DATASETS,
+            "dataset": f"{DATASETS}{ds['id']}/",
+            "job_status": f"{DATASETS}{ds['id']}/job-status/",
+        }
+        response = auth_client.get(endpoints[endpoint])
+        assert response.status_code == 200, response.content
+        payload = json.dumps(response.json())
+        assert "log_excerpt" not in payload
+        assert raw_log not in payload
+
+    @pytest.mark.parametrize("phase", ["prep", "push"])
+    def test_saved_failure_logs_are_owner_only(self, auth_client, phase):
+        from depositions.models import Dataset, DatasetJob
+
+        dep = _make_deposition(auth_client)
+        ds = _make_dataset(auth_client, dep["id"])
+        DatasetJob.objects.create(
+            dataset=Dataset.objects.get(pk=ds["id"]),
+            state="failed",
+            prep_slurm_job_id="123",
+            push_slurm_job_id="456" if phase == "push" else "",
+            cluster_id="bruno",
+            log_excerpt="private failure tail",
+        )
+        url = f"{DATASETS}{ds['id']}/logs/?phase={phase}"
+        with mock.patch(
+            "depositions.services.logs.clusterio.get_auth_service_user", side_effect=RuntimeError("offline")
+        ):
+            owner_response = auth_client.get(url)
+        assert owner_response.status_code == 200
+        assert owner_response.json()["logs"] == "private failure tail"
+
+        other = User.objects.create_user(username="viewer@example.com", password="pw")
+        auth_client.force_login(other)
+        with (
+            mock.patch("depositions.services.logs.clusterio.get_auth_service_user") as auth,
+            mock.patch("depositions.services.logs._read_slurm_tail") as read,
+        ):
+            viewer_response = auth_client.get(url)
+        assert viewer_response.status_code == 200
+        assert viewer_response.json()["logs"] == ""
+        auth.assert_not_called()
+        read.assert_not_called()
 
 
 @pytest.mark.django_db

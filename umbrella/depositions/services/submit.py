@@ -92,6 +92,8 @@ def submit_dataset_prep(dataset):
                 error_message="",
                 log_excerpt="",
                 started_at=timezone.now(),
+                prep_completed_at=None,
+                completed_at=None,
             )
         )
         if not claimed:
