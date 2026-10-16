@@ -7,7 +7,7 @@ from django_q.tasks import async_task
 
 from common import clusterio
 from depositions.models import DatasetJob
-from depositions.services import logs, progress, submission
+from depositions.services import logs, progress, submission, validation
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +138,16 @@ def run_deposition_job_syncer(dataset_job_id, phase, cluster_id, expected_job_id
             # Snapshot the SLURM tail so the failure's cause survives after live reads stop.
             log_excerpt = logs.capture_failure_tail(cluster_id, auth, phase, slurm_job_id)
         summary = progress.collect(job, phase, cluster_id, slurm_job_id, auth)
-        extra = {"sync_summary": summary} if phase == "prep" else {}
+        extra = {}
+        if phase == "prep":
+            extra["sync_summary"] = summary
+            if success:
+                # A failed log read yields unavailable and blocks upload until re-prep.
+                try:
+                    out = logs.read_slurm_tail(cluster_id, auth, phase, slurm_job_id) if auth else ""
+                except Exception:
+                    out = ""
+                extra["validation"] = validation.result_for_attempt(out, slurm_job_id, job.dataset.dataset_id)
         _COMPLETION[phase](
             job, success, job_id=slurm_job_id, error_message=error_message, log_excerpt=log_excerpt, **extra
         )

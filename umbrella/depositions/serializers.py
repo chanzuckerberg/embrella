@@ -113,6 +113,24 @@ class DatasetJobSerializer(serializers.ModelSerializer):
     sync_progress = serializers.SerializerMethodField()
     sync_summary = serializers.SerializerMethodField()
     push_progress = serializers.SerializerMethodField()
+    validation = serializers.SerializerMethodField()
+
+    def get_validation(self, obj):
+        result = obj.validation
+        if result is None or _is_owner(self, obj.dataset):
+            return result
+        # CLI text can contain private paths; only the owner sees it.
+        return {
+            **{key: result[key] for key in ("status", "attempt", "dataset_id") if key in result},
+            "warnings": [
+                {"message": "Validation warning. Details are available to the submission owner."}
+                for _ in result.get("warnings", [])
+            ],
+            "blocking_issues": [
+                {"message": "Validation issue. Details are available to the submission owner."}
+                for _ in result.get("blocking_issues", [])
+            ],
+        }
 
     def get_sync_progress(self, obj):
         return serialize_progress(obj.sync_progress)
@@ -125,7 +143,7 @@ class DatasetJobSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DatasetJob
-        # Raw cluster output is available only through the owner-gated logs endpoint.
+        # Full log excerpts are available only through the owner-gated logs endpoint.
         exclude = ["log_excerpt"]
 
 

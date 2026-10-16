@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { fetchDataset, pushDataset, submitDataset } from '../services/depositionApi';
+import { fetchDataset, pushDataset, resetDatasetPreparation, submitDataset } from '../services/depositionApi';
 import { depositionKeys } from '../queryKeys';
 import type { Dataset, JobState } from '../types';
 import { isActiveJobPhase } from '../submitPhases';
@@ -34,13 +34,16 @@ export function useSubmitFlow(
     refetchInterval: (q) => (isActiveJobState(q.state.data?.job?.state) ? pollIntervalMs : false),
   });
 
-  const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: depositionKeys.dataset(id) });
-    queryClient.invalidateQueries({ queryKey: depositionKeys.submissionsRoot() });
-  };
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: depositionKeys.dataset(id) }),
+      queryClient.invalidateQueries({ queryKey: depositionKeys.submissionsRoot() }),
+    ]);
 
   const submit = useMutation({ mutationFn: () => submitDataset(id), onSettled: refresh });
   const push = useMutation({ mutationFn: () => pushDataset(id), onSettled: refresh });
 
-  return { dataset: query.data ?? initial, submit, push };
+  const resetPreparation = useMutation({ mutationFn: () => resetDatasetPreparation(id), onSettled: refresh });
+
+  return { dataset: query.data ?? initial, submit, push, resetPreparation };
 }

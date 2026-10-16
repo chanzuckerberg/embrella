@@ -129,6 +129,11 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
             reportSave={setSave}
             reportBlocking={setBlocking}
             readOnly={readOnly}
+            onPreparationReset={() => {
+              setSave(null);
+              setBlocking(0);
+              setCurrent(1);
+            }}
             manualAutofillSessions={manualAutofillSessions}
             onManualAutofillEntry={(key) => setManualAutofillSessions((prev) => new Set(prev).add(key))}
           />

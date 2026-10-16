@@ -119,7 +119,7 @@ class DatasetJob(models.Model):
         "pending": {"prep_submitted"},
         "prep_submitted": {"prep_running", "prep_completed", "failed"},
         "prep_running": {"prep_completed", "failed"},
-        "prep_completed": {"push_submitted", "pending", "failed"},
+        "prep_completed": {"prep_submitted", "push_submitted", "pending", "failed"},
         "push_submitted": {"push_running", "completed", "failed"},
         "push_running": {"completed", "failed"},
         "failed": {"prep_submitted", "pending"},
@@ -129,7 +129,8 @@ class DatasetJob(models.Model):
     # allowed only in pending or failed.
     LOCKED_STATES = frozenset(TRANSITIONS) - {"pending", "failed"}
     DATASET_STATUS = {
-        "pending": "syncing",
+        # After a reset, pending means an editable draft.
+        "pending": "draft",
         "prep_submitted": "syncing",
         "prep_running": "syncing",
         "prep_completed": "syncing",
@@ -153,6 +154,8 @@ class DatasetJob(models.Model):
     sync_progress = models.JSONField(null=True, blank=True)
     sync_summary = models.JSONField(null=True, blank=True)
     push_progress = models.JSONField(null=True, blank=True)
+    # Pre-flight validation result for the current prep attempt (see services/validation.py).
+    validation = models.JSONField(null=True, blank=True)
     error_message = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

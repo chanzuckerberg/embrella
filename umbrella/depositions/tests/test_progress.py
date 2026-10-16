@@ -30,12 +30,12 @@ def test_collect_rejects_regressions_and_old_attempts_and_sanitizes_api(monkeypa
     )
     monkeypatch.setattr(progress, "get_processor", lambda _: SimpleNamespace(get_script_directory=lambda **kw: "/jobs"))
     monkeypatch.setattr(progress.clusterio, "read_remote_file_tail", lambda *a, **kw: json.dumps(raw))
-    progress.collect(job, "prep", "bruno", "123", {"username": "service"})
+    progress.collect(job, "prep", "cluster-a", "123", {"username": "service"})
     job.refresh_from_db()
     saved = job.sync_progress
     for fields, attempt in [({"done": 4}, "123"), ({"updated_at": 109}, "123"), ({"done": 6}, "old")]:
         raw.update(fields)
-        progress.collect(job, "prep", "bruno", attempt, {"username": "service"})
+        progress.collect(job, "prep", "cluster-a", attempt, {"username": "service"})
         job.refresh_from_db()
         assert job.sync_progress == saved
     public = DatasetJobSerializer(job).data["sync_progress"]
@@ -62,7 +62,7 @@ def test_missing_progress_never_changes_job_state(monkeypatch):
         raise OSError("unavailable")
 
     monkeypatch.setattr(progress.clusterio, "read_remote_file_tail", unavailable)
-    assert progress.collect(job, "push", "bruno", "123", {"username": "service"}) is None
+    assert progress.collect(job, "push", "cluster-a", "123", {"username": "service"}) is None
     job.refresh_from_db()
     assert job.state == "push_running" and job.push_progress is None
 
@@ -95,6 +95,87 @@ def test_reporter_counts_real_staged_files_and_followed_link_bytes(tmp_path):
     }
 
 
+@pytest.mark.parametrize("mdoc_suffix", [".mdoc", ".mrc.mdoc"])
+def test_prep_inventory_matches_cli_mdoc_support(tmp_path, mdoc_suffix):
+    import yaml
+
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "TiltSeries_Metrics.csv").write_text("Tilt_Series\nPosition_1.mrc\n")
+    mdoc_dir = tmp_path / "mdoc"
+    mdoc_dir.mkdir()
+    frames_dir = tmp_path / "frames"
+    frames_dir.mkdir()
+    (mdoc_dir / f"Position_1{mdoc_suffix}").write_bytes(
+        b"# non-UTF-8 note: \xff\nSubFramePath = X:\\data\\frame_1.tif\n"
+    )
+    (frames_dir / "frame_1.tif").write_bytes(b"f")
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        yaml.safe_dump(
+            {
+                "output_dir": str(tmp_path),
+                "datasets": {
+                    "ds": {
+                        "dataset_id": 2,
+                        "sessions": {
+                            "session": {
+                                "paths": {"aretomo3": str(source), "mdoc": str(mdoc_dir), "frames": str(frames_dir)}
+                            }
+                        },
+                    }
+                },
+            }
+        )
+    )
+    _, inventory = reporter.prep_inventory(config, "2")
+    if mdoc_suffix == ".mdoc":
+        assert inventory["session_Position_1.mdoc"] == "Metadata"
+        assert inventory["session_Position_1/session_frame_1.tif"] == "Frames"
+    else:
+        # Add this suffix only after the CLI stages it (deposition_prep.commands.sync).
+        assert "session_Position_1.mdoc" not in inventory
+        assert "Frames" not in inventory.values()
+
+
+# Expected staged names mirror deposition_prep SYMLINK_TYPES; the mapping is confirmed against the CLI source, not here.
+def test_prep_inventory_matches_expected_staged_names(tmp_path):
+    import yaml
+
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "TiltSeries_Metrics.csv").write_text("Tilt_Series\nPosition_1.mrc\n")
+    staged_names = {
+        "Position_1.aln": "session_Position_1.aln",
+        "Position_1_CTF.txt": "session_Position_1_CTFFIND_format_CTF.txt",
+        "Position_1.mrc": "session_Position_1_TS.mrc",
+        "Position_1_Vol.mrc": "session_Position_1_dctf_Vol.mrc",
+    }
+    for name in staged_names:
+        (source / name).write_bytes(b"data")
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        yaml.safe_dump(
+            {
+                "output_dir": str(tmp_path),
+                "datasets": {
+                    "ds": {
+                        "dataset_id": 2,
+                        "sessions": {"session": {"paths": {"aretomo3": str(source), "dctf_vol": str(source)}}},
+                    }
+                },
+            }
+        )
+    )
+    root, inventory = reporter.prep_inventory(config, "2")
+    root.mkdir()
+    for name, staged in staged_names.items():
+        (root / staged).symlink_to(source / name)
+    items = {item["label"]: item for item in reporter.prep_sample(root, inventory, False)["items"]}
+    for label in ("Alignment", "CTF", "Tilt series", "Tomograms"):
+        assert items[label] == {"label": label, "done": 1, "total": 1}
+
+
 @pytest.mark.django_db
 def test_syncer_stores_final_summary_on_completion(monkeypatch):
     import workflow.syncers
@@ -118,7 +199,7 @@ def test_syncer_stores_final_summary_on_completion(monkeypatch):
             get_job_info_from_sacct=lambda: {"state": "COMPLETED", "exit_code": "0:0"}, is_job_terminal=lambda _: True
         ),
     )
-    tasks.run_deposition_job_syncer(job.pk, "prep", "bruno", "123")
+    tasks.run_deposition_job_syncer(job.pk, "prep", "cluster-a", "123")
     job.refresh_from_db()
     assert job.state == "prep_completed"
     public = DatasetJobSerializer(job).data
@@ -156,9 +237,8 @@ def test_generated_scripts_publish_progress_and_preserve_command_failure(tmp_pat
                 "config_yaml": yaml.safe_dump(config),
                 "dataset_id": 2,
                 "prep_env": "test",
-                "run_validate": False,
             },
-            SimpleNamespace(cluster_id="bruno"),
+            SimpleNamespace(cluster_id="cluster-a"),
         )
         command = 'cryoetportalprep() { mkdir -p "$output_dir/2"; printf data > "$output_dir/2/test.mrc"; return "$command_status"; }'
     else:
@@ -168,7 +248,7 @@ def test_generated_scripts_publish_progress_and_preserve_command_failure(tmp_pat
                 "s3_dest": "s3://example/dataset/",
                 "prologue": ":",
             },
-            SimpleNamespace(cluster_id="bruno"),
+            SimpleNamespace(cluster_id="cluster-a"),
         )
         command = (
             'aws() { printf "Completed 2.0 MiB/4.0 MiB\\rCompleted 4.0 MiB/4.0 MiB\\n"; return "$command_status"; }'

@@ -51,7 +51,9 @@ export interface ValidationWarning {
 }
 
 export interface JobValidation {
-  passed: boolean;
+  status: 'passed' | 'failed' | 'unavailable';
+  attempt: string | null;
+  blocking_issues: ValidationWarning[];
   warnings: ValidationWarning[];
 }
 

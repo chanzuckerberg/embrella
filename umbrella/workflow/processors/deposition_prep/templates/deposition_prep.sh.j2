@@ -57,8 +57,9 @@ done
 kill "$progress_pid" 2>/dev/null || true
 wait "$progress_pid" 2>/dev/null || true
 
-{% if run_validate -%}
-cryoetportalprep push {{ config_path }} --dry-run
-{% endif -%}
+# Validation failures are stored without failing prep; upload is gated on the result.
+python - {{ config_path }} {{ dataset_id }} <<'END_DEPOSITION_VALIDATION'
+{{ validation_code }}
+END_DEPOSITION_VALIDATION
 
 echo "Deposition prep completed."

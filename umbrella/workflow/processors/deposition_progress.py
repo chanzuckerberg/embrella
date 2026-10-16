@@ -17,7 +17,7 @@ def prep_inventory(config_path, dataset_id):
     root = Path(config["output_dir"]) / str(dataset_id)
     block = next(b for b in config["datasets"].values() if b["dataset_id"] == int(dataset_id))
     inventory = {}
-    # File layouts used by the staging CLI.
+    # Source -> staged names from deposition_prep.commands.sync.SYMLINK_TYPES.
     links = (
         ("aretomo3", "{pos}.aln", "{run}.aln", "Alignment"),
         ("aretomo3", "{pos}_CTF.txt", "{run}_CTFFIND_format_CTF.txt", "CTF"),
@@ -49,7 +49,8 @@ def prep_inventory(config_path, dataset_id):
             if paths.get("mdoc") and paths.get("frames"):
                 mdoc = Path(paths["mdoc"]) / f"{pos}.mdoc"
                 if mdoc.is_file():
-                    for original in re.findall(r"^\s*SubFramePath\s*=\s*(.+?)\s*$", mdoc.read_text(), re.MULTILINE):
+                    text = mdoc.read_text(errors="replace")
+                    for original in re.findall(r"^\s*SubFramePath\s*=\s*(.+?)\s*$", text, re.MULTILINE):
                         filename = original.replace("\\", "/").rsplit("/", 1)[-1]
                         if (Path(paths["frames"]) / filename).is_file():
                             target = filename if filename.startswith(prefix) else f"{prefix}_{filename}"

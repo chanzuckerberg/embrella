@@ -12,9 +12,15 @@ jest.mock('../services/depositionApi');
 
 const dataset = {
   id: 7,
+  deposition: 1,
   title: 'DS',
   status: 'syncing',
-  job: { id: 1, state: 'prep_completed' },
+  job: {
+    id: 1,
+    state: 'prep_completed',
+    prep_slurm_job_id: 'prep-1',
+    validation: { status: 'passed', attempt: 'prep-1', warnings: [], blocking_issues: [] },
+  },
 } as Dataset;
 
 function wrapperFor(client: QueryClient) {
@@ -127,4 +133,24 @@ it('uses an overridden polling interval and stops when the job finishes', async 
     client.clear();
     jest.useRealTimers();
   }
+});
+
+it('refreshes the editable dataset before completing reset recovery', async () => {
+  (api.resetDatasetPreparation as jest.Mock).mockImplementation(async () => {
+    (api.fetchDataset as jest.Mock).mockResolvedValue({
+      ...dataset,
+      status: 'draft',
+      job: { id: 1, state: 'pending', validation: null },
+    });
+  });
+  const client = newClient();
+  const { result, unmount } = renderHook(() => useSubmitFlow(dataset), { wrapper: wrapperFor(client) });
+  await act(async () => {
+    await result.current.resetPreparation.mutateAsync();
+  });
+  expect(api.resetDatasetPreparation).toHaveBeenCalledWith(dataset.id);
+  await waitFor(() => expect(result.current.dataset.job?.state).toBe('pending'));
+  expect(result.current.dataset.status).toBe('draft');
+  unmount();
+  client.clear();
 });

@@ -157,7 +157,7 @@ class TestAuthorsJsonValidation:
                 "authors_json": [
                     {
                         "full_name": "Test Author",
-                        "affiliation": "CZ Biohub",
+                        "affiliation": "Example Institute",
                         "orcid": "0000-0002-1825-0097",
                         "is_corresponding": True,
                         "author_list_order": 0,
@@ -344,9 +344,9 @@ class TestAutoFill:
     def _patch_cluster(self):
         """Isolate the SSH/path plumbing so tests exercise the view, not the cluster."""
         return (
-            mock.patch("depositions.views.cluster_id_for_run", return_value="bruno"),
+            mock.patch("depositions.views.cluster_id_for_run", return_value="cluster-a"),
             mock.patch("depositions.views.Cluster"),
-            mock.patch("depositions.views.resolve_review_path", return_value="/hpc/aretomo3/24nov10/run001"),
+            mock.patch("depositions.views.resolve_review_path", return_value="/test/aretomo3/24nov10/run001"),
         )
 
     def test_requires_an_aretomo_run(self, auth_client, owned_session):
@@ -566,9 +566,9 @@ class TestAutoFill:
         # Runs are stored as "001" but the cluster dir is "run001" - the view must prefix it.
         owned_session.aretomo_run_name = "001"
         owned_session.save(update_fields=["aretomo_run_name"])
-        resolve = mock.patch("depositions.views.resolve_review_path", return_value="/hpc/aretomo3/x/run001")
+        resolve = mock.patch("depositions.views.resolve_review_path", return_value="/test/aretomo3/x/run001")
         with (
-            mock.patch("depositions.views.cluster_id_for_run", return_value="bruno"),
+            mock.patch("depositions.views.cluster_id_for_run", return_value="cluster-a"),
             mock.patch("depositions.views.Cluster"),
             resolve as resolve_mock,
             mock.patch(
@@ -1162,7 +1162,7 @@ class TestLogsEndpoint:
             dataset=Dataset.objects.get(pk=ds["id"]),
             state="prep_running",
             prep_slurm_job_id="123",
-            cluster_id="bruno",
+            cluster_id="cluster-a",
             log_excerpt="stored tail",
         )
 
@@ -1171,7 +1171,7 @@ class TestLogsEndpoint:
         self._running_job(ds)
         with (
             mock.patch("depositions.services.logs.clusterio.get_auth_service_user", return_value={"username": "svc"}),
-            mock.patch("depositions.services.logs._read_slurm_tail", return_value="live!") as read,
+            mock.patch("depositions.services.logs.read_slurm_tail", return_value="live!") as read,
         ):
             r = auth_client.get(f"{DATASETS}{ds['id']}/logs/")
         assert r.json()["source"] == "live"
@@ -1184,7 +1184,7 @@ class TestLogsEndpoint:
         other = User.objects.create_user(username="nonowner@example.com", password="pw")
         client = APIClient()
         client.force_login(other)
-        with mock.patch("depositions.services.logs._read_slurm_tail", side_effect=AssertionError("no live read")):
+        with mock.patch("depositions.services.logs.read_slurm_tail", side_effect=AssertionError("no live read")):
             r = client.get(f"{DATASETS}{ds['id']}/logs/")
         assert r.status_code == 200, r.content
         assert r.json()["source"] == "stored"
@@ -1204,13 +1204,13 @@ class TestLogsEndpoint:
         auth = {"username": "svc"}
         with (
             mock.patch("depositions.services.logs.clusterio.get_auth_service_user", return_value=auth),
-            mock.patch("depositions.services.logs._read_slurm_tail", return_value="prep output") as read,
+            mock.patch("depositions.services.logs.read_slurm_tail", return_value="prep output") as read,
         ):
             response = auth_client.get(f"{DATASETS}{ds['id']}/logs/?phase=prep")
         assert response.status_code == 200
         assert response.json()["phase"] == "prep"
         assert response.json()["logs"] == "prep output"
-        read.assert_called_once_with("bruno", auth, "prep", "123")
+        read.assert_called_once_with("cluster-a", auth, "prep", "123")
 
     def test_requested_push_without_an_attempt_does_not_show_prep_excerpt(self, auth_client):
         from depositions.models import Dataset, DatasetJob
@@ -1261,7 +1261,7 @@ class TestRawLogPrivacy:
             state="failed",
             prep_slurm_job_id="123",
             push_slurm_job_id="456" if phase == "push" else "",
-            cluster_id="bruno",
+            cluster_id="cluster-a",
             log_excerpt="private failure tail",
         )
         url = f"{DATASETS}{ds['id']}/logs/?phase={phase}"
@@ -1276,7 +1276,7 @@ class TestRawLogPrivacy:
         auth_client.force_login(other)
         with (
             mock.patch("depositions.services.logs.clusterio.get_auth_service_user") as auth,
-            mock.patch("depositions.services.logs._read_slurm_tail") as read,
+            mock.patch("depositions.services.logs.read_slurm_tail") as read,
         ):
             viewer_response = auth_client.get(url)
         assert viewer_response.status_code == 200
@@ -1318,3 +1318,84 @@ class TestConfigYamlEndpoint:
             r = auth_client.get(f"{DATASETS}{ds['id']}/config.yaml/")
         assert r.status_code == 502
         assert r.json() == {"detail": "Couldn't build the config. Please try again."}
+
+
+@pytest.mark.django_db
+class TestResetPreparationEndpoint:
+    def test_reset_and_payload(self, auth_client):
+        from depositions.models import DatasetJob
+
+        dep = _make_deposition(auth_client)
+        ds = _make_dataset(auth_client, dep["id"])
+        job = DatasetJob.objects.create(
+            dataset_id=ds["id"],
+            state="prep_completed",
+            prep_slurm_job_id="42",
+            validation={"status": "failed", "attempt": "42", "warnings": [], "blocking_issues": [{"message": "fix"}]},
+        )
+        before = auth_client.get(f"{DATASETS}{ds['id']}/job-status/").json()
+        assert before["validation"]["status"] == "failed"
+        response = auth_client.post(f"{DATASETS}{ds['id']}/reset-preparation/")
+        assert response.status_code == 200
+        assert response.json()["state"] == "pending"
+        assert response.json()["validation"] is None  # null means not_run to the UI
+        job.refresh_from_db()
+        assert job.dataset.status == "draft"
+
+    def test_missing_job_returns_public_error(self, auth_client):
+        ds = _make_dataset(auth_client, _make_deposition(auth_client)["id"])
+        response = auth_client.post(f"{DATASETS}{ds['id']}/reset-preparation/")
+        assert response.status_code == 400
+        assert response.json() == {"detail": "This dataset hasn't been prepared yet."}
+
+    def test_non_owner_is_forbidden(self, auth_client):
+        ds = _make_dataset(auth_client, _make_deposition(auth_client)["id"])
+        client = APIClient()
+        client.force_login(User.objects.create_user(username="reset-other", password="pw"))
+        with mock.patch("depositions.services.submission.reset_preparation") as reset:
+            response = client.post(f"{DATASETS}{ds['id']}/reset-preparation/")
+        assert response.status_code == 403
+        reset.assert_not_called()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("is_owner", [True, False])
+@pytest.mark.parametrize("endpoint", ["deposition", "dataset_list", "dataset", "job_status"])
+def test_validation_diagnostics_are_owner_only(auth_client, is_owner, endpoint):
+    from depositions.models import DatasetJob
+
+    dep = _make_deposition(auth_client)
+    ds = _make_dataset(auth_client, dep["id"])
+    warning = "WARNING private diagnostic /srv/private/warning"
+    issue = "ERROR private diagnostic /srv/private/failure"
+    path = "/private/source/path"
+    DatasetJob.objects.create(
+        dataset_id=ds["id"],
+        state="prep_completed",
+        prep_slurm_job_id="42",
+        validation={
+            "status": "failed",
+            "attempt": "42",
+            "warnings": [{"message": warning, "path": path}],
+            "blocking_issues": [{"message": issue, "path": path}],
+        },
+    )
+    if not is_owner:
+        auth_client.force_login(User.objects.create_user(username="diagnostic-viewer", password="pw"))
+    endpoints = {
+        "deposition": f"{DEPOSITIONS}{dep['id']}/",
+        "dataset_list": DATASETS,
+        "dataset": f"{DATASETS}{ds['id']}/",
+        "job_status": f"{DATASETS}{ds['id']}/job-status/",
+    }
+    response = auth_client.get(endpoints[endpoint])
+    assert response.status_code == 200
+    payload = json.dumps(response.json())
+    for raw in (warning, issue, path):
+        assert (raw in payload) == is_owner
+    if endpoint == "job_status":
+        validation = response.json()["validation"]
+        assert validation["status"] == "failed" and validation["attempt"] == "42"
+        assert len(validation["warnings"]) == len(validation["blocking_issues"]) == 1
+        if not is_owner:
+            assert "submission owner" in validation["blocking_issues"][0]["message"]

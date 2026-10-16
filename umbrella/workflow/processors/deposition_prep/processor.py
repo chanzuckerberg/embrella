@@ -1,5 +1,5 @@
-"""DepositionPrepProcessor - Runs one SLURM job to stage and validates a dataset before the push.
-``sync -> copick deposit -> push --dry-run``
+"""DepositionPrepProcessor - Runs one SLURM job to stage and validate a dataset before the push.
+``sync -> copick deposit -> pre-flight validation (push --dry-run, scoped to this dataset)``
 """
 
 import logging
@@ -48,6 +48,7 @@ class DepositionPrepProcessor(BaseProcessor):
             config_delimiter += "_"
         return template.render(
             progress_code=(Path(__file__).parent.parent / "deposition_progress.py").read_text(),
+            validation_code=(Path(__file__).parent.parent / "deposition_validation.py").read_text(),
             dataset_id=shlex.quote(str(params["dataset_id"])),
             output_dir=shlex.quote(params["output_dir"]),
             config_path=shlex.quote(params["config_path"]),
@@ -57,8 +58,6 @@ class DepositionPrepProcessor(BaseProcessor):
             target_dir=shlex.quote(params.get("target_dir", "")),
             copick_flags=params.get("copick_flags", ""),  # Caller must shell-quote each value.
             session_flags=session_flags,
-            # Gates the whole-config `push --dry-run`. The submit flow leaves it off per dataset;
-            run_validate=params.get("run_validate", True),
             prep_env=shlex.quote(prep_env),
             cluster=run_context.cluster_id,
             slurm_directives=self.generate_slurm_directives(params),
