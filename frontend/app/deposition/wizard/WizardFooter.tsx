@@ -7,6 +7,8 @@ export function WizardFooter({
   disableBack,
   disableNext,
   savingNext = false,
+  readOnly = false,
+  savingExit = false,
   onBack,
   onNext,
   onSaveAndExit,
@@ -14,6 +16,8 @@ export function WizardFooter({
   disableBack: boolean;
   disableNext: boolean;
   savingNext?: boolean;
+  readOnly?: boolean;
+  savingExit?: boolean;
   onBack: () => void;
   onNext: () => void;
   onSaveAndExit: () => void;
@@ -29,8 +33,8 @@ export function WizardFooter({
       >
         Back
       </Button>
-      <Button sdsType="primary" sdsStyle="minimal" onClick={onSaveAndExit}>
-        Save draft &amp; exit
+      <Button sdsType="primary" sdsStyle="minimal" disabled={savingExit} onClick={onSaveAndExit}>
+        {readOnly ? 'Close' : 'Save draft & exit'}
       </Button>
       <Button
         sdsType="primary"

@@ -85,10 +85,10 @@ export function AutofillStep({
     [dataset.id, queryClient]
   );
 
-  const { status, lastSavedAt, saveNow } = useDraftAutoSave(sessions, save, { enabled: !readOnly });
+  const { status, isDirty, lastSavedAt, saveNow } = useDraftAutoSave(sessions, save, { enabled: !readOnly });
   useEffect(() => {
-    reportSave?.({ status, lastSavedAt, saveNow });
-  }, [status, lastSavedAt, saveNow, reportSave]);
+    reportSave?.({ status, isDirty, lastSavedAt, saveNow });
+  }, [status, isDirty, lastSavedAt, saveNow, reportSave]);
 
   // Gate the wizard's Next while any required field is still empty.
   const totalIssues = sessions.reduce((n, s) => n + sessionIssues(s), 0);

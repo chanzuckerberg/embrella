@@ -1,12 +1,14 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@czi-sds/components';
 import { Box, Typography } from '@mui/material';
 
 import type { JobLogs, JobLogsSource } from '../../types';
 import type { SubmitPhase } from '../../submitPhases';
 
-function logNote(source: JobLogsSource | undefined, hasLines: boolean, active: boolean): string {
+function logNote(source: JobLogsSource | undefined, hasLines: boolean, active: boolean, restricted: boolean): string {
+  if (restricted) return 'Logs are visible to the submitter only.';
   // Only promise a retry while still polling.
   if (source === 'unavailable') {
     if (hasLines) return 'Showing the saved output; the live log is unavailable.';
@@ -17,39 +19,99 @@ function logNote(source: JobLogsSource | undefined, hasLines: boolean, active: b
   return 'No output yet.';
 }
 
-export function SubmissionLogPanel({ data, active, phase }: { data?: JobLogs; active: boolean; phase: SubmitPhase }) {
-  const text = data?.logs ?? '';
+export function SubmissionLogPanel({
+  data,
+  active,
+  phase,
+  restricted = false,
+}: {
+  data?: JobLogs;
+  active: boolean;
+  phase: SubmitPhase;
+  restricted?: boolean;
+}) {
+  const [copyStatus, setCopyStatus] = useState<{ phase: SubmitPhase; result: 'ok' | 'fail' } | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const stick = useRef(true); // follow the tail until the user scrolls up to read earlier lines
+  const text = restricted ? '' : (data?.logs ?? '');
   const lines = text.split('\n').filter(Boolean);
-  const note = logNote(data?.source, lines.length > 0, active);
-  const copy = () => {
-    if (text && navigator.clipboard) navigator.clipboard.writeText(text).catch(() => undefined);
+  useEffect(() => {
+    stick.current = true;
+  }, [phase]);
+  // Follow the tail as it grows, including the final post-completion fetch; skip if the user scrolled up.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (stick.current && el) el.scrollTop = el.scrollHeight;
+  }, [text, phase]);
+  const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
   };
+  const note = logNote(data?.source, lines.length > 0, active, restricted);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyStatus({ phase, result: 'ok' });
+    } catch {
+      setCopyStatus({ phase, result: 'fail' });
+    }
+  };
+  // Auto-dismiss only the success note; the failure note asks the user to act, so leave it up.
+  useEffect(() => {
+    if (copyStatus?.result !== 'ok') return;
+    const timer = setTimeout(() => setCopyStatus(null), 3000);
+    return () => clearTimeout(timer);
+  }, [copyStatus]);
+  const showCopyStatus = copyStatus?.phase === phase;
   return (
     <Box
       sx={{
         bgcolor: 'grey.900',
         borderRadius: 2,
-        p: 2,
-        height: 320,
+        height: { xs: 320, md: 400 },
         minWidth: 0,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
       }}
     >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, flexShrink: 0 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          p: 2,
+          borderBottom: '1px solid',
+          borderColor: 'grey.700',
+          flexShrink: 0,
+        }}
+      >
         <Typography variant="body2" sx={{ color: 'grey.100', fontWeight: 700 }}>
           {phase === 'prep' ? 'Sync log (tail)' : 'Upload log (tail)'}
         </Typography>
-        <Button sdsType="secondary" sdsStyle="minimal" size="small" onClick={copy} disabled={!lines.length}>
+        <Button
+          sdsType="secondary"
+          sdsStyle="minimal"
+          size="small"
+          onClick={copy}
+          disabled={!lines.length}
+          sx={{ color: 'grey.100', '&.Mui-disabled': { color: 'grey.500' } }}
+        >
           Copy
         </Button>
       </Box>
       <Box
+        ref={scrollRef}
+        onScroll={onScroll}
+        tabIndex={0}
+        role="region"
+        aria-label={phase === 'prep' ? 'Sync log output' : 'Upload log output'}
         sx={{
+          p: 2,
+          '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.light', outlineOffset: -2 },
           fontFamily: 'monospace',
           fontSize: 12,
-          color: 'grey.300',
+          color: 'grey.100',
           whiteSpace: 'pre-wrap',
           overflowWrap: 'anywhere',
           overflow: 'auto',
@@ -61,11 +123,16 @@ export function SubmissionLogPanel({ data, active, phase }: { data?: JobLogs; ac
           <div key={i}>{line}</div>
         ))}
         {note && (
-          <Typography variant="caption" sx={{ color: 'grey.500' }}>
+          <Typography variant="caption" sx={{ color: 'grey.400' }}>
             {note}
           </Typography>
         )}
       </Box>
+      {showCopyStatus && (
+        <Typography role="status" variant="caption" sx={{ px: 2, pb: 1, color: 'grey.100' }}>
+          {copyStatus?.result === 'ok' ? 'Log copied.' : 'Could not copy. Select the log text to copy it manually.'}
+        </Typography>
+      )}
     </Box>
   );
 }

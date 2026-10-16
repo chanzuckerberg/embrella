@@ -4,6 +4,7 @@ export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 export interface AutoSaveState {
   status: SaveStatus;
+  isDirty: boolean;
   lastSavedAt: Date | null;
   // true on success (or nothing to save), false on failure. Callers hold navigation on false.
   saveNow: () => Promise<boolean>;
@@ -21,11 +22,12 @@ export function useDraftAutoSave<T>(
   save: (data: T) => Promise<unknown>,
   { debounceMs = DEFAULT_DEBOUNCE_MS, enabled = true }: Options = {}
 ) {
+  const [isDirty, setIsDirty] = useState(false);
   const [status, setStatus] = useState<SaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isFirstRun = useRef(true);
+  const observedData = useRef(data);
   const dataRef = useRef(data);
   const saveRef = useRef(save);
   const revision = useRef(0);
@@ -54,6 +56,7 @@ export function useDraftAutoSave<T>(
           await saveRef.current(snapshot);
           savedRevision.current = targetRevision;
         }
+        setIsDirty(false);
         setStatus('saved');
         setLastSavedAt(new Date());
         return true;
@@ -70,12 +73,12 @@ export function useDraftAutoSave<T>(
 
   useEffect(() => {
     if (!enabled) return undefined;
-    if (isFirstRun.current) {
-      isFirstRun.current = false;
-      return undefined;
+    if (!Object.is(observedData.current, data)) {
+      observedData.current = data;
+      revision.current += 1;
+      setIsDirty(true);
     }
-
-    revision.current += 1;
+    if (savedRevision.current === revision.current) return undefined;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(flush, debounceMs);
 
@@ -95,5 +98,15 @@ export function useDraftAutoSave<T>(
     };
   }, []);
 
-  return { status, lastSavedAt, saveNow: flush };
+  useEffect(() => {
+    if (!enabled || !isDirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [enabled, isDirty]);
+
+  return { status, isDirty, lastSavedAt, saveNow: flush };
 }

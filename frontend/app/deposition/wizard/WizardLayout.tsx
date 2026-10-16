@@ -3,10 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Icon } from '@czi-sds/components';
-import { Alert, Box, Container, IconButton, Paper, Tooltip, Typography } from '@mui/material';
+import { Box, Container, IconButton, Paper, Tooltip, Typography } from '@mui/material';
 
-import type { Dataset } from '../types';
+import { ConfirmDialog } from '@app/common/components/Forms/ConfirmDialog';
+import { isEditableStatus, type Dataset } from '../types';
 import type { AutoSaveState } from '../hooks/useDraftAutoSave';
+import { READ_ONLY_FIELDS_SX } from '../components/readOnlyStyles';
+import { ReadOnlyNotice } from '../components/ReadOnlyNotice';
 import { SaveIndicator } from './SaveIndicator';
 import { WIZARD_STEPS, isStepSkipped } from './steps';
 import { WizardFooter } from './WizardFooter';
@@ -16,12 +19,15 @@ const SUBMISSIONS_HREF = '/deposition/submissions';
 
 export function WizardLayout({ dataset }: { dataset: Dataset }) {
   const router = useRouter();
+  const [confirmClose, setConfirmClose] = useState(false);
   const [current, setCurrent] = useState(1);
   const [save, setSave] = useState<AutoSaveState | null>(null);
   const [blocking, setBlocking] = useState(0);
   const [savingStep, setSavingStep] = useState<number | null>(null);
+  const [closing, setClosing] = useState(false); // saving-and-exiting (distinct from per-step saves)
   const [manualAutofillSessions, setManualAutofillSessions] = useState<Set<string>>(() => new Set());
-  const readOnly = dataset.is_owner === false;
+  const nonOwner = dataset.is_owner === false;
+  const readOnly = nonOwner || !isEditableStatus(dataset.status);
   const skippedNums = WIZARD_STEPS.filter((s) => isStepSkipped(s, dataset)).map((s) => s.num);
   const activeNums = WIZARD_STEPS.filter((s) => !skippedNums.includes(s.num)).map((s) => s.num);
   const pos = activeNums.indexOf(current);
@@ -30,7 +36,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
   const Body = step.Component;
   // Save before leaving this step; abort on failure.
   const go = async (n: number) => {
-    if (savingStep !== null) return;
+    if (savingStep !== null || closing) return;
     setSavingStep(n);
     try {
       if (!readOnly && save && (await save.saveNow()) === false) return;
@@ -43,9 +49,15 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
   };
 
   const saveAndExit = async () => {
-    if (savingStep !== null) return;
-    if (!readOnly && save && (await save.saveNow()) === false) return;
-    router.push(SUBMISSIONS_HREF);
+    if (savingStep !== null || closing) return;
+    setClosing(true);
+    try {
+      if (!readOnly && save && (await save.saveNow()) === false) return;
+      setConfirmClose(false);
+      router.push(SUBMISSIONS_HREF);
+    } finally {
+      setClosing(false);
+    }
   };
 
   return (
@@ -53,6 +65,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
       <Paper
         variant="outlined"
         sx={{
+          ...READ_ONLY_FIELDS_SX,
           width: '100%',
           maxWidth: 1070,
           mx: 'auto',
@@ -85,7 +98,12 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {!readOnly && save && (
                 <>
-                  <SaveIndicator status={save.status} lastSavedAt={save.lastSavedAt} onRetry={save.saveNow} />
+                  <SaveIndicator
+                    status={save.status}
+                    isDirty={save.isDirty}
+                    lastSavedAt={save.lastSavedAt}
+                    onRetry={save.saveNow}
+                  />
                   <Button
                     sdsType="secondary"
                     sdsStyle="outline"
@@ -97,10 +115,17 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
                   </Button>
                 </>
               )}
-              <Tooltip title={readOnly ? 'Close wizard' : 'Save draft and close'}>
-                <IconButton onClick={saveAndExit} aria-label="Close wizard">
-                  <Icon sdsIcon="XMark" sdsSize="l" />
-                </IconButton>
+              <Tooltip title="Close">
+                {/* span wrapper: Tooltip can't bind to a disabled button directly */}
+                <span>
+                  <IconButton
+                    onClick={() => (!readOnly && save?.isDirty ? setConfirmClose(true) : saveAndExit())}
+                    disabled={savingStep !== null || closing}
+                    aria-label="Close wizard"
+                  >
+                    <Icon sdsIcon="XMark" sdsSize="l" />
+                  </IconButton>
+                </span>
               </Tooltip>
             </Box>
           </Box>
@@ -119,16 +144,14 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
             py: { xs: 4, md: 5 },
           }}
         >
-          {readOnly && (
-            <Alert severity="info" sx={{ mb: 3 }}>
-              You&apos;re viewing another user&apos;s submission - it&apos;s read-only.
-            </Alert>
-          )}
+          {readOnly && <ReadOnlyNotice nonOwner={nonOwner} />}
           <Body
             dataset={dataset}
             reportSave={setSave}
             reportBlocking={setBlocking}
-            readOnly={readOnly}
+            // Lock metadata steps once the dataset is non-editable; Submit stays interactive so an
+            // owner can still push after prep (only a non-owner fully loses the Submit actions).
+            readOnly={step.key === 'submit' ? nonOwner : readOnly}
             onPreparationReset={() => {
               setSave(null);
               setBlocking(0);
@@ -141,15 +164,31 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
 
         <Box sx={{ flexShrink: 0, px: { xs: 3, md: 5 }, py: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
           <WizardFooter
-            disableBack={pos <= 0 || savingStep !== null}
-            disableNext={pos < 0 || pos >= activeNums.length - 1 || blocking > 0 || savingStep !== null}
+            disableBack={pos <= 0 || savingStep !== null || closing}
+            disableNext={pos < 0 || pos >= activeNums.length - 1 || blocking > 0 || savingStep !== null || closing}
             savingNext={savingStep !== null && savingStep === activeNums[pos + 1]}
             onBack={() => pos > 0 && go(activeNums[pos - 1])}
             onNext={() => pos >= 0 && pos < activeNums.length - 1 && go(activeNums[pos + 1])}
             onSaveAndExit={saveAndExit}
+            readOnly={readOnly}
+            savingExit={closing}
           />
         </Box>
       </Paper>
+      <ConfirmDialog
+        open={confirmClose}
+        onClose={() => !closing && setConfirmClose(false)}
+        onConfirm={saveAndExit}
+        title="Save changes before closing?"
+        heading="Unsaved changes"
+        body="You have unsaved changes. Save your draft before leaving so you can return to it later."
+        intent="warning"
+        confirmText="Save draft & close"
+        submittingText="Saving…"
+        cancelText="Keep editing"
+        isSubmitting={closing}
+        error={save?.status === 'error' ? 'Your changes could not be saved. Please try again.' : null}
+      />
     </Container>
   );
 }

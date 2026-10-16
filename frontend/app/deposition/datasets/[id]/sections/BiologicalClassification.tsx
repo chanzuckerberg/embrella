@@ -13,7 +13,6 @@ function OntologyRow({
   label,
   summary,
   set,
-  readOnly,
   children,
   isLast,
   required = false,
@@ -22,7 +21,6 @@ function OntologyRow({
   label: string;
   summary: string;
   set: boolean;
-  readOnly: boolean;
   children: React.ReactNode;
   isLast?: boolean;
   required?: boolean;
@@ -31,7 +29,6 @@ function OntologyRow({
   return (
     <Accordion
       disableGutters
-      disabled={readOnly}
       sx={{
         '&:before': { display: 'none' },
         boxShadow: 'none',
@@ -86,6 +83,19 @@ function OntologyRow({
   );
 }
 
+function ReadOnlyTerm({ name, id }: { name: string; id: string }) {
+  return (
+    <Box sx={{ py: 1, pl: 3 }}>
+      <Typography variant="body2" sx={{ color: 'text.primary', userSelect: 'text' }}>
+        {name || 'No name provided'}
+      </Typography>
+      <Typography variant="body2" sx={{ fontFamily: 'monospace', userSelect: 'text' }}>
+        {id || 'Not set'}
+      </Typography>
+    </Box>
+  );
+}
+
 export function BiologicalClassification({
   sample,
   requiredBioField,
@@ -119,29 +129,31 @@ export function BiologicalClassification({
         label={row.label}
         summary={idVal || 'Not set'}
         set={!!idVal}
-        readOnly={readOnly}
         isLast={isLast}
         required={required}
         description={row.description}
       >
-        <OntologyIdInput
-          label={row.label}
-          ontology={row.ontology}
-          pattern={row.pattern}
-          prefix={row.prefix}
-          lookup={row.lookup}
-          manualOnly={row.manualOnly}
-          idPlaceholder={row.idPlaceholder}
-          childrenOf={row.childrenOf}
-          required={required}
-          name={(sample[row.nameKey] as string) ?? ''}
-          id={idVal}
-          onChange={({ name, id }) => {
-            if (name !== undefined) onChangeSample(row.nameKey, name);
-            if (id !== undefined) onChangeSample(row.idKey, id);
-          }}
-          disabled={readOnly}
-        />
+        {readOnly ? (
+          <ReadOnlyTerm name={(sample[row.nameKey] as string) || ''} id={idVal} />
+        ) : (
+          <OntologyIdInput
+            label={row.label}
+            ontology={row.ontology}
+            pattern={row.pattern}
+            prefix={row.prefix}
+            lookup={row.lookup}
+            manualOnly={row.manualOnly}
+            idPlaceholder={row.idPlaceholder}
+            childrenOf={row.childrenOf}
+            required={required}
+            name={(sample[row.nameKey] as string) ?? ''}
+            id={idVal}
+            onChange={({ name, id }) => {
+              if (name !== undefined) onChangeSample(row.nameKey, name);
+              if (id !== undefined) onChangeSample(row.idKey, id);
+            }}
+          />
+        )}
       </OntologyRow>
     );
   };
@@ -167,21 +179,24 @@ export function BiologicalClassification({
       >
         {rowsBeforeAssay.map((row) => renderRow(row))}
 
-        <OntologyRow label="Assay" summary={assayOntologyId || 'Not set'} set={!!assayOntologyId} readOnly={readOnly}>
-          <OntologyIdInput
-            label="Assay"
-            ontology="efo"
-            pattern="^EFO:[0-9]{7}$"
-            prefix="EFO"
-            lookup="https://www.ebi.ac.uk/ols4/ontologies/efo"
-            name={assayLabel}
-            id={assayOntologyId}
-            onChange={({ name, id }) => {
-              if (name !== undefined) onChangeAssayLabel(name);
-              if (id !== undefined) onChangeAssayOntologyId(id);
-            }}
-            disabled={readOnly}
-          />
+        <OntologyRow label="Assay" summary={assayOntologyId || 'Not set'} set={!!assayOntologyId}>
+          {readOnly ? (
+            <ReadOnlyTerm name={assayLabel} id={assayOntologyId} />
+          ) : (
+            <OntologyIdInput
+              label="Assay"
+              ontology="efo"
+              pattern="^EFO:[0-9]{7}$"
+              prefix="EFO"
+              lookup="https://www.ebi.ac.uk/ols4/ontologies/efo"
+              name={assayLabel}
+              id={assayOntologyId}
+              onChange={({ name, id }) => {
+                if (name !== undefined) onChangeAssayLabel(name);
+                if (id !== undefined) onChangeAssayOntologyId(id);
+              }}
+            />
+          )}
         </OntologyRow>
 
         {rowsAfterAssay.map((row, i) => renderRow(row, i === rowsAfterAssay.length - 1))}
