@@ -1,5 +1,54 @@
 # Changelog
 
+## [1.1.0](https://github.com/chanzuckerberg/embrella/compare/v1.0.0...v1.1.0) (2026-10-17)
+
+
+### Features
+
+* clusters read from database ([#1332](https://github.com/chanzuckerberg/embrella/issues/1332)) ([83fb04b](https://github.com/chanzuckerberg/embrella/commit/83fb04be2d8d3cd3f5801d23293d3914c685edd8))
+* **deposition:** add DatasetJob submit state machine ([#1277](https://github.com/chanzuckerberg/embrella/issues/1277)) ([bac1d52](https://github.com/chanzuckerberg/embrella/commit/bac1d52e64d174b539a253be98ca10ce1aa56231))
+* **deposition:** add DepositionPrepProcessor ([#1281](https://github.com/chanzuckerberg/embrella/issues/1281)) ([c6f5af6](https://github.com/chanzuckerberg/embrella/commit/c6f5af668700337e9954e68c3adf97cf1f81cb29))
+* **deposition:** add DepositionPushProcessor ([#1282](https://github.com/chanzuckerberg/embrella/issues/1282)) ([986ae33](https://github.com/chanzuckerberg/embrella/commit/986ae334086b9178009b1a50298ce2aa4bea57b4))
+* **deposition:** clearer messages on job ([#1327](https://github.com/chanzuckerberg/embrella/issues/1327)) ([2976c7b](https://github.com/chanzuckerberg/embrella/commit/2976c7b70df1a20bd7ac60b168af337e59c3370d))
+* **deposition:** Finalize & Submit ([#1303](https://github.com/chanzuckerberg/embrella/issues/1303)) ([1ab4da4](https://github.com/chanzuckerberg/embrella/commit/1ab4da4a0590f8bcb8bb36883f2c6e3bf245c6d9))
+* **deposition:** implement job-status, logs, and config.yaml endpoints ([#1315](https://github.com/chanzuckerberg/embrella/issues/1315)) ([2e94349](https://github.com/chanzuckerberg/embrella/commit/2e94349f95693963612b6061c43d387fded84801))
+* **deposition:** keep DatasetJob transitions on the current database… ([#1290](https://github.com/chanzuckerberg/embrella/issues/1290)) ([4170e64](https://github.com/chanzuckerberg/embrella/commit/4170e64587a624ef9ede465f23a3218a98f346ea))
+* **deposition:** run staging and uploads as the service account ([#1326](https://github.com/chanzuckerberg/embrella/issues/1326)) ([9ba8ed5](https://github.com/chanzuckerberg/embrella/commit/9ba8ed5e732d7ad1cc40bdb4da1410c6fb10c165))
+* **depositions:** pre-flight validation + sync/upload progress ([#1334](https://github.com/chanzuckerberg/embrella/issues/1334)) ([d015f61](https://github.com/chanzuckerberg/embrella/commit/d015f61c06c8310120b365fd53cc9d5b24cd8509))
+* **deposition:** stream the SLURM log tail into Finalize & Submit ([#1319](https://github.com/chanzuckerberg/embrella/issues/1319)) ([ad2b0df](https://github.com/chanzuckerberg/embrella/commit/ad2b0dfef6f114de28e2bd28e058d3fee4e951d4))
+* **deposition:** submit endpoint and Django-Q job syncer for prep and push ([#1293](https://github.com/chanzuckerberg/embrella/issues/1293)) ([46e55a9](https://github.com/chanzuckerberg/embrella/commit/46e55a960bb54e5f2523fd1bf987616b9ca4a94b))
+* projects v1 ([#1307](https://github.com/chanzuckerberg/embrella/issues/1307)) ([23ef20c](https://github.com/chanzuckerberg/embrella/commit/23ef20cd3d1c66218a781b04a874c1cde06fda77))
+* **stores:** seed deposition_staging PathType for deposition prep/push ([#1294](https://github.com/chanzuckerberg/embrella/issues/1294)) ([ee30b9f](https://github.com/chanzuckerberg/embrella/commit/ee30b9f749d105d367cb7b8f5dccfc6c6300757d))
+* update aretomo 2.3.4 ([#1342](https://github.com/chanzuckerberg/embrella/issues/1342)) ([3f84d10](https://github.com/chanzuckerberg/embrella/commit/3f84d100d0d206614e6077b644c5dca8f4b306d9))
+* want users share specific tomograms ([#1320](https://github.com/chanzuckerberg/embrella/issues/1320)) ([ee95a33](https://github.com/chanzuckerberg/embrella/commit/ee95a33fb606832a91929053dfe64cf0685cde7f))
+
+
+### Bug Fixes
+
+* sync tomograms from different processors ([#1318](https://github.com/chanzuckerberg/embrella/issues/1318)) ([27637ce](https://github.com/chanzuckerberg/embrella/commit/27637ce61f64782d12b92e1d15a40b1cd4290079))
+
+
+### Misc
+
+* bump chanzuckerberg/github-actions from 6.41.2 to 6.41.3 ([#1309](https://github.com/chanzuckerberg/embrella/issues/1309)) ([fdca970](https://github.com/chanzuckerberg/embrella/commit/fdca97013f6cac290727d956da4873be81fe9983))
+* bump chanzuckerberg/github-actions from 6.41.3 to 6.42.0 ([#1336](https://github.com/chanzuckerberg/embrella/issues/1336)) ([bd8a67e](https://github.com/chanzuckerberg/embrella/commit/bd8a67e4e7ea218f84ffbbae4519ef4eacb5b83e))
+* bump chanzuckerberg/github-actions/.github/workflows/argus-builder-dispatch.yaml from 6.41.2 to 6.41.3 ([#1308](https://github.com/chanzuckerberg/embrella/issues/1308)) ([9bd07bf](https://github.com/chanzuckerberg/embrella/commit/9bd07bfede9040c4959b55da52e98e9c8fe23d28))
+* bump chanzuckerberg/github-actions/.github/workflows/argus-builder-dispatch.yaml from 6.41.3 to 6.42.0 ([#1335](https://github.com/chanzuckerberg/embrella/issues/1335)) ([c5cf6d7](https://github.com/chanzuckerberg/embrella/commit/c5cf6d7496f477af617516b909b728b1fd3924c3))
+* bump django from 5.2.16 to 5.2.17 ([#1284](https://github.com/chanzuckerberg/embrella/issues/1284)) ([7e8f241](https://github.com/chanzuckerberg/embrella/commit/7e8f241fb4eb0c0705e76441bad2235d28931cdf))
+* bump fsspec from 2026.4.0 to 2026.6.0 ([#1310](https://github.com/chanzuckerberg/embrella/issues/1310)) ([3197e8c](https://github.com/chanzuckerberg/embrella/commit/3197e8ceaebffa772c717e148db4bfe716df57e7))
+* bump multidict from 6.7.1 to 6.9.1 ([#1311](https://github.com/chanzuckerberg/embrella/issues/1311)) ([ffb36c9](https://github.com/chanzuckerberg/embrella/commit/ffb36c91eafc5bd5b9d7ac3bfce00adb0f06116d))
+* bump next from 16.3.3 to 16.3.6 in /frontend ([#1287](https://github.com/chanzuckerberg/embrella/issues/1287)) ([5a35beb](https://github.com/chanzuckerberg/embrella/commit/5a35beb94d376a7813707fef31c02a7bddbc8c20))
+* bump next from 16.3.6 to 16.3.8 in /frontend ([#1312](https://github.com/chanzuckerberg/embrella/issues/1312)) ([8cee3f9](https://github.com/chanzuckerberg/embrella/commit/8cee3f9a59bce08096955e278a147bdb26e9ef5b))
+* bump oauthlib from 3.3.1 to 4.0.0 ([#1286](https://github.com/chanzuckerberg/embrella/issues/1286)) ([0b4890d](https://github.com/chanzuckerberg/embrella/commit/0b4890d6922d2baec0f1d5d7b7c4859af40d3499))
+* bump pyjwt from 2.13.0 to 2.15.0 ([#1283](https://github.com/chanzuckerberg/embrella/issues/1283)) ([327d1c8](https://github.com/chanzuckerberg/embrella/commit/327d1c855bdea8a0b5e6e15398bab4844edff987))
+* bump source-map-js from 1.2.1 to 1.2.2 in /frontend ([#1313](https://github.com/chanzuckerberg/embrella/issues/1313)) ([277511b](https://github.com/chanzuckerberg/embrella/commit/277511b0eca97a3cfae16907ed455b1ce83eca4f))
+* bump urllib3 from 2.7.0 to 2.8.0 ([#1285](https://github.com/chanzuckerberg/embrella/issues/1285)) ([2537158](https://github.com/chanzuckerberg/embrella/commit/2537158e42a08a02c1dd6c2aa4c8440d168a52b1))
+* update 'stack' helm chart version for embrella staging ([#1279](https://github.com/chanzuckerberg/embrella/issues/1279)) ([900638d](https://github.com/chanzuckerberg/embrella/commit/900638d19a26551572f80f6889759463b3f0ab1b))
+* update 'stack' helm chart version for embrella staging ([#1288](https://github.com/chanzuckerberg/embrella/issues/1288)) ([6d98069](https://github.com/chanzuckerberg/embrella/commit/6d9806945e45262acd1651d5ab201a8a13f8ada5))
+* update 'stack' helm chart version for embrella staging ([#1295](https://github.com/chanzuckerberg/embrella/issues/1295)) ([d2f2ed6](https://github.com/chanzuckerberg/embrella/commit/d2f2ed6a48b98ffa103ec937214413cb2879974c))
+* update 'stack' helm chart version for embrella staging ([#1314](https://github.com/chanzuckerberg/embrella/issues/1314)) ([d8624ab](https://github.com/chanzuckerberg/embrella/commit/d8624aba102e1dc5567079e349a2b9791b6179a3))
+* update 'stack' helm chart version for embrella staging ([#1337](https://github.com/chanzuckerberg/embrella/issues/1337)) ([baf9475](https://github.com/chanzuckerberg/embrella/commit/baf94758dca98e149798e3cffc83a09bf5a68d5b))
+
 ## [1.0.0](https://github.com/chanzuckerberg/embrella/compare/v1.1.2...v1.0.0) (2026-09-29)
 
 
