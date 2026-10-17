@@ -236,6 +236,17 @@ push reads those same subdirectories.
     Updating a PathType does not move existing data. Verify a small prep and
     upload from the deployed backend and worker before enabling the flow.
 
+### Pre-flight validation {#deposition-validation}
+
+After sync, prep runs `cryoetportalprep push <config> --dry-run` for the current
+dataset only. Upload is enabled only when this passes for the current prep attempt.
+Failed, missing or unavailable results block upload, and users can retry preparation
+or choose **Fix and re-prepare** to edit metadata first. Diagnostics are visible only
+to the submission owner.
+
+The result comes from the dry run's **exit code** (messages are best-effort text
+matches), so the installed CLI must exit nonzero on an invalid config.
+
 ## Bare Metal Install {#bare-metal-legacy}
 
 Runs Django, Next.js and the task worker directly on the host, against a MariaDB/MySQL

@@ -24,7 +24,7 @@ def _active_attempt(job):
     return "prep", job.prep_slurm_job_id
 
 
-def _read_slurm_tail(cluster_id, auth, phase, slurm_job_id):
+def read_slurm_tail(cluster_id, auth, phase, slurm_job_id):
     """Last MAX_LOG_BYTES of the job's default slurm-<id>.out."""
     script_dir = get_processor(_PROCESSOR[phase]).get_script_directory(cluster=cluster_id)
     path = f"{script_dir.rstrip('/')}/slurm-{slurm_job_id}.out"
@@ -37,7 +37,7 @@ def capture_failure_tail(cluster_id, auth, phase, slurm_job_id):
     if not (cluster_id and slurm_job_id and auth):
         return None
     try:
-        return _read_slurm_tail(cluster_id, auth, phase, slurm_job_id)
+        return read_slurm_tail(cluster_id, auth, phase, slurm_job_id)
     except Exception:
         logger.warning("Couldn't capture SLURM log tail for %s job %s", phase, slurm_job_id, exc_info=True)
         return None
@@ -73,7 +73,7 @@ def fetch_job_logs(dataset, *, is_owner, phase=None):
         return stored
 
     try:
-        text = _read_slurm_tail(cluster_id, auth, phase, slurm_job_id)
+        text = read_slurm_tail(cluster_id, auth, phase, slurm_job_id)
     except Exception:
         # "unavailable" (not "stored") tells the client the live read failed vs. there being no log.
         logger.warning("Couldn't read SLURM log for dataset %s job %s", dataset.pk, slurm_job_id, exc_info=True)

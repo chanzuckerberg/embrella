@@ -25,6 +25,7 @@ from .models import (
 )
 from .permissions import deposition_owner_id
 from .services.autofill import TILTSERIES_PIPELINE_VALUES
+from .services.progress import serialize_progress, serialize_summary
 
 
 def validate_authors_json(value):
@@ -109,9 +110,40 @@ class DepositionAnnotationSerializer(serializers.ModelSerializer):
 class DatasetJobSerializer(serializers.ModelSerializer):
     """Read-only — job state is set by processors, not the API."""
 
+    sync_progress = serializers.SerializerMethodField()
+    sync_summary = serializers.SerializerMethodField()
+    push_progress = serializers.SerializerMethodField()
+    validation = serializers.SerializerMethodField()
+
+    def get_validation(self, obj):
+        result = obj.validation
+        if result is None or _is_owner(self, obj.dataset):
+            return result
+        # CLI text can contain private paths; only the owner sees it.
+        return {
+            **{key: result[key] for key in ("status", "attempt", "dataset_id") if key in result},
+            "warnings": [
+                {"message": "Validation warning. Details are available to the submission owner."}
+                for _ in result.get("warnings", [])
+            ],
+            "blocking_issues": [
+                {"message": "Validation issue. Details are available to the submission owner."}
+                for _ in result.get("blocking_issues", [])
+            ],
+        }
+
+    def get_sync_progress(self, obj):
+        return serialize_progress(obj.sync_progress)
+
+    def get_sync_summary(self, obj):
+        return serialize_summary(obj)
+
+    def get_push_progress(self, obj):
+        return serialize_progress(obj.push_progress)
+
     class Meta:
         model = DatasetJob
-        # Raw cluster output is available only through the owner-gated logs endpoint.
+        # Full log excerpts are available only through the owner-gated logs endpoint.
         exclude = ["log_excerpt"]
 
 

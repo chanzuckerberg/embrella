@@ -17,13 +17,19 @@ function setLogs(data: JobLogs | undefined) {
   mockLogs.mockReturnValue({ data });
 }
 
-function setup(job: DatasetJob | null, { readOnly = false } = {}) {
+const passed = { status: 'passed' as const, attempt: 'prep-1', warnings: [], blocking_issues: [] };
+const prepared: DatasetJob = { id: 1, state: 'prep_completed', prep_slurm_job_id: 'prep-1', validation: passed };
+
+function setup(job: DatasetJob | null, { readOnly = false, onPreparationReset = jest.fn() } = {}) {
   const submit = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
   const push = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
   const dataset = { id: 1, title: 'DS', dataset_id: 2, status: 'draft', job } as Dataset;
-  mockFlow.mockReturnValue({ dataset, submit, push });
-  render(<SubmitStep dataset={dataset} readOnly={readOnly} reportSave={jest.fn()} />);
-  return { submit, push };
+  const resetPreparation = { mutate: jest.fn(), isPending: false, error: null };
+  mockFlow.mockReturnValue({ dataset, submit, push, resetPreparation });
+  render(
+    <SubmitStep dataset={dataset} readOnly={readOnly} reportSave={jest.fn()} onPreparationReset={onPreparationReset} />
+  );
+  return { submit, push, resetPreparation };
 }
 
 beforeEach(() => {
@@ -38,7 +44,7 @@ it('auto-starts sync on arrival with no manual start button', () => {
 });
 
 it('offers Submit deposition once prep is complete', () => {
-  const { push } = setup({ id: 1, state: 'prep_completed' });
+  const { push } = setup(prepared);
   fireEvent.click(screen.getByRole('button', { name: /submit deposition/i }));
   expect(push.mutate).toHaveBeenCalled();
 });
@@ -76,7 +82,7 @@ it('offers retry when the launch is rejected before a job exists', () => {
   };
   const push = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
   const dataset = { id: 1, title: 'DS', dataset_id: 2, status: 'draft', job: null } as Dataset;
-  mockFlow.mockReturnValue({ dataset, submit, push });
+  mockFlow.mockReturnValue({ dataset, submit, push, resetPreparation: { isPending: false, error: null } });
   render(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
   expect(screen.getByText('Missing dataset ids')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /retry sync/i })).toBeInTheDocument();
@@ -90,7 +96,7 @@ it('renders live progress from the job payload', () => {
       done: 1883,
       total: 2215,
       eta: '0:05',
-      items: [{ label: 'Symlink tiltseries', done: 582, total: 582 }],
+      items: [{ label: 'Tilt series', done: 582, total: 582 }],
     },
   });
   expect(screen.getByText(/1,883 \/ 2,215 objects/)).toBeInTheDocument();
@@ -99,7 +105,7 @@ it('renders live progress from the job payload', () => {
 });
 
 it('shows a clean validation pass as success, not a warning', () => {
-  setup({ id: 1, state: 'prep_completed', validation: { passed: true, warnings: [] } });
+  setup({ id: 1, state: 'prep_completed', prep_slurm_job_id: 'prep-1', validation: passed });
   expect(screen.getByText('Validation passed')).toBeInTheDocument();
   expect(screen.queryByText(/0 warnings/)).toBeNull();
 });
@@ -108,7 +114,7 @@ it('blocks submit on a failing validation', () => {
   setup({
     id: 1,
     state: 'prep_completed',
-    validation: { passed: false, warnings: [{ message: 'bad voxel spacing' }] },
+    validation: { ...passed, status: 'failed', blocking_issues: [{ message: 'bad voxel spacing' }] },
   });
   expect(screen.getByText('Validation found blocking issues')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /submit deposition/i })).toBeDisabled();
@@ -146,13 +152,13 @@ it('does not promise a retry once a finished job log is unavailable', () => {
 it('shows queued uploads without claiming they are uploading', () => {
   setup({ id: 1, state: 'push_submitted', push_slurm_job_id: '99' });
   expect(screen.getByText('Waiting in queue')).toBeInTheDocument();
-  expect(screen.getByText('Upload job submitted. Detailed progress is unavailable.')).toBeInTheDocument();
+  expect(screen.getByText('Upload job submitted.')).toBeInTheDocument();
 });
 
 it('distinguishes a running upload from unavailable detailed progress', () => {
   setup({ id: 1, state: 'push_running', push_slurm_job_id: '99' });
   expect(screen.getByText('Upload job in progress')).toBeInTheDocument();
-  expect(screen.getByText('Upload job in progress. Detailed progress is unavailable.')).toBeInTheDocument();
+  expect(screen.getByText('Waiting for upload progress.')).toBeInTheDocument();
 });
 
 it('updates sync elapsed time, freezes on completion and resets on restart', () => {
@@ -161,7 +167,12 @@ it('updates sync elapsed time, freezes on completion and resets on restart', () 
   try {
     const job: DatasetJob = { id: 1, state: 'prep_running', started_at: '2026-10-14T12:00:00Z' };
     const dataset = { id: 1, title: 'DS', status: 'syncing', job } as Dataset;
-    mockFlow.mockReturnValue({ dataset, submit: { isPending: false }, push: {} });
+    mockFlow.mockReturnValue({
+      dataset,
+      submit: { isPending: false },
+      push: {},
+      resetPreparation: { isPending: false, error: null },
+    });
     const props = { dataset, readOnly: true, reportSave: jest.fn() };
     const view = render(<SubmitStep {...props} />);
     expect(screen.getByText(/Elapsed: 2m 0s/)).toBeInTheDocument();
@@ -225,7 +236,7 @@ it.each(['prep', 'push'])('shows one request error instead of the saved %s failu
       push_slurm_job_id: phase === 'push' ? '99' : null,
     },
   } as Dataset;
-  mockFlow.mockReturnValue({ dataset, submit, push });
+  mockFlow.mockReturnValue({ dataset, submit, push, resetPreparation: { isPending: false, error: null } });
   render(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
   expect(screen.getAllByRole('alert')).toHaveLength(1);
   expect(screen.getByRole('alert')).toHaveTextContent("Couldn't reach the cluster to submit. Please try again.");
@@ -250,7 +261,7 @@ it('lets users review each phase without launching another job', () => {
   expect(screen.getByText('original prep output')).toBeInTheDocument();
   expect(screen.queryByText('push output')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Pre-flight validation' }));
-  expect(screen.getByText('Pre-flight validation is not available yet.')).toBeInTheDocument();
+  expect(screen.getByText('Pre-flight validation has not run. Upload requires a passed check.')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Submit deposition' })).toBeNull();
   expect(screen.queryByText('Sync log (tail)')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Push to S3' }));
@@ -270,7 +281,12 @@ it('does not offer an upload action when viewing validation before sync complete
 it('keeps a manually selected sync log open when prep completes', () => {
   const job: DatasetJob = { id: 1, state: 'prep_running' };
   const dataset = { id: 1, title: 'DS', status: 'syncing', job } as Dataset;
-  mockFlow.mockReturnValue({ dataset, submit: { isPending: false }, push: {} });
+  mockFlow.mockReturnValue({
+    dataset,
+    submit: { isPending: false },
+    push: {},
+    resetPreparation: { isPending: false, error: null },
+  });
   const props = { dataset, readOnly: false, reportSave: jest.fn() };
   const view = render(<SubmitStep {...props} />);
   fireEvent.click(screen.getByRole('button', { name: 'Sync on cluster' }));
@@ -285,7 +301,7 @@ it('keeps a manually selected sync log open when prep completes', () => {
 it.each(['Sync on cluster', 'Pre-flight validation', 'Push to S3'])(
   'keeps submit accessible while viewing %s',
   (tile) => {
-    const { push } = setup({ id: 1, state: 'prep_completed' });
+    const { push } = setup(prepared);
     fireEvent.click(screen.getByRole('button', { name: tile }));
     fireEvent.click(screen.getByRole('button', { name: 'Submit deposition' }));
     expect(push.mutate).toHaveBeenCalledTimes(1);
@@ -307,4 +323,104 @@ it('labels the saved excerpt when the live log is unavailable', () => {
   setup({ id: 1, state: 'failed' });
   expect(screen.getByText('saved failure output')).toBeInTheDocument();
   expect(screen.getByText('Showing the saved output; the live log is unavailable.')).toBeInTheDocument();
+});
+
+it('shows measured upload bytes and ETA', () => {
+  setup({ id: 1, state: 'push_running', push_progress: { done: 1048576, total: 4194304, eta: '30s' } });
+  expect(screen.getByText('1.0 MiB / 4.0 MiB · 25% · ETA 30s')).toBeInTheDocument();
+  expect(screen.getByRole('progressbar', { name: 'Upload progress' })).toHaveAttribute('aria-valuenow', '25');
+});
+
+it.each([null, { ...passed, status: 'unavailable' as const }, { ...passed, attempt: 'old' }])(
+  'blocks upload without a current pass: %j',
+  (validation) => {
+    const { push } = setup({ ...prepared, validation });
+    const button = screen.getByRole('button', { name: 'Submit deposition' });
+    expect(button).toBeDisabled();
+    expect(screen.getByText(/Upload requires passed validation for this preparation/)).toBeInTheDocument();
+    fireEvent.click(button);
+    expect(push.mutate).not.toHaveBeenCalled();
+  }
+);
+
+it('shows warnings and blocking issues separately', () => {
+  setup({
+    ...prepared,
+    validation: {
+      ...passed,
+      status: 'failed',
+      warnings: [{ message: 'Optional metadata missing' }],
+      blocking_issues: [{ message: 'Invalid voxel spacing' }],
+    },
+  });
+  expect(screen.getByText('Optional metadata missing')).toBeInTheDocument();
+  expect(screen.getByText('Invalid voxel spacing')).toBeInTheDocument();
+});
+
+it('does not describe an unavailable result as a pass', () => {
+  setup({ ...prepared, validation: { ...passed, status: 'unavailable' } });
+  expect(screen.queryByText('Validation passed')).not.toBeInTheDocument();
+  expect(screen.getByText('Validation unavailable')).toBeInTheDocument();
+});
+
+it('retries preparation and validation from a prepared job', () => {
+  const { submit, push } = setup({ ...prepared, validation: null });
+  fireEvent.click(screen.getByRole('button', { name: 'Retry preparation and validation' }));
+  expect(submit.mutate).toHaveBeenCalledTimes(1);
+  expect(push.mutate).not.toHaveBeenCalled();
+});
+
+it('resets to metadata correction on "Fix and re-prepare" without auto-starting prep', () => {
+  const submit = { mutate: jest.fn(), reset: jest.fn(), isPending: false };
+  const push = { reset: jest.fn(), isPending: false };
+  const resetPreparation = { mutate: jest.fn(), isPending: false };
+  const dataset = { id: 1, deposition: 1, title: 'DS', status: 'syncing', job: prepared } as Dataset;
+  const onPreparationReset = jest.fn();
+  mockFlow.mockReturnValue({ dataset, submit, push, resetPreparation });
+  const props = { dataset, readOnly: false, reportSave: jest.fn(), onPreparationReset };
+  const view = render(<SubmitStep {...props} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Fix and re-prepare' }));
+  expect(resetPreparation.mutate).toHaveBeenCalledTimes(1);
+  // onPreparationReset fires only once the reset mutation succeeds.
+  expect(onPreparationReset).not.toHaveBeenCalled();
+  act(() => resetPreparation.mutate.mock.calls[0][1].onSuccess());
+  expect(onPreparationReset).toHaveBeenCalledTimes(1);
+
+  // Back at an editable draft, landing on the step must not auto-start another prep.
+  const pending = { ...dataset, status: 'draft', job: { id: 1, state: 'pending' } };
+  mockFlow.mockReturnValue({ dataset: pending, submit, push, resetPreparation });
+  view.rerender(<SubmitStep {...props} />);
+  expect(submit.mutate).not.toHaveBeenCalled();
+});
+
+it('renders grouped counts while keeping overall progress and ETA from the snapshot', () => {
+  setup({
+    id: 1,
+    state: 'prep_running',
+    sync_progress: {
+      done: 10,
+      total: 20,
+      eta: '30s',
+      items: [
+        { label: 'Alignment', done: 2, total: 2 },
+        { label: 'CTF', done: 2, total: 2 },
+        { label: 'Tilt series', done: 0, total: 4 },
+        { label: 'Tomograms', done: 3, total: 3 },
+        { label: 'Metadata', done: 2, total: 4 },
+        { label: 'Masks', done: 0, total: 1 },
+        { label: 'Frames', done: 1, total: 4 },
+      ],
+    },
+  });
+  expect(screen.getAllByRole('listitem').map((row) => row.getAttribute('aria-label'))).toEqual([
+    'Symlink tiltseries: 4 of 8, incomplete',
+    'Symlink tomograms: 3 of 3, complete',
+    'Other items: 3 of 9, incomplete',
+  ]);
+  expect(screen.queryByText('Deposit annotations')).not.toBeInTheDocument();
+  expect(screen.queryByText('Alignment')).not.toBeInTheDocument();
+  expect(screen.getByText('10 / 20 objects')).toBeInTheDocument();
+  expect(screen.getAllByText('50% · ETA 30s')).toHaveLength(2);
+  expect(screen.getByRole('progressbar', { name: 'Sync progress' })).toHaveAttribute('aria-valuenow', '50');
 });

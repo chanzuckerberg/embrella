@@ -236,13 +236,23 @@ class DatasetViewSet(viewsets.ModelViewSet):
             status=status.HTTP_202_ACCEPTED,
         )
 
+    @action(detail=True, methods=["post"], url_path="reset-preparation")
+    def reset_preparation(self, request, pk=None):
+        from .services.submission import reset_preparation
+
+        try:
+            job = reset_preparation(self.get_object())
+        except SubmissionValidationError as error:
+            return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(DatasetJobSerializer(job, context=self.get_serializer_context()).data)
+
     @action(detail=True, methods=["get"], url_path="job-status")
     def job_status(self, request, pk=None):
         dataset = self.get_object()
         job = getattr(dataset, "job", None)
         if job is None:
             return Response({"detail": "This dataset hasn't been submitted yet."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(DatasetJobSerializer(job).data)
+        return Response(DatasetJobSerializer(job, context=self.get_serializer_context()).data)
 
     @extend_schema(
         parameters=[

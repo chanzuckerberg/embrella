@@ -9,6 +9,7 @@ export interface StepProps {
   /** Report how many required fields are still blocking. */
   reportBlocking?: (count: number) => void;
   readOnly: boolean;
+  onPreparationReset?: () => void;
   manualAutofillSessions?: Set<string>;
   onManualAutofillEntry?: (sessionKey: string) => void;
 }

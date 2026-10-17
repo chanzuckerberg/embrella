@@ -17,7 +17,8 @@ import type { StepProps } from '../wizardTypes';
 import { useSubmitFlow } from '../../hooks/useSubmitFlow';
 import { useDatasetLogs } from '../../hooks/useDatasetLogs';
 
-import { isActiveJobPhase, submissionPhases, type PhaseStatus, type SubmitPhase } from '../../submitPhases';
+import { canUpload, isActiveJobPhase, submissionPhases, type PhaseStatus, type SubmitPhase } from '../../submitPhases';
+import { groupSyncProgress } from '../../syncProgressGroups';
 import { SubmissionLogPanel } from './SubmissionLogPanel';
 
 const SYNC_TIMER_INTERVAL_MS = 1000;
@@ -77,23 +78,27 @@ function validationSub(status: PhaseStatus, validation?: JobValidation | null): 
   if (status === 'warning' && validation) return `Passed · ${pluralWarnings(validation.warnings.length)}`;
   if (status === 'done') return 'Passed';
   if (status === 'error') return 'Issues found';
-  return 'Not available yet';
+  return validation?.status === 'unavailable' ? 'Unavailable' : 'Not run';
 }
 
-function validationSeverity(validation: JobValidation): 'success' | 'warning' | 'error' {
-  if (!validation.passed) return 'error';
+function validationSeverity(validation: JobValidation): 'success' | 'warning' | 'error' | 'info' {
+  if (validation.status === 'unavailable') return 'info';
+  if (validation.status !== 'passed') return 'error';
   return validation.warnings.length ? 'warning' : 'success';
 }
 
 function validationTitle(validation: JobValidation): string {
-  if (!validation.passed) return 'Validation found blocking issues';
+  if (validation.status === 'unavailable') return 'Validation unavailable';
+  if (validation.status !== 'passed') return 'Validation found blocking issues';
   return validation.warnings.length
     ? `Validation passed with ${pluralWarnings(validation.warnings.length)}`
     : 'Validation passed';
 }
 
 function validationBody(validation: JobValidation): string {
-  if (!validation.passed) return 'These issues must be resolved before the deposition can be pushed.';
+  if (validation.status === 'unavailable')
+    return 'The validation result could not be obtained. Retry preparation and validation before uploading.';
+  if (validation.status !== 'passed') return 'These issues must be resolved before the deposition can be pushed.';
   return validation.warnings.length ? 'You can submit - review the warnings below before you do.' : 'You can submit.';
 }
 
@@ -114,9 +119,19 @@ function pushHeading(status: PhaseStatus, state: JobState | undefined): string {
 }
 
 function uploadNote(state: JobState | undefined): string {
-  if (state === 'push_submitted') return 'Upload job submitted. Detailed progress is unavailable.';
-  if (state === 'push_running') return 'Upload job in progress. Detailed progress is unavailable.';
+  if (state === 'push_submitted') return 'Upload job submitted.';
+  if (state === 'push_running') return 'Waiting for upload progress.';
   return 'Upload complete.';
+}
+
+function byteLabel(value: number): string {
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
+  let index = 0;
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024;
+    index += 1;
+  }
+  return `${index ? value.toFixed(1) : value} ${units[index]}`;
 }
 
 function summaryLine(s: SyncSummary): string {
@@ -192,11 +207,16 @@ function CommandBox({ text }: { text: string }) {
 
 function SyncChecklist({ items }: { items: SyncChecklistItem[] }) {
   return (
-    <Stack spacing={1} sx={{ mt: 2 }}>
-      {items.map((it) => {
-        const complete = it.total > 0 && it.done >= it.total;
+    <Stack role="list" aria-label="Sync progress by group" spacing={1} sx={{ mt: 2 }}>
+      {groupSyncProgress(items).map((it) => {
+        const complete = it.total > 0 && it.done === it.total;
         return (
-          <Box key={it.label} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box
+            key={it.label}
+            role="listitem"
+            aria-label={`${it.label}: ${it.done} of ${it.total}, ${complete ? 'complete' : 'incomplete'}`}
+            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {complete ? (
                 <Icon sdsIcon="CheckCircle" sdsSize="s" color="green" />
@@ -238,8 +258,8 @@ function WarningsList({ warnings, blocking }: { warnings: ValidationWarning[]; b
   );
 }
 
-export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
-  const { dataset, submit, push } = useSubmitFlow(initial);
+export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: StepProps) {
+  const { dataset, submit, push, resetPreparation } = useSubmitFlow(initial);
   const [selection, setSelection] = useState<{ datasetId: number; phase: 1 | 2 | 3 } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const started = useRef(false);
@@ -266,7 +286,7 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
     push.mutate();
   };
 
-  // Landing on this step kicks off the sync - no manual start button (matches the mock).
+  // Start preparation once when arriving with an idle job.
   useEffect(() => {
     if (!readOnly && sync === 'idle' && !submit.isPending && !started.current) {
       started.current = true;
@@ -276,11 +296,17 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
   }, [readOnly, sync]);
 
   const progress = job?.sync_progress ?? null;
+  const uploadProgress = job?.push_progress ?? null;
   const summary = job?.sync_summary ?? null;
   const warnings = job?.validation?.warnings ?? [];
-  const canPush = !job?.validation || job.validation.passed;
+  const blockingIssues = job?.validation?.blocking_issues ?? [];
+  const canPush = canUpload(job);
+  const actionPending = submit.isPending || push.isPending || resetPreparation.isPending;
 
-  const actionError = (submit.error as Error | null)?.message || (push.error as Error | null)?.message;
+  const actionError =
+    (submit.error as Error | null)?.message ||
+    (push.error as Error | null)?.message ||
+    (resetPreparation.error as Error | null)?.message;
   const errorMessage =
     actionError || (state === 'failed' ? job?.error_message || 'Submission failed. You can try again.' : null);
 
@@ -336,19 +362,44 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
 
       {!readOnly && state === 'prep_completed' && (
         <Box>
-          <Button sdsType="primary" sdsStyle="solid" disabled={push.isPending || !canPush} onClick={runPush}>
+          <Button sdsType="primary" sdsStyle="solid" disabled={actionPending || !canPush} onClick={runPush}>
             {push.isPending ? 'Submitting…' : 'Submit deposition'}
           </Button>
+          {!canPush && (
+            <Alert severity="warning" sx={{ mt: 1 }}>
+              Upload requires passed validation for this preparation. Retry preparation and validation, or fix the
+              metadata first.
+            </Alert>
+          )}
+          <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+            <Button sdsType="secondary" sdsStyle="outline" disabled={actionPending} onClick={runSync}>
+              Retry preparation and validation
+            </Button>
+            <Button
+              sdsType="secondary"
+              sdsStyle="outline"
+              disabled={actionPending}
+              onClick={() => {
+                // Suppress auto-prep during reset so metadata can be corrected first.
+                started.current = true;
+                submit.reset();
+                push.reset();
+                resetPreparation.mutate(undefined, { onSuccess: () => onPreparationReset?.() });
+              }}
+            >
+              Fix and re-prepare
+            </Button>
+          </Box>
         </Box>
       )}
       {!readOnly && (sync === 'error' || pushed === 'error' || submit.isError) && (
         <Box>
           {pushed === 'error' && (
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-              Recovery restarts from preparation - the upload becomes available again once prep completes.
+              Restart preparation and validation before uploading again.
             </Typography>
           )}
-          <Button sdsType="primary" sdsStyle="solid" disabled={submit.isPending} onClick={runSync}>
+          <Button sdsType="primary" sdsStyle="solid" disabled={actionPending} onClick={runSync}>
             {submit.isPending ? 'Retrying…' : retryLabel}
           </Button>
         </Box>
@@ -371,22 +422,28 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
               <CommandBox text={job?.sync_command ?? DEFAULT_SYNC_COMMAND} />
               {progress ? (
                 <>
-                  <LinearProgress variant="determinate" value={toPct(progress.done, progress.total)} sx={{ mt: 2 }} />
+                  <LinearProgress
+                    aria-label="Sync progress"
+                    variant="determinate"
+                    value={toPct(progress.done, progress.total)}
+                    sx={{ mt: 2 }}
+                  />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
                     <Typography variant="caption" color="text.secondary">
                       {progress.done.toLocaleString()} / {progress.total.toLocaleString()} objects
                     </Typography>
                     <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700 }}>
-                      {toPct(progress.done, progress.total)}%{progress.eta ? ` · ETA ${progress.eta}` : ''}
+                      {toPct(progress.done, progress.total)}%
+                      {progress.eta && sync === 'active' ? ` · ETA ${progress.eta}` : ''}
                     </Typography>
                   </Box>
                   {progress.items && progress.items.length > 0 && <SyncChecklist items={progress.items} />}
                 </>
               ) : (
                 <>
-                  {sync === 'active' && <LinearProgress sx={{ mt: 2 }} />}
+                  {sync === 'active' && <LinearProgress aria-label="Sync progress" sx={{ mt: 2 }} />}
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
-                    Per-object progress and the symlink/deposit breakdown aren&apos;t available yet.
+                    Waiting for preparation progress.
                   </Typography>
                 </>
               )}
@@ -420,10 +477,11 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
                     </Typography>
                     <Typography variant="body2">{validationBody(job.validation)}</Typography>
                   </Alert>
-                  {warnings.length > 0 && <WarningsList warnings={warnings} blocking={!job.validation.passed} />}
+                  {warnings.length > 0 && <WarningsList warnings={warnings} />}
+                  {blockingIssues.length > 0 && <WarningsList warnings={blockingIssues} blocking />}
                 </>
               ) : (
-                <Alert severity="info">Pre-flight validation is not available yet.</Alert>
+                <Alert severity="info">Pre-flight validation has not run. Upload requires a passed check.</Alert>
               )}
 
               {!readOnly && state === 'prep_completed' && (
@@ -453,7 +511,21 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
                 {pushHeading(pushed, state)}
               </Typography>
-              {pushed === 'active' && <LinearProgress sx={{ my: 1 }} />}
+              {pushed === 'active' && (
+                <LinearProgress
+                  aria-label="Upload progress"
+                  variant={uploadProgress && uploadProgress.total > 0 ? 'determinate' : 'indeterminate'}
+                  value={uploadProgress ? toPct(uploadProgress.done, uploadProgress.total) : undefined}
+                  sx={{ my: 1 }}
+                />
+              )}
+              {uploadProgress && uploadProgress.total > 0 && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  {byteLabel(uploadProgress.done)} / {byteLabel(uploadProgress.total)}
+                  {` · ${toPct(uploadProgress.done, uploadProgress.total)}%`}
+                  {uploadProgress.eta && pushed === 'active' ? ` · ETA ${uploadProgress.eta}` : ''}
+                </Typography>
+              )}
               {job?.push_slurm_job_id && (
                 <Typography variant="caption" color="text.secondary">
                   SLURM job {job.push_slurm_job_id}
@@ -461,7 +533,9 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
               )}
               {(pushed === 'active' || pushed === 'done') && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                  {uploadNote(state)}
+                  {uploadProgress && uploadProgress.total > 0 && pushed === 'active'
+                    ? 'Uploading to S3.'
+                    : uploadNote(state)}
                 </Typography>
               )}
             </Box>

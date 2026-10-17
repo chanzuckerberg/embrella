@@ -116,6 +116,10 @@ export async function submitDataset(id: number): Promise<SubmitResponse> {
   return parse(await postResource(url(`${API.DEPOSITION_DATASETS}${id}/submit/`), {}));
 }
 
+export async function resetDatasetPreparation(id: number): Promise<unknown> {
+  return parse(await postResource(url(`${API.DEPOSITION_DATASETS}${id}/reset-preparation/`), {}));
+}
+
 export async function pushDataset(id: number): Promise<SubmitResponse> {
   return parse(await postResource(url(`${API.DEPOSITION_DATASETS}${id}/push/`), {}));
 }

@@ -15,6 +15,7 @@ from depositions.services.dataprep_config import dataprep_config_yaml, dataset_i
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
 from depositions.services.submission import PREP_ACTIVE, apply_status, on_push_complete, start_push
+from depositions.services.validation import require_validation
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,7 @@ def submit_dataset_prep(dataset):
         job, _ = DatasetJob.objects.using(db).get_or_create(dataset=dataset)
         claimed = (
             DatasetJob.objects.using(db)
-            .filter(pk=job.pk, state__in=("pending", "failed"))
+            .filter(pk=job.pk, state__in=("pending", "failed", "prep_completed"))
             # Clear the prior attempt's ids + log so a re-failed prep doesn't surface the old output.
             .update(
                 state="prep_submitted",
@@ -91,6 +92,10 @@ def submit_dataset_prep(dataset):
                 push_slurm_job_id="",
                 error_message="",
                 log_excerpt="",
+                sync_progress=None,
+                sync_summary=None,
+                push_progress=None,
+                validation=None,
                 started_at=timezone.now(),
                 prep_completed_at=None,
                 completed_at=None,
@@ -115,11 +120,11 @@ def submit_dataset_prep(dataset):
             required_dataset_ids=required_ids,
         )
         params = {
+            "dataset_id": dataset.dataset_id,
             "output_dir": output_dir,
             "config_path": config_path,
             "config_yaml": config_yaml,
             "session_names": list(dataset.sessions.values_list("msi_session__name", flat=True)),
-            "run_validate": False,
         }
         job_name = f"deposition_prep_{deposition.deposition_id}_{dataset.dataset_id}"
         slurm_job_id = launch_deposition_job(
@@ -167,7 +172,9 @@ def submit_dataset_push(dataset):
     except DatasetJob.DoesNotExist:
         raise SubmissionValidationError("This dataset hasn't been prepared yet; submit it first.")
 
-    # Use the cluster prep staged on, not one re-derived from (mutable) metadata.
+    require_validation(job)
+
+    # Upload from the cluster used for preparation.
     cluster_id = job.cluster_id or _cluster_for_dataset(dataset)
     auth = _service_auth()
     output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
