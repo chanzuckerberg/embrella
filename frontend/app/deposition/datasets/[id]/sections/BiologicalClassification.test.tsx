@@ -56,3 +56,29 @@ it('scopes the Cell component GO search to the cellular component branch', async
     expect(mockSearch).toHaveBeenCalledWith('mitochondrion', 'go', 'http://purl.obolibrary.org/obo/GO_0005575')
   );
 });
+
+it('allows read-only users to expand and read classification names and IDs without editing', async () => {
+  const onChange = jest.fn();
+  render(
+    <BiologicalClassification
+      sample={{ tissue_name: 'brain', tissue_id: 'UBERON:0000955' }}
+      requiredBioField={null}
+      assayLabel="electron tomography"
+      assayOntologyId="EFO:0000001"
+      onChangeSample={onChange}
+      onChangeAssayLabel={onChange}
+      onChangeAssayOntologyId={onChange}
+      readOnly
+      innerRef={() => {}}
+    />
+  );
+  const tissue = screen.getByRole('button', { name: /Tissue/ });
+  expect(tissue).toBeEnabled();
+  await userEvent.click(tissue);
+  expect(tissue).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByText('brain')).toBeVisible();
+  await userEvent.click(screen.getByRole('button', { name: /Assay/ }));
+  expect(screen.getByText('electron tomography')).toBeVisible();
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  expect(onChange).not.toHaveBeenCalled();
+});

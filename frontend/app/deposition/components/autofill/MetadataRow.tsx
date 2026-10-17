@@ -48,14 +48,14 @@ export function MetadataRow({
   };
 
   let control;
-  if (locked) {
+  if (locked || readOnly) {
     control = (
       <TextField
         fullWidth
         size="small"
-        value={filled ? String(shown) : ''}
+        value={filled ? String(shown ?? false) : ''}
         placeholder={placeholder}
-        disabled
+        InputProps={{ readOnly: true, inputProps: { 'aria-label': label } }}
         sx={inputSx}
       />
     );
@@ -66,7 +66,6 @@ export function MetadataRow({
         fullWidth
         size="small"
         value={shown === true ? 'true' : 'false'}
-        disabled={readOnly}
         onChange={(e) => onChange(e.target.value === 'true')}
         sx={inputSx}
       >
@@ -81,7 +80,6 @@ export function MetadataRow({
         size="small"
         type={field.type === 'number' ? 'number' : 'text'}
         value={shown ?? ''}
-        disabled={readOnly}
         error={isRequired}
         placeholder={placeholder}
         onChange={(e) => handleChange(e.target.value)}

@@ -73,7 +73,7 @@ it('shows recovery after a failed upload, then starts preparation with the real 
   fireEvent.click(restart);
   await waitFor(() => expect(api.submitDataset).toHaveBeenCalledWith(dataset.id));
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Restart preparation' })).not.toBeInTheDocument());
-  expect(screen.getByText('In progress')).toBeInTheDocument();
+  expect(screen.getByText('Waiting in queue')).toBeInTheDocument();
   expect(screen.queryByText('Cluster launch failed')).toBeNull();
   expect(api.pushDataset).toHaveBeenCalledTimes(1);
   unmount();
@@ -97,7 +97,9 @@ it('shows upload completion and invalidates both cached submissions scopes', asy
   });
 
   fireEvent.click(screen.getByRole('button', { name: 'Submit deposition' }));
-  expect(await screen.findByText('Submitted - uploaded to the data portal.')).toBeInTheDocument();
+  expect(
+    await screen.findByText('Files have been uploaded to S3. Portal indexing and publication are separate steps.')
+  ).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Submit deposition' })).not.toBeInTheDocument();
   expect(client.getQueryState(depositionKeys.submissions())?.isInvalidated).toBe(true);
   expect(client.getQueryState(depositionKeys.submissions('mine'))?.isInvalidated).toBe(true);

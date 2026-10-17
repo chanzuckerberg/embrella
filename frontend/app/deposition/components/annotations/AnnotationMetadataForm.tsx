@@ -85,7 +85,7 @@ function AnnotationPublications({
             fullWidth
             placeholder="10.1021/…"
             value={doi}
-            disabled={disabled}
+            readOnly={disabled}
             onChange={(v) => sync(rows.map((d, j) => (j === i ? v : d)))}
           />
           {!disabled && (
@@ -132,13 +132,13 @@ function MethodLinksEditor({
         {value.map((row, i) => (
           <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
             <TextField
-              select
+              select={!disabled}
               size="small"
               label="Type"
               required
               value={row.link_type ?? ''}
               onChange={(e) => update(i, { link_type: e.target.value as MethodLinkType })}
-              disabled={disabled}
+              InputProps={{ readOnly: disabled }}
               sx={{ minWidth: 160 }}
             >
               {LINK_TYPES.map((t) => (
@@ -154,7 +154,7 @@ function MethodLinksEditor({
               placeholder="https://…"
               value={row.link ?? ''}
               onChange={(e) => update(i, { link: e.target.value })}
-              disabled={disabled}
+              InputProps={{ readOnly: disabled }}
               sx={{ flex: 2 }}
             />
             <TextField
@@ -163,7 +163,7 @@ function MethodLinksEditor({
               placeholder="Optional"
               value={row.custom_name ?? ''}
               onChange={(e) => update(i, { custom_name: e.target.value })}
-              disabled={disabled}
+              InputProps={{ readOnly: disabled }}
               sx={{ flex: 1 }}
             />
             {!disabled && (
@@ -198,7 +198,7 @@ export function AnnotationMetadataForm({
       onChange={(e) => onChange({ [key]: e.target.value } as Partial<DepositionAnnotation>)}
       size="small"
       fullWidth
-      disabled={readOnly}
+      InputProps={{ readOnly }}
       multiline={multiline}
       minRows={multiline ? 2 : undefined}
     />
@@ -240,13 +240,13 @@ export function AnnotationMetadataForm({
         >
           {text('annotation_method', 'Annotation method')}
           <TextField
-            select
+            select={!readOnly}
             label="Method type"
             value={annotation.method_type ?? ''}
             onChange={(e) => onChange({ method_type: e.target.value as AnnotationMethodType })}
             size="small"
             fullWidth
-            disabled={readOnly}
+            InputProps={{ readOnly }}
           >
             <MenuItem value=""></MenuItem>
             {METHOD_TYPES.map((m) => (
@@ -281,7 +281,7 @@ export function AnnotationMetadataForm({
               onChange={(e) => onChange({ object_state: e.target.value })}
               size="small"
               fullWidth
-              disabled={readOnly}
+              InputProps={{ readOnly }}
               sx={{ '& .MuiOutlinedInput-root': { height: '100%', alignItems: 'flex-start' } }}
             />
             {text('object_description', 'Object description', true)}

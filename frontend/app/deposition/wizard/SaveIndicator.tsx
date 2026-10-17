@@ -11,10 +11,12 @@ const TIME = { hour: '2-digit', minute: '2-digit', second: '2-digit' } as const;
 export function SaveIndicator({
   status,
   lastSavedAt,
+  isDirty,
   onRetry,
 }: {
   status: SaveStatus;
   lastSavedAt: Date | null;
+  isDirty: boolean;
   onRetry: () => void;
 }) {
   let icon: ReactNode = null;
@@ -28,6 +30,8 @@ export function SaveIndicator({
     icon = <Icon sdsIcon="ExclamationMarkCircle" sdsSize="s" color="red" />;
     label = 'Save failed - retry';
     color = 'error.main';
+  } else if (isDirty) {
+    label = 'Unsaved changes';
   } else if (status === 'saved' || lastSavedAt) {
     icon = <Icon sdsIcon="CheckCircle" sdsSize="s" color="green" />;
     const at = lastSavedAt ? ` · ${lastSavedAt.toLocaleTimeString([], TIME)}` : '';

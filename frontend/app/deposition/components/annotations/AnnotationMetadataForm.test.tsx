@@ -68,9 +68,10 @@ it('toggles a boolean flag after expanding Details', () => {
   expect(onChange).toHaveBeenCalledWith({ ground_truth_status: true });
 });
 
-it('disables all inputs when readOnly', () => {
+it('keeps read-only text selectable and disables editing controls', () => {
   setup({ object_name: 'x', ground_truth_status: true }, true);
-  expect(screen.getByLabelText(/Object name/)).toBeDisabled();
+  expect(screen.getByLabelText(/Object name/)).toHaveAttribute('readonly');
+  expect(screen.getByLabelText(/Object name/)).not.toBeDisabled();
   expect(screen.getByLabelText(/Ground truth/)).toBeDisabled();
 });
 
