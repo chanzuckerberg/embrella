@@ -472,6 +472,20 @@ properties:
     x-cli-format: boolean_to_int
     x-cli-default: true
 
+  out_motion:
+    type: boolean
+    title: Save Motion Files
+    description: Save per-movie global shifts (and residual local shift of each patch with McPatch) as .mcaln files in OutDir
+    default: true
+    x-parameter-group: motion_correction
+    x-bash-var: out_motion
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: '-OutMotion'
+    x-cli-format: boolean_to_int
+    x-cli-default: false
+
   mag_correction:
     type: string
     title: Anisotropic Magnification Correction
