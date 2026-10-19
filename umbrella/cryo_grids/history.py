@@ -20,6 +20,7 @@ class ChangeReason(StrEnum):
     UNCLIPPED = "unclipped"
     BOX_DELETED = "box_deleted"
     PUCK_DELETED = "puck_deleted"
+    BASELINE = "baseline"  # Snapshot of pre-existing objects
 
 
 # Fields whose change means the object moved within the storage chain
