@@ -70,7 +70,7 @@ admin.site.register(PlungeFreezingDevice)
 admin.site.register(PlungeFreezingSession)
 admin.site.register(Sample)
 admin.site.register(Specimen)
-admin.site.register(Label)
+admin.site.register(Label, SimpleHistoryAdmin)
 admin.site.register(GridLabel, SimpleHistoryAdmin)
 
 

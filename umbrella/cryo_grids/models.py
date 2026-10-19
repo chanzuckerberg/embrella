@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
@@ -234,6 +236,10 @@ LABEL_COLORS = [
 ]
 
 
+# Unused labels younger than this are typos: auto-deleted on removal, hidden from timelines
+LABEL_TYPO_WINDOW = timedelta(minutes=1)
+
+
 def random_label_color():
     import random
 
@@ -247,6 +253,7 @@ class Label(models.Model):
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_labels"
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
