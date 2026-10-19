@@ -177,6 +177,8 @@ SPECTACULAR_SETTINGS = {
     # Several models have a `status` field with different choice sets, this helps differentiate
     "ENUM_NAME_OVERRIDES": {
         "PreserveStatusEnum": "processes.models.DirectorySummary.PRESERVE_STATUS_CHOICES",
+        "TimelineKindEnum": "timeline.serializers.KIND_CHOICES",
+        "TimelineSubjectEnum": "timeline.serializers.SUBJECT_CHOICES",
     },
 }
 

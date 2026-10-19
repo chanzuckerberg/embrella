@@ -49,6 +49,7 @@ from umbrella.choices import (
 from common.sorting import msi_session_sort_key
 from cryo_grids.history import ChangeReason, edit_reason, with_reason
 from cryo_grids.models import (
+    LABEL_TYPO_WINDOW,
     Cane,
     CryoGrid,
     CryoGridBox,
@@ -1396,14 +1397,11 @@ class CryoGridViewSet(viewsets.ModelViewSet):
             # Auto-delete recently created labels (< 1 min old) that are now unused.
             # This catches typos from label creation without removing established labels.
             if removed_label_ids:
-                import datetime
-
                 from django.utils import timezone
 
-                one_minute_ago = timezone.now() - datetime.timedelta(minutes=1)
                 Label.objects.filter(
                     id__in=removed_label_ids,
-                    created_at__gte=one_minute_ago,
+                    created_at__gte=timezone.now() - LABEL_TYPO_WINDOW,
                 ).exclude(id__in=GridLabel.objects.values_list("label_id", flat=True)).delete()
 
             # Add new labels
