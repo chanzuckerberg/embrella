@@ -4,6 +4,7 @@ export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 export interface AutoSaveState {
   status: SaveStatus;
+  // Unsaved edits remain dirty after a save error or a metadata lock, until saved or discarded.
   isDirty: boolean;
   lastSavedAt: Date | null;
   error?: string | null;
@@ -119,7 +120,6 @@ export function useDraftAutoSave<T>(
     if (!isDirty) return;
     const warn = (event: BeforeUnloadEvent) => {
       event.preventDefault();
-      event.returnValue = '';
     };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);

@@ -580,7 +580,15 @@ class TestAutoFill:
         assert r.status_code == 200, r.content
         assert resolve_mock.call_args.kwargs["proc_run"] == "run001"
 
-    def test_init_failure_returns_502(self, auth_client, owned_session):
+    @pytest.mark.parametrize(
+        "reason, expected",
+        [
+            ("Metrics file not found", "Check the AreTomo run on the Sources step."),
+            ("environment_unavailable", "Auto-fill is unavailable on this cluster."),
+            ("dataportal_env_unconfigured", "Auto-fill is unavailable on this cluster."),
+        ],
+    )
+    def test_init_failure_returns_502(self, auth_client, owned_session, reason, expected):
         owned_session.aretomo_run_name = "run001"
         owned_session.save(update_fields=["aretomo_run_name"])
         c1, c2, c3 = self._patch_cluster()
@@ -590,14 +598,14 @@ class TestAutoFill:
             c3,
             mock.patch(
                 "depositions.views.run_autofill_init",
-                return_value={"filled": False, "session": None, "reason": "Metrics file not found"},
+                return_value={"filled": False, "session": None, "reason": reason},
             ),
         ):
             r = auth_client.post(self._url(owned_session))
         assert r.status_code == 502
         detail = r.json()["detail"]
         assert "Metrics file not found" not in detail
-        assert "AreTomo run" in detail
+        assert detail == expected
 
     def test_non_owner_cannot_autofill(self, owned_session):
         other = User.objects.create_user(username="heidi@example.com", password="pw")

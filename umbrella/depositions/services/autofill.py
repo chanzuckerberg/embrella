@@ -189,6 +189,8 @@ def _extract_session(cfg, session_name: str) -> dict | None:
 
 
 def _short_reason(err: str) -> str:
+    if "EnvironmentLocationNotFound:" in err or "EnvironmentNameNotFound:" in err:
+        return "environment_unavailable"
     for line in reversed(err.splitlines()):
         stripped = line.strip()
         if stripped.startswith("Error:"):

@@ -432,6 +432,8 @@ class DepositionSessionViewSet(
             user_messages = {
                 "ssh_disabled": "Auto-fill isn't available here.",
                 "ssh_error": "Couldn't reach the cluster to auto-fill. Please try again.",
+                "environment_unavailable": "Auto-fill is unavailable on this cluster.",
+                "dataportal_env_unconfigured": "Auto-fill is unavailable on this cluster.",
             }
             user_message = user_messages.get(
                 result["reason"],
