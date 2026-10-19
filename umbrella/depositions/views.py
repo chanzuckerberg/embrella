@@ -38,11 +38,23 @@ from .services.autofill import (
     run_autofill_init,
 )
 from .services.exceptions import SubmissionValidationError
+from .services.metadata import metadata_edit
 
 logger = logging.getLogger(__name__)
 
 # Wizard autosaves via PATCH only — no PUT full-replace.
 HTTP_METHODS_NO_PUT = ["get", "post", "patch", "delete", "head", "options"]
+
+
+class MetadataLockedMixin:
+    def perform_update(self, serializer):
+        with metadata_edit(serializer.instance):
+            serializer.instance.refresh_from_db()
+            serializer.save()
+
+    def perform_destroy(self, instance):
+        with metadata_edit(instance, deleting=True):
+            instance.delete()
 
 
 @extend_schema_view(
@@ -79,7 +91,7 @@ HTTP_METHODS_NO_PUT = ["get", "post", "patch", "delete", "head", "options"]
         ],
     ),
 )
-class DepositionViewSet(viewsets.ModelViewSet):
+class DepositionViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
     """Container CRUD; list nests datasets (My Submissions)."""
 
     permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
@@ -166,7 +178,7 @@ class DepositionViewSet(viewsets.ModelViewSet):
         ],
     ),
 )
-class DatasetViewSet(viewsets.ModelViewSet):
+class DatasetViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
     """Submit-unit CRUD + per-dataset actions."""
 
     permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
@@ -189,6 +201,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
         deposition = serializer.validated_data["deposition"]
         if deposition.submitter_user_id != self.request.user.id:
             raise PermissionDenied("You can only add datasets to your own depositions.")
+        # New drafts do not change shared metadata or staged files; prep claims remain serialized per deposition.
         dataset_id = None
         try:
             dataset_id = get_reservation_service().reserve_new_dataset()
@@ -356,7 +369,9 @@ class DatasetViewSet(viewsets.ModelViewSet):
         ],
     ),
 )
-class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
+class DepositionSessionViewSet(
+    MetadataLockedMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
+):
     """Session detail save. No create/list/delete — managed via dataset nested sessions."""
 
     permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
@@ -374,6 +389,9 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
     def auto_fill(self, request, pk=None):
         """Run `cryoetportalprep init` on the cluster and populate this session's metadata."""
         session = self.get_object()
+        # Fail before cluster work; recheck under the write lock before saving its result.
+        with metadata_edit(session):
+            pass
         if not session.aretomo_run_name:
             return Response(
                 {"detail": "Select an AreTomo run for this session before auto-filling."},
@@ -414,6 +432,8 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
             user_messages = {
                 "ssh_disabled": "Auto-fill isn't available here.",
                 "ssh_error": "Couldn't reach the cluster to auto-fill. Please try again.",
+                "environment_unavailable": "Auto-fill is unavailable on this cluster.",
+                "dataportal_env_unconfigured": "Auto-fill is unavailable on this cluster.",
             }
             user_message = user_messages.get(
                 result["reason"],
@@ -421,28 +441,29 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
             )
             return Response({"detail": user_message}, status=status.HTTP_502_BAD_GATEWAY)
 
-        raw = result["session"]
-        mapped = map_session_to_metadata(raw)
-        TiltseriesMetadata.objects.update_or_create(
-            session=session,
-            defaults={
-                **mapped["tiltseries"],
-                **map_session_plan_to_instrument_metadata(msi_session.session_plan),
-                "autofill_metadata": raw,
-            },
-        )
-        for tomo in mapped["tomograms"]:
-            TomogramMetadata.objects.update_or_create(
+        with metadata_edit(session):
+            raw = result["session"]
+            mapped = map_session_to_metadata(raw)
+            TiltseriesMetadata.objects.update_or_create(
                 session=session,
-                flavor=tomo["flavor"],
-                defaults={**tomo, "autofill_metadata": raw},
+                defaults={
+                    **mapped["tiltseries"],
+                    **map_session_plan_to_instrument_metadata(msi_session.session_plan),
+                    "autofill_metadata": raw,
+                },
             )
-        kept_flavors = {tomo["flavor"] for tomo in mapped["tomograms"]}
-        session.tomogram_metadata.exclude(flavor__in=kept_flavors).delete()
+            for tomo in mapped["tomograms"]:
+                TomogramMetadata.objects.update_or_create(
+                    session=session,
+                    flavor=tomo["flavor"],
+                    defaults={**tomo, "autofill_metadata": raw},
+                )
+            kept_flavors = {tomo["flavor"] for tomo in mapped["tomograms"]}
+            session.tomogram_metadata.exclude(flavor__in=kept_flavors).delete()
 
-        session.last_autofill_at = timezone.now()
-        session.last_autofill_duration_seconds = round(time.monotonic() - started)
-        session.save(update_fields=["last_autofill_at", "last_autofill_duration_seconds", "updated_at"])
+            session.last_autofill_at = timezone.now()
+            session.last_autofill_duration_seconds = round(time.monotonic() - started)
+            session.save(update_fields=["last_autofill_at", "last_autofill_duration_seconds", "updated_at"])
         return Response(self.get_serializer(session).data)
 
     @action(detail=True, methods=["post"], url_path="subset-csv")
@@ -473,8 +494,9 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        session.subset_selection = selection
-        session.subset_filename = upload.name
-        session.subset_csv_path = ""
-        session.save(update_fields=["subset_selection", "subset_filename", "subset_csv_path", "updated_at"])
+        with metadata_edit(session):
+            session.subset_selection = selection
+            session.subset_filename = upload.name
+            session.subset_csv_path = ""
+            session.save(update_fields=["subset_selection", "subset_filename", "subset_csv_path", "updated_at"])
         return Response({"subset_selection": selection, "subset_filename": upload.name})

@@ -580,7 +580,15 @@ class TestAutoFill:
         assert r.status_code == 200, r.content
         assert resolve_mock.call_args.kwargs["proc_run"] == "run001"
 
-    def test_init_failure_returns_502(self, auth_client, owned_session):
+    @pytest.mark.parametrize(
+        "reason, expected",
+        [
+            ("Metrics file not found", "Check the AreTomo run on the Sources step."),
+            ("environment_unavailable", "Auto-fill is unavailable on this cluster."),
+            ("dataportal_env_unconfigured", "Auto-fill is unavailable on this cluster."),
+        ],
+    )
+    def test_init_failure_returns_502(self, auth_client, owned_session, reason, expected):
         owned_session.aretomo_run_name = "run001"
         owned_session.save(update_fields=["aretomo_run_name"])
         c1, c2, c3 = self._patch_cluster()
@@ -590,14 +598,14 @@ class TestAutoFill:
             c3,
             mock.patch(
                 "depositions.views.run_autofill_init",
-                return_value={"filled": False, "session": None, "reason": "Metrics file not found"},
+                return_value={"filled": False, "session": None, "reason": reason},
             ),
         ):
             r = auth_client.post(self._url(owned_session))
         assert r.status_code == 502
         detail = r.json()["detail"]
         assert "Metrics file not found" not in detail
-        assert "AreTomo run" in detail
+        assert detail == expected
 
     def test_non_owner_cannot_autofill(self, owned_session):
         other = User.objects.create_user(username="heidi@example.com", password="pw")
@@ -1399,3 +1407,125 @@ def test_validation_diagnostics_are_owner_only(auth_client, is_owner, endpoint):
         assert len(validation["warnings"]) == len(validation["blocking_issues"]) == 1
         if not is_owner:
             assert "submission owner" in validation["blocking_issues"][0]["message"]
+
+
+@pytest.mark.django_db
+class TestMetadataLock:
+    @pytest.mark.parametrize(
+        "state",
+        ["prep_running", "prep_completed", "failed", "completed"],
+    )
+    @pytest.mark.parametrize(
+        "target", ["dataset", "deposition", "session", "subset", "autofill", "delete_dataset", "delete_deposition"]
+    )
+    def test_rejects_writes_without_mutating_staged_metadata(self, auth_client, owned_session, state, target):
+        from depositions.models import DatasetJob, DepositionAnnotation
+
+        session = owned_session
+        dataset = session.dataset
+        deposition = dataset.deposition
+        annotation = DepositionAnnotation.objects.create(session=session, copick_kind="picks", copick_ref="keep")
+        DatasetJob.objects.create(dataset=dataset, state=state)
+        if target == "dataset":
+            response = auth_client.patch(
+                f"{DATASETS}{dataset.pk}/",
+                {"title": "changed", "sessions": [], "funding": [], "sample": {"organism_name": "changed"}},
+                format="json",
+            )
+        elif target == "deposition":
+            response = auth_client.patch(f"{DEPOSITIONS}{deposition.pk}/", {"title": "changed"}, format="json")
+        elif target == "session":
+            response = auth_client.patch(
+                f"{SESSIONS}{session.pk}/", {"aretomo_run_name": "changed", "annotations": []}, format="json"
+            )
+        elif target == "subset":
+            response = auth_client.post(
+                f"{SESSIONS}{session.pk}/subset-csv/",
+                {"file": SimpleUploadedFile("subset.csv", b"name\nchanged\n")},
+                format="multipart",
+            )
+        elif target == "autofill":
+            with mock.patch("depositions.views.run_autofill_init") as autofill:
+                response = auth_client.post(f"{SESSIONS}{session.pk}/auto-fill/")
+                autofill.assert_not_called()
+        else:
+            endpoint, pk = (DATASETS, dataset.pk) if target == "delete_dataset" else (DEPOSITIONS, deposition.pk)
+            response = auth_client.delete(f"{endpoint}{pk}/")
+        assert response.status_code == 409, response.content
+        detail = response.json()["detail"]
+        if target.startswith("delete_"):
+            assert detail.startswith("Deletion is locked.")
+            assert "before deleting" in detail
+            assert "Edit metadata" not in detail
+        else:
+            assert "Edit metadata" in detail
+        dataset.refresh_from_db()
+        session.refresh_from_db()
+        deposition.refresh_from_db()
+        assert dataset.title == "DS" and dataset.sample_id is None
+        assert deposition.title == "Dep"
+        assert session.aretomo_run_name == "" and session.subset_selection is None
+        assert DepositionAnnotation.objects.filter(pk=annotation.pk).exists()
+
+    @pytest.mark.parametrize("state", ["prep_completed", "failed"])
+    def test_reset_is_required_before_dataset_and_annotation_edits(self, auth_client, owned_session, state):
+        from depositions.models import DatasetJob
+
+        dataset = owned_session.dataset
+        job = DatasetJob.objects.create(
+            dataset=dataset,
+            state=state,
+            prep_slurm_job_id="42",
+            validation={"status": "passed", "attempt": "42", "warnings": [], "blocking_issues": []},
+        )
+        response = auth_client.post(f"{DATASETS}{dataset.pk}/reset-preparation/")
+        assert response.status_code == 200, response.content
+        assert auth_client.patch(f"{DATASETS}{dataset.pk}/", {"title": "fixed"}, format="json").status_code == 200
+        assert (
+            auth_client.patch(
+                f"{SESSIONS}{owned_session.pk}/",
+                {"annotations": [{"copick_kind": "picks", "copick_ref": "new"}]},
+                format="json",
+            ).status_code
+            == 200
+        )
+        job.refresh_from_db()
+        assert job.state == "pending" and job.validation is None
+        assert owned_session.annotations.get().copick_ref == "new"
+
+    def test_shared_deposition_metadata_stays_locked_until_all_attempts_are_reset(self, auth_client, owned_session):
+        from depositions.models import Dataset, DatasetJob
+
+        dataset = owned_session.dataset
+        DatasetJob.objects.create(dataset=dataset, state="prep_completed")
+        sibling = Dataset.objects.create(deposition=dataset.deposition, title="sibling")
+        DatasetJob.objects.create(dataset=sibling, state="prep_completed")
+        assert auth_client.post(f"{DATASETS}{dataset.pk}/reset-preparation/").status_code == 200
+        endpoint = f"{DEPOSITIONS}{dataset.deposition_id}/"
+        assert auth_client.patch(endpoint, {"title": "changed"}, format="json").status_code == 409
+        assert auth_client.post(f"{DATASETS}{sibling.pk}/reset-preparation/").status_code == 200
+        assert auth_client.patch(endpoint, {"title": "changed"}, format="json").status_code == 200
+
+    def test_autofill_rechecks_lock_after_cluster_work(self, auth_client, owned_session):
+        from stores.models import Cluster
+
+        from depositions.models import DatasetJob
+
+        session = owned_session
+        session.aretomo_run_name = "run1"
+        session.save()
+        Cluster.objects.create(cluster_id="lock-test", name="Lock test", is_active=True)
+
+        def finish_after_prep_starts(*args):
+            DatasetJob.objects.create(dataset=session.dataset, state="prep_submitted")
+            return {"filled": True, "session": {}}
+
+        with (
+            mock.patch("depositions.views.cluster_id_for_run", return_value="lock-test"),
+            mock.patch("depositions.views.resolve_review_path", return_value="/tmp/run"),
+            mock.patch("depositions.views.run_autofill_init", side_effect=finish_after_prep_starts),
+        ):
+            response = auth_client.post(f"{SESSIONS}{session.pk}/auto-fill/")
+        assert response.status_code == 409
+        session.refresh_from_db()
+        assert session.last_autofill_at is None

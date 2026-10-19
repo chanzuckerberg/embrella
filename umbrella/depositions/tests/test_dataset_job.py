@@ -16,12 +16,12 @@ def test_every_state_maps_to_a_dataset_status():
     assert DatasetJob.DATASET_STATUS["pending"] == "draft"
 
 
-def test_only_pending_and_failed_are_editable():
-    assert set(ALL_STATES) - {"pending", "failed"} == DatasetJob.LOCKED_STATES
-    assert not DatasetJob(state="pending").is_locked
-    assert not DatasetJob(state="failed").is_locked
-    assert DatasetJob(state="prep_completed").is_locked
-    assert DatasetJob(state="push_running").is_locked
+def test_only_pending_and_failed_allow_cluster_selection():
+    assert set(ALL_STATES) - {"pending", "failed"} == DatasetJob.CLUSTER_FROZEN_STATES
+    assert not DatasetJob(state="pending").cluster_is_frozen
+    assert not DatasetJob(state="failed").cluster_is_frozen
+    assert DatasetJob(state="prep_completed").cluster_is_frozen
+    assert DatasetJob(state="push_running").cluster_is_frozen
 
 
 def test_prep_completed_can_push_or_retry_preparation():

@@ -12,7 +12,7 @@ const mockUseDataset = useDataset as jest.Mock;
 
 const DRAFT = { id: 5, deposition: 1, dataset_id: 100, title: 'My dataset', status: 'draft', funding: [] };
 const PUSHED = { ...DRAFT, status: 'pushed' };
-const FAILED = { ...DRAFT, status: 'failed' };
+const FAILED = { ...DRAFT, status: 'failed', job: { id: 1, state: 'failed' } };
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -44,17 +44,22 @@ describe('DatasetDetailPage', () => {
     expect(screen.queryByText(/read-only/i)).not.toBeInTheDocument();
   });
 
-  it('renders read-only with a banner for a pushed dataset', () => {
-    mockUseDataset.mockReturnValue({ data: PUSHED, isPending: false, isError: false });
+  it.each([
+    { data: PUSHED, message: /Uploaded datasets can’t be edited/i },
+    { data: { ...DRAFT, is_owner: false }, message: /Only the submission owner can edit this dataset/i },
+    { data: { ...DRAFT, status: 'syncing' }, message: /Editing is paused during preparation and upload/i },
+  ])('renders selectable read-only values for a locked or non-owned dataset', ({ data, message }) => {
+    mockUseDataset.mockReturnValue({ data, isPending: false, isError: false });
     renderPage();
-    expect(screen.getByText(/read-only/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Title/)).toBeDisabled();
+    expect(screen.getByText(message)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Title/)).toHaveAttribute('readonly');
+    expect(screen.getByLabelText(/Title/)).not.toBeDisabled();
   });
 
-  it('renders an editable form with no banner for a failed dataset', () => {
+  it('keeps a failed dataset read-only until the owner chooses Edit metadata', () => {
     mockUseDataset.mockReturnValue({ data: FAILED, isPending: false, isError: false });
     renderPage();
-    expect(screen.getByLabelText(/Title/)).not.toBeDisabled();
-    expect(screen.queryByText(/read-only/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Title/)).toHaveAttribute('readonly');
+    expect(screen.getByRole('button', { name: 'Edit metadata' })).toBeEnabled();
   });
 });

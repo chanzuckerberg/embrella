@@ -87,7 +87,7 @@ it('allows removing a saved session after submission fails and saves the removal
 });
 
 it.each(['syncing', 'pushed'])('keeps %s datasets read-only', (status) => {
-  render(<SourcesStep dataset={{ ...dataset, status } as Dataset} readOnly={false} reportSave={jest.fn()} />);
+  render(<SourcesStep dataset={{ ...dataset, status } as Dataset} readOnly reportSave={jest.fn()} />);
   expect(tableProps().readOnly).toBe(true);
 });
 

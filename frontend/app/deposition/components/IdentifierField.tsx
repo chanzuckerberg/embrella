@@ -33,18 +33,20 @@ export function IdentifierField({
   value,
   onChange,
   disabled = false,
+  readOnly = false,
   ...rest
 }: {
   kind: IdentifierKind;
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  readOnly?: boolean;
 } & Omit<TextFieldProps, 'value' | 'onChange' | 'error' | 'helperText'>) {
   const trimmed = value.trim();
   const debounced = useDebounced(trimmed, 400);
   const formatOk = formatOkFor(kind, value);
 
-  const q = useIdentifierLookup(kind, debounced, formatOk && debounced.length > 0);
+  const q = useIdentifierLookup(kind, debounced, !readOnly && formatOk && debounced.length > 0);
 
   const settled = formatOk && debounced === trimmed && !q.isFetching;
   const resolved = settled && !!q.data;
@@ -53,7 +55,7 @@ export function IdentifierField({
 
   let helperText: ReactNode = null;
   let isValid = false;
-  if (trimmed) {
+  if (trimmed && !readOnly) {
     if (!formatOk) helperText = LABELS[kind].invalid;
     else if (q.isFetching || debounced !== trimmed) helperText = 'Checking…';
     else if (resolved) {
@@ -66,7 +68,7 @@ export function IdentifierField({
       helperText = `${LABELS[kind].name} not found`;
     }
   }
-  const error = !!trimmed && (!formatOk || notFound);
+  const error = !readOnly && !!trimmed && (!formatOk || notFound);
 
   let helper: ReactNode;
   if (helperText == null) helper = undefined;
@@ -84,6 +86,7 @@ export function IdentifierField({
       value={value}
       onChange={(e) => onChange(kind === 'doi' ? normalizeDoi(e.target.value) : e.target.value)}
       disabled={disabled}
+      InputProps={{ readOnly }}
       error={error}
       helperText={helper}
       FormHelperTextProps={{ component: 'div', sx: isValid ? { color: 'success.main' } : undefined }}

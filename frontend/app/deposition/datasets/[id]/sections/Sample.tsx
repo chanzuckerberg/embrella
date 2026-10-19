@@ -56,14 +56,14 @@ export function Sample({
     <SectionCard title="Sample" sectionKey="sample" innerRef={innerRef}>
       <Stack direction="row" spacing={0.5} alignItems="flex-start" sx={{ maxWidth: { sm: 360 } }}>
         <TextField
-          select
+          select={!readOnly}
           label="Sample type"
           value={sampleType}
           onChange={(e) => onChangeSampleType(e.target.value)}
           required
           fullWidth
           size="small"
-          disabled={readOnly}
+          InputProps={{ readOnly }}
           helperText={shortGuidance}
           SelectProps={{
             renderValue: (value) => value as string,
@@ -99,7 +99,7 @@ export function Sample({
           minRows={4}
           fullWidth
           size="small"
-          disabled={readOnly}
+          InputProps={{ readOnly }}
           sx={{ '& textarea': { resize: 'vertical' } }}
         />
         <TextField
@@ -111,7 +111,7 @@ export function Sample({
           minRows={4}
           fullWidth
           size="small"
-          disabled={readOnly}
+          InputProps={{ readOnly }}
           placeholder="e.g. glow discharge + blot 3s + plunge in ethane"
           sx={{ '& textarea': { resize: 'vertical' } }}
         />
@@ -124,7 +124,7 @@ export function Sample({
         onChange={(e) => onChangeOtherSetup(e.target.value)}
         fullWidth
         size="small"
-        disabled={readOnly}
+        InputProps={{ readOnly }}
       />
     </SectionCard>
   );

@@ -25,7 +25,7 @@ function validationStatus(validation: JobValidation | null | undefined): PhaseSt
   return validation.warnings.length ? 'warning' : 'done';
 }
 
-function pushStatus(state: JobState | undefined, hasPushId: boolean): PhaseStatus {
+function pushStatus(state: JobState | undefined, hasPushId: boolean): Exclude<PhaseStatus, 'warning'> {
   if (isActiveJobPhase(state, 'push')) return 'active';
   if (state === 'completed') return 'done';
   if (state === 'failed' && hasPushId) return 'error';

@@ -1,9 +1,8 @@
 import type { SyncChecklistItem } from './types';
 
-export const SYNC_PROGRESS_GROUPS = [
+const SYNC_PROGRESS_GROUPS = [
   { label: 'Symlink tiltseries', categories: ['Tilt series', 'Alignment', 'CTF'] },
   { label: 'Symlink tomograms', categories: ['Tomograms'] },
-  // Selected annotation progress will be added when the exporter supplies it.
   { label: 'Deposit annotations', categories: [] },
   { label: 'Other items', categories: ['Masks', 'Metadata', 'Frames'] },
 ] as const;

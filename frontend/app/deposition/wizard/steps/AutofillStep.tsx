@@ -19,7 +19,7 @@ import {
   TOMOGRAM_FIELDS,
 } from '../../components/autofill/fields';
 import type { Dataset, TomogramFlavor, TomogramMetadata } from '../../types';
-import { TOMOGRAM_FLAVORS, isEditableStatus } from '../../types';
+import { TOMOGRAM_FLAVORS } from '../../types';
 import type { StepProps } from '../wizardTypes';
 
 function toTomograms(list?: TomogramMetadata[] | null): Record<TomogramFlavor, TomogramMetadata> {
@@ -58,12 +58,11 @@ export function AutofillStep({
   dataset,
   reportSave,
   reportBlocking,
-  readOnly: readOnlyProp,
+  readOnly,
   manualAutofillSessions,
   onManualAutofillEntry,
 }: StepProps) {
   const queryClient = useQueryClient();
-  const readOnly = readOnlyProp || !isEditableStatus(dataset.status);
   const [sessions, setSessions] = useState<SessionMeta[]>(() => toSessionMeta(dataset));
   const [activeKey, setActiveKey] = useState<string>(
     () => (sessions.find((s) => s.aretomoRun) ?? sessions[0])?.key ?? ''
@@ -85,10 +84,12 @@ export function AutofillStep({
     [dataset.id, queryClient]
   );
 
-  const { status, lastSavedAt, saveNow } = useDraftAutoSave(sessions, save, { enabled: !readOnly });
+  const { status, isDirty, lastSavedAt, error, saveNow, discardChanges } = useDraftAutoSave(sessions, save, {
+    enabled: !readOnly,
+  });
   useEffect(() => {
-    reportSave?.({ status, lastSavedAt, saveNow });
-  }, [status, lastSavedAt, saveNow, reportSave]);
+    reportSave?.({ status, isDirty, lastSavedAt, error, saveNow, discardChanges });
+  }, [status, isDirty, lastSavedAt, error, saveNow, discardChanges, reportSave]);
 
   // Gate the wizard's Next while any required field is still empty.
   const totalIssues = sessions.reduce((n, s) => n + sessionIssues(s), 0);

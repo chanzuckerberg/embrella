@@ -3,6 +3,7 @@
 from types import SimpleNamespace
 from unittest import mock
 
+import pytest
 from stores.models import PathType
 
 from depositions.services import autofill
@@ -147,6 +148,10 @@ class TestBetween:
 
 
 class TestShortReason:
+    @pytest.mark.parametrize("error", ["EnvironmentLocationNotFound", "EnvironmentNameNotFound"])
+    def test_recognizes_missing_conda_environment(self, error):
+        assert _short_reason(f"{error}: Not a conda environment: /private/env") == "environment_unavailable"
+
     def test_extracts_click_error_line(self):
         err = "INFO reading things\nError: Metrics file not found: /x/TiltSeries_Metrics.csv\n"
         assert _short_reason(err) == "Metrics file not found: /x/TiltSeries_Metrics.csv"

@@ -136,7 +136,18 @@ export function ObjectOntologyField({
   else if (!disabled && !id.trim()) nameHelper = 'Edit if needed.';
 
   let idField: ReactNode;
-  if (!cfg) {
+  if (disabled) {
+    idField = (
+      <TextField
+        label="Object ID"
+        value={id}
+        size="small"
+        fullWidth
+        InputProps={{ readOnly: true }}
+        helperText={resolved?.label}
+      />
+    );
+  } else if (!cfg) {
     idField = (
       <TextField
         label="Object ID"
@@ -189,7 +200,6 @@ export function ObjectOntologyField({
             onChange(name.trim() ? { object_id: val.id } : { object_id: val.id, object_name: val.label });
           }
         }}
-        disabled={disabled}
         renderOption={(props, o: OntologyTerm) => (
           <Box component="li" {...props} key={o.id}>
             <OntologyOption term={o} />
@@ -229,7 +239,6 @@ export function ObjectOntologyField({
           lockOntology();
           onChange({ object_id: e.target.value.trim() });
         }}
-        disabled={disabled}
         placeholder={cfg.placeholder}
         error={!!id.trim() && !formatOk}
         helperText={!!id.trim() && !formatOk ? `Expected format like ${cfg.placeholder}` : `Enter the ${cfg.type} ID.`}
@@ -240,13 +249,13 @@ export function ObjectOntologyField({
   return (
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'flex-start' }} sx={sx}>
       <TextField
-        select
+        select={!disabled}
         size="small"
         label="Ontology"
         required
         value={cfg?.type ?? ''}
         onChange={(e) => selectType(e.target.value)}
-        disabled={disabled}
+        InputProps={{ readOnly: disabled }}
         onBlur={() => setOntologyTouched(true)}
         error={!disabled && !cfg && ontologyTouched}
         helperText={!cfg && !disabled ? 'Required - choose the ontology this object belongs to.' : ' '}
@@ -284,7 +293,7 @@ export function ObjectOntologyField({
             onChange({ object_name: e.target.value });
           }
         }}
-        disabled={disabled}
+        InputProps={{ readOnly: disabled }}
         error={!disabled && nameEmpty}
         helperText={nameHelper}
       />
