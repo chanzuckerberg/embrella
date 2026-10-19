@@ -47,6 +47,7 @@ from umbrella.choices import (
 )
 
 from common.sorting import msi_session_sort_key
+from cryo_grids.history import ChangeReason, edit_reason, with_reason
 from cryo_grids.models import (
     Cane,
     CryoGrid,
@@ -72,6 +73,7 @@ from cryo_grids.serializers import (
     SampleSerializer,
     SpecimenSerializer,
 )
+from cryo_grids.services import update_grids
 from cryo_grids.viewset_helpers import (
     add_selected_status,
     apply_grid_box_filters,
@@ -193,6 +195,11 @@ class PuckViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    def perform_update(self, serializer):
+        # Tag cane / position changes as moves for the grid timeline
+        with_reason(serializer.instance, edit_reason(serializer.instance, serializer.validated_data))
+        serializer.save()
 
     @action(detail=True, methods=["get"], url_path="slots")
     def slots(self, request, pk=None):
@@ -438,7 +445,9 @@ class PuckViewSet(viewsets.ModelViewSet):
                     )
 
                     # Trash all grids
-                    grids_updated = grids.update(
+                    grids_updated = update_grids(
+                        grids,
+                        reason=ChangeReason.PUCK_DELETED,
                         trashed=True,
                         grid_box=None,
                         position_in_box=None,
@@ -493,6 +502,7 @@ class PuckViewSet(viewsets.ModelViewSet):
             # Use serializer for validation and update
             serializer = CryoGridBoxSerializer(grid_box, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
+            with_reason(grid_box, edit_reason(grid_box, serializer.validated_data))
             serializer.save()
 
             return Response(
@@ -557,7 +567,9 @@ class PuckViewSet(viewsets.ModelViewSet):
             with transaction.atomic():
                 # Trash all grids in the grid box
                 grids = CryoGrid.objects.filter(grid_box=grid_box, trashed=False)
-                stats["grids_trashed"] = grids.update(
+                stats["grids_trashed"] = update_grids(
+                    grids,
+                    reason=ChangeReason.BOX_DELETED,
                     trashed=True,
                     grid_box=None,
                     position_in_box=None,
@@ -663,7 +675,7 @@ class PuckViewSet(viewsets.ModelViewSet):
 
             grid_box.puck = new_puck
             grid_box.position_in_puck = new_position
-            grid_box.save()
+            with_reason(grid_box, ChangeReason.MOVED).save()
 
             return Response(
                 {
@@ -1195,7 +1207,7 @@ class CryoGridViewSet(viewsets.ModelViewSet):
             # Update grid location
             grid.grid_box = destination_grid_box
             grid.position_in_box = destination_position
-            grid.save()
+            with_reason(grid, ChangeReason.MOVED).save()
 
             return Response(
                 {
@@ -1245,6 +1257,7 @@ class CryoGridViewSet(viewsets.ModelViewSet):
 
             serializer = CryoGridSerializer(grid, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
+            with_reason(grid, edit_reason(grid, serializer.validated_data))
             serializer.save()
 
             return Response(
@@ -1313,7 +1326,7 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                 )
 
             # Update all grids to clipped=True
-            updated_count = grids.update(clipped=True)
+            updated_count = update_grids(grids, reason=ChangeReason.CLIPPED, clipped=True)
 
             return Response(
                 {
@@ -1402,8 +1415,9 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                     added = True
 
             # Bump the grid's updated_on (auto_now only fires on save())
+            # No grid history row: updated_on isn't tracked, GridLabel history records the change
             if added or removed_label_ids:
-                grid.save(update_fields=["updated_on"])
+                grid.save_without_historical_record(update_fields=["updated_on"])
 
             return Response(
                 {

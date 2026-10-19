@@ -2,6 +2,7 @@ import logging
 
 from django.contrib import admin
 from django.http import HttpResponseRedirect
+from simple_history.admin import SimpleHistoryAdmin
 
 from .models import (
     Cane,
@@ -62,19 +63,19 @@ def build_frontend_url_with_state(request, base_path="/samples/grid_logging"):
 
 # Register standard models
 admin.site.register(Site)
-admin.site.register(Dewar)
-admin.site.register(Cane)
+admin.site.register(Dewar, SimpleHistoryAdmin)
+admin.site.register(Cane, SimpleHistoryAdmin)
 admin.site.register(CryoGridCassette)
 admin.site.register(PlungeFreezingDevice)
 admin.site.register(PlungeFreezingSession)
 admin.site.register(Sample)
 admin.site.register(Specimen)
 admin.site.register(Label)
-admin.site.register(GridLabel)
+admin.site.register(GridLabel, SimpleHistoryAdmin)
 
 
 # Custom admin classes for models that need redirect
-class PuckAdmin(admin.ModelAdmin):
+class PuckAdmin(SimpleHistoryAdmin):
     # def response_add(self, request, obj, post_url_continue=None):
     #     if "_addanother" not in request.POST and "_continue" not in request.POST:
     #         frontend_url = build_frontend_url_with_state(request)
@@ -100,7 +101,7 @@ class PuckAdmin(admin.ModelAdmin):
         return super().changeform_view(request, object_id, form_url, extra_context=extra_context)
 
 
-class CryoGridBoxAdmin(admin.ModelAdmin):
+class CryoGridBoxAdmin(SimpleHistoryAdmin):
     # def response_add(self, request, obj, post_url_continue=None):
     #     if "_addanother" not in request.POST and "_continue" not in request.POST:
     #         frontend_url = build_frontend_url_with_state(request)
@@ -126,7 +127,7 @@ class CryoGridBoxAdmin(admin.ModelAdmin):
         return super().changeform_view(request, object_id, form_url, extra_context=extra_context)
 
 
-class CryoGridAdmin(admin.ModelAdmin):
+class CryoGridAdmin(SimpleHistoryAdmin):
     # def response_add(self, request, obj, post_url_continue=None):
     #     if "_addanother" not in request.POST and "_continue" not in request.POST:
     #         frontend_url = build_frontend_url_with_state(request)
