@@ -91,6 +91,7 @@ INSTALLED_APPS = [
     "tem",
     "stores",
     "processes",
+    "timeline",
     "accounts",
     "people",
     "django.contrib.admin",
