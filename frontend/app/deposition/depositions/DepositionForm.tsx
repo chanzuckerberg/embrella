@@ -66,11 +66,13 @@ export function DepositionForm({
     [deposition.id, queryClient]
   );
 
-  const { status, lastSavedAt, saveNow } = useDraftAutoSave(form, save, { enabled: !readOnly });
+  const { status, isDirty, lastSavedAt, error, saveNow, discardChanges } = useDraftAutoSave(form, save, {
+    enabled: !readOnly,
+  });
 
   useEffect(() => {
-    reportSave?.({ status, lastSavedAt, saveNow });
-  }, [status, lastSavedAt, saveNow, reportSave]);
+    reportSave?.({ status, isDirty, lastSavedAt, error, saveNow, discardChanges });
+  }, [status, isDirty, lastSavedAt, error, saveNow, discardChanges, reportSave]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -90,7 +92,7 @@ export function DepositionForm({
               required
               fullWidth
               size="small"
-              disabled={readOnly}
+              InputProps={{ readOnly }}
             />
             <TextField
               label="Description"
@@ -100,7 +102,7 @@ export function DepositionForm({
               minRows={5}
               fullWidth
               size="small"
-              disabled={readOnly}
+              InputProps={{ readOnly }}
               helperText="3–5 sentences."
               sx={{ '& textarea': { resize: 'vertical' } }}
             />

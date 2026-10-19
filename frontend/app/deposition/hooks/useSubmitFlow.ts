@@ -1,49 +1,20 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { fetchDataset, pushDataset, resetDatasetPreparation, submitDataset } from '../services/depositionApi';
+import { pushDataset, submitDataset } from '../services/depositionApi';
 import { depositionKeys } from '../queryKeys';
-import type { Dataset, JobState } from '../types';
-import { isActiveJobPhase } from '../submitPhases';
 
-export const DEFAULT_SUBMIT_POLL_INTERVAL_MS = 4000;
-
-interface SubmitFlowOptions {
-  pollIntervalMs?: number;
-}
-
-export const isActiveJobState = (state?: JobState | null): boolean => isActiveJobPhase(state);
-
-/**
- * Live view of a dataset's submission: polls while a prep/push job is running and exposes
- * submit (prep) and push mutations that refresh the dataset + submissions list once they settle.
- */
-export function useSubmitFlow(
-  initial: Dataset,
-  { pollIntervalMs = DEFAULT_SUBMIT_POLL_INTERVAL_MS }: SubmitFlowOptions = {}
-) {
+/** Submission actions; useDataset owns the live dataset query and polling. */
+export function useSubmitFlow(id: number, depositionId: number) {
   const queryClient = useQueryClient();
-  const id = initial.id;
-
-  const query = useQuery<Dataset>({
-    queryKey: depositionKeys.dataset(id),
-    queryFn: () => fetchDataset(id),
-    initialData: initial,
-    // Poll only while a job is in flight; stop once it reaches a terminal state.
-    refetchInterval: (q) => (isActiveJobState(q.state.data?.job?.state) ? pollIntervalMs : false),
-  });
-
   const refresh = () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: depositionKeys.dataset(id) }),
+      queryClient.invalidateQueries({ queryKey: depositionKeys.deposition(depositionId) }),
       queryClient.invalidateQueries({ queryKey: depositionKeys.submissionsRoot() }),
     ]);
-
   const submit = useMutation({ mutationFn: () => submitDataset(id), onSettled: refresh });
   const push = useMutation({ mutationFn: () => pushDataset(id), onSettled: refresh });
-
-  const resetPreparation = useMutation({ mutationFn: () => resetDatasetPreparation(id), onSettled: refresh });
-
-  return { dataset: query.data ?? initial, submit, push, resetPreparation };
+  return { submit, push };
 }

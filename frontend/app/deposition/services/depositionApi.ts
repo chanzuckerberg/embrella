@@ -1,16 +1,11 @@
 import { API, DJANGO_URL } from '@app/common/constants/api';
-import {
-  deleteResource,
-  fetchResource,
-  patchResource,
-  postFormData,
-  postResource,
-} from '@app/common/queries/fetchResource';
+import { fetchResource, patchResource, postFormData, postResource } from '@app/common/queries/fetchResource';
 
 import type { ScanResult } from '../components/annotations/scan';
 import type {
   CopickRunOption,
   Dataset,
+  DatasetJob,
   Deposition,
   DepositionSession,
   Institution,
@@ -37,6 +32,9 @@ async function parse<T>(response: Response): Promise<T> {
       message = typeof body?.detail === 'string' ? body.detail : JSON.stringify(body);
     } catch {
       /* no body */
+    }
+    if (response.status === 409) {
+      message = `${message || 'Metadata is locked.'} Reload the page to check its current status before editing.`;
     }
     throw new Error(message || `Something went wrong (${response.status}). Please try again.`);
   }
@@ -92,10 +90,6 @@ export async function updateDeposition(id: number, data: Partial<Deposition>): P
   return parse(await patchResource(url(`${API.DEPOSITIONS}${id}/`), data));
 }
 
-export async function deleteDeposition(id: number): Promise<void> {
-  return parse(await deleteResource(url(`${API.DEPOSITIONS}${id}/`)));
-}
-
 export async function createDataset(data: Partial<Dataset>): Promise<Dataset> {
   return parse(await postResource(url(API.DEPOSITION_DATASETS), data as Record<string, unknown>));
 }
@@ -108,15 +102,11 @@ export async function updateDataset(id: number, data: Partial<Dataset>): Promise
   return parse(await patchResource(url(`${API.DEPOSITION_DATASETS}${id}/`), data));
 }
 
-export async function deleteDataset(id: number): Promise<void> {
-  return parse(await deleteResource(url(`${API.DEPOSITION_DATASETS}${id}/`)));
-}
-
 export async function submitDataset(id: number): Promise<SubmitResponse> {
   return parse(await postResource(url(`${API.DEPOSITION_DATASETS}${id}/submit/`), {}));
 }
 
-export async function resetDatasetPreparation(id: number): Promise<unknown> {
+export async function resetDatasetPreparation(id: number): Promise<DatasetJob> {
   return parse(await postResource(url(`${API.DEPOSITION_DATASETS}${id}/reset-preparation/`), {}));
 }
 
@@ -124,17 +114,9 @@ export async function pushDataset(id: number): Promise<SubmitResponse> {
   return parse(await postResource(url(`${API.DEPOSITION_DATASETS}${id}/push/`), {}));
 }
 
-export async function fetchDatasetJobStatus(id: number): Promise<unknown> {
-  return parse(await fetchResource(url(`${API.DEPOSITION_DATASETS}${id}/job-status/`)));
-}
-
 export async function fetchDatasetLogs(id: number, phase?: 'prep' | 'push'): Promise<JobLogs> {
   const query = phase ? `?phase=${phase}` : '';
   return parse(await fetchResource(url(`${API.DEPOSITION_DATASETS}${id}/logs/${query}`)));
-}
-
-export async function fetchSession(id: number): Promise<DepositionSession> {
-  return parse(await fetchResource(url(`${API.DEPOSITION_SESSIONS}${id}/`)));
 }
 
 export async function updateSession(id: number, data: Partial<DepositionSession>): Promise<DepositionSession> {

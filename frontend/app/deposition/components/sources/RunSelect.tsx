@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, FormControl, MenuItem, Select, Typography } from '@mui/material';
+import { Box, FormControl, MenuItem, Select, TextField, Typography } from '@mui/material';
 
 import { NONE_RUN } from './types';
 
@@ -11,6 +11,7 @@ export function RunSelect({
   options,
   loading,
   disabled,
+  readOnly = false,
   placeholder,
   allowNone,
   noneLabel = 'None',
@@ -22,6 +23,7 @@ export function RunSelect({
   options: string[];
   loading: boolean;
   disabled: boolean;
+  readOnly?: boolean;
   placeholder: string;
   allowNone?: boolean;
   noneLabel?: string;
@@ -33,30 +35,39 @@ export function RunSelect({
         {label}
         {required ? ' *' : ''}
       </Typography>
-      <FormControl fullWidth size="small" disabled={disabled}>
-        <Select
-          displayEmpty
-          MenuProps={{ PaperProps: { sx: { maxHeight: 180 } } }}
-          value={allowNone ? value || NONE_RUN : value}
-          onChange={(e) => {
-            const v = String(e.target.value);
-            onChange(allowNone && v === NONE_RUN ? '' : v);
-          }}
-          renderValue={(v) => {
-            if (v && v !== NONE_RUN) return String(v);
-            if (allowNone) return noneLabel;
-            return <Typography color="text.disabled">{placeholder}</Typography>;
-          }}
-        >
-          {allowNone && <MenuItem value={NONE_RUN}>{noneLabel}</MenuItem>}
-          {loading && <MenuItem disabled>Loading…</MenuItem>}
-          {options.map((o) => (
-            <MenuItem key={o} value={o}>
-              {o}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      {readOnly ? (
+        <TextField
+          value={value || (allowNone ? noneLabel : '')}
+          size="small"
+          fullWidth
+          InputProps={{ readOnly: true, inputProps: { 'aria-label': label } }}
+        />
+      ) : (
+        <FormControl fullWidth size="small" disabled={disabled}>
+          <Select
+            displayEmpty
+            MenuProps={{ PaperProps: { sx: { maxHeight: 180 } } }}
+            value={allowNone ? value || NONE_RUN : value}
+            onChange={(e) => {
+              const v = String(e.target.value);
+              onChange(allowNone && v === NONE_RUN ? '' : v);
+            }}
+            renderValue={(v) => {
+              if (v && v !== NONE_RUN) return String(v);
+              if (allowNone) return noneLabel;
+              return <Typography color="text.disabled">{placeholder}</Typography>;
+            }}
+          >
+            {allowNone && <MenuItem value={NONE_RUN}>{noneLabel}</MenuItem>}
+            {loading && <MenuItem disabled>Loading…</MenuItem>}
+            {options.map((o) => (
+              <MenuItem key={o} value={o}>
+                {o}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      )}
     </Box>
   );
 }
