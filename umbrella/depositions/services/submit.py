@@ -45,7 +45,7 @@ def _required_dataset_ids(deposition, dataset, *, db):
     staged = (
         DatasetJob.objects.using(db)
         .filter(dataset__deposition=deposition)
-        .filter(Q(staged_at__isnull=False) | Q(state__in=DatasetJob.LOCKED_STATES))
+        .filter(Q(staged_at__isnull=False) | Q(state__in=DatasetJob.CLUSTER_FROZEN_STATES))
         .values_list("dataset__dataset_id", flat=True)
     )
     return set(staged) | {dataset.dataset_id}
@@ -56,22 +56,26 @@ def submit_dataset_prep(dataset):
     deposition = dataset.deposition
     if deposition.deposition_id is None or dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before submitting.")
-    if not dataset_is_ready(dataset):
-        raise SubmissionValidationError("This dataset isn't ready to submit — add sessions and run auto-fill first.")
-    if DepositionAnnotation.objects.filter(session__dataset=dataset, is_selected=True).exists():
-        # Annotation export isn't wired yet; refuse rather than mark the dataset done without it.
-        # TODO(#1291): annotation export.
-        raise SubmissionValidationError(
-            "Depositing annotations isn't supported yet; deselect them to submit this dataset."
-        )
-
-    cluster_id = _cluster_for_dataset(dataset)
-    auth = _service_auth()
     db = dataset._state.db
     # Claim one queued/running prep per deposition before freezing the shared config.
     # Otherwise an older queued job could overwrite a newer sibling's config.
     with transaction.atomic(using=db):
         Deposition.objects.using(db).select_for_update().get(pk=deposition.pk)
+        deposition.refresh_from_db()
+        dataset.refresh_from_db()
+        if not dataset_is_ready(dataset):
+            raise SubmissionValidationError(
+                "This dataset isn't ready to submit — add sessions and run auto-fill first."
+            )
+        if DepositionAnnotation.objects.filter(session__dataset=dataset, is_selected=True).exists():
+            # Annotation export isn't wired yet; refuse rather than mark the dataset done without it.
+            # TODO(#1291): annotation export.
+            raise SubmissionValidationError(
+                "Depositing annotations isn't supported yet; deselect them to submit this dataset."
+            )
+
+        auth = _service_auth()
+        cluster_id = _cluster_for_dataset(dataset)
         if (
             DatasetJob.objects.using(db)
             .filter(dataset__deposition=deposition, state__in=PREP_ACTIVE)
@@ -224,7 +228,7 @@ def preview_config_yaml(dataset):
     db = dataset._state.db
     job = getattr(dataset, "job", None)
     # Show the staged cluster only while the job is locked; otherwise derive it the way a resubmit will.
-    cluster_id = (job.cluster_id if job and job.is_locked else "") or _cluster_for_dataset(dataset)
+    cluster_id = (job.cluster_id if job and job.cluster_is_frozen else "") or _cluster_for_dataset(dataset)
     output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
     return dataprep_config_yaml(
         deposition,

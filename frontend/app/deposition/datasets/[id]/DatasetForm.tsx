@@ -7,14 +7,7 @@ import { Box, IconButton, Stack, MenuItem, TextField, Tooltip, Typography } from
 
 import { updateDataset } from '../../services/depositionApi';
 import { depositionKeys } from '../../queryKeys';
-import {
-  isEditableStatus,
-  type AuthorRef,
-  type CrossRef,
-  type Dataset,
-  type DatasetFunding,
-  type DatasetSample,
-} from '../../types';
+import { type AuthorRef, type CrossRef, type Dataset, type DatasetFunding, type DatasetSample } from '../../types';
 import { type AutoSaveState, useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useDeposition } from '../../hooks/useDeposition';
 import { CrossReferencesEditor } from '../../depositions/CrossReferencesEditor';
@@ -110,17 +103,16 @@ const NAV: NavItem[] = [
 export function DatasetForm({
   dataset,
   reportSave,
-  readOnly: readOnlyProp = false,
+  readOnly,
 }: {
   dataset: Dataset;
   reportSave?: (state: AutoSaveState) => void;
-  readOnly?: boolean;
+  readOnly: boolean;
 }) {
   const queryClient = useQueryClient();
   const { data: deposition } = useDeposition(dataset.deposition);
   const depositionAuthorCount = deposition?.authors_json?.length;
   const [form, setForm] = useState<FormState>(() => toForm(dataset));
-  const readOnly = readOnlyProp || dataset.is_owner === false || !isEditableStatus(dataset.status);
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
   const [active, setActive] = useState('basic');
   const [reusedFrom, setReusedFrom] = useState('');
@@ -163,10 +155,12 @@ export function DatasetForm({
     [dataset.id, queryClient]
   );
 
-  const { status, isDirty, lastSavedAt, saveNow } = useDraftAutoSave(form, save, { enabled: !readOnly });
+  const { status, isDirty, lastSavedAt, error, saveNow, discardChanges } = useDraftAutoSave(form, save, {
+    enabled: !readOnly,
+  });
   useEffect(() => {
-    reportSave?.({ status, isDirty, lastSavedAt, saveNow });
-  }, [status, isDirty, lastSavedAt, saveNow, reportSave]);
+    reportSave?.({ status, isDirty, lastSavedAt, error, saveNow, discardChanges });
+  }, [status, isDirty, lastSavedAt, error, saveNow, discardChanges, reportSave]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));

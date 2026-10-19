@@ -6,8 +6,10 @@ export interface AutoSaveState {
   status: SaveStatus;
   isDirty: boolean;
   lastSavedAt: Date | null;
+  error?: string | null;
   // true on success (or nothing to save), false on failure. Callers hold navigation on false.
   saveNow: () => Promise<boolean>;
+  discardChanges: () => void;
 }
 
 const DEFAULT_DEBOUNCE_MS = 5000;
@@ -24,6 +26,7 @@ export function useDraftAutoSave<T>(
 ) {
   const [isDirty, setIsDirty] = useState(false);
   const [status, setStatus] = useState<SaveStatus>('idle');
+  const [error, setError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -48,19 +51,21 @@ export function useDraftAutoSave<T>(
 
     const run = (async () => {
       setStatus('saving');
+      setError(null);
       try {
         // Replay if the user edited while this save was in flight.
         while (savedRevision.current < revision.current) {
           const targetRevision = revision.current;
           const snapshot = dataRef.current;
           await saveRef.current(snapshot);
-          savedRevision.current = targetRevision;
+          savedRevision.current = Math.max(savedRevision.current, targetRevision);
         }
         setIsDirty(false);
         setStatus('saved');
         setLastSavedAt(new Date());
         return true;
-      } catch {
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Your changes could not be saved. Please try again.');
         setStatus('error');
         return false;
       } finally {
@@ -69,6 +74,18 @@ export function useDraftAutoSave<T>(
     })();
     inFlight.current = run;
     return run;
+  }, []);
+
+  const discardChanges = useCallback(() => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    // Prevent the unmount cleanup from saving edits the user explicitly discarded.
+    savedRevision.current = revision.current;
+    setIsDirty(false);
+    setStatus('idle');
+    setError(null);
   }, []);
 
   useEffect(() => {
@@ -99,14 +116,14 @@ export function useDraftAutoSave<T>(
   }, []);
 
   useEffect(() => {
-    if (!enabled || !isDirty) return;
+    if (!isDirty) return;
     const warn = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = '';
     };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [enabled, isDirty]);
+  }, [isDirty]);
 
-  return { status, isDirty, lastSavedAt, saveNow: flush };
+  return { status, isDirty, lastSavedAt, error, saveNow: flush, discardChanges };
 }

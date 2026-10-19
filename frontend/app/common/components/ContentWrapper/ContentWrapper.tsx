@@ -8,6 +8,7 @@ interface ContentWrapperProps {
 
 export function ContentWrapper({ children }: ContentWrapperProps) {
   const pathname = usePathname();
+  const isDepositionWizard = /^\/deposition\/wizard\/[^/]+$/.test(pathname);
   // Full-width pages without a navbar (e.g., tomogram viewer).
   const isFullWidthPage = /^\/processing\/tomograms\/reviews\/[^/]+$/.test(pathname);
 
@@ -36,7 +37,8 @@ export function ContentWrapper({ children }: ContentWrapperProps) {
         maxWidth: '95rem',
         marginLeft: 'auto',
         marginRight: 'auto',
-        paddingTop: '130px',
+        ...(isDepositionWizard && { '--wizard-top-offset': 'clamp(72px, 10dvh, 110px)' }),
+        paddingTop: isDepositionWizard ? 'var(--wizard-top-offset)' : '130px',
       }}
     >
       {children}

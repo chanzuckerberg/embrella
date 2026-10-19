@@ -10,7 +10,7 @@ import { useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useMsiSessions } from '../../hooks/useSources';
 import { SourcesTable, type SourceRow } from '../../components/SourcesTable';
 import type { StepProps } from '../wizardTypes';
-import { isEditableStatus, type Dataset, type TomogramSubsetMode } from '../../types';
+import { type Dataset, type TomogramSubsetMode } from '../../types';
 
 interface SourcesState {
   rows: SourceRow[];
@@ -44,9 +44,8 @@ function toRows(dataset: Dataset): SourceRow[] {
   }));
 }
 
-export function SourcesStep({ dataset, reportSave, readOnly: readOnlyProp }: StepProps) {
+export function SourcesStep({ dataset, reportSave, readOnly }: StepProps) {
   const queryClient = useQueryClient();
-  const readOnly = readOnlyProp || !isEditableStatus(dataset.status);
   const [rows, setRows] = useState<SourceRow[]>(() => toRows(dataset));
   const [subsetMode, setSubsetMode] = useState<TomogramSubsetMode>(dataset.tomogram_subset_mode ?? 'all');
   const sessions = useMsiSessions();
@@ -91,10 +90,12 @@ export function SourcesStep({ dataset, reportSave, readOnly: readOnlyProp }: Ste
 
   const validationError = sourceValidationError(rows);
   const formState = useMemo<SourcesState>(() => ({ rows, subsetMode }), [rows, subsetMode]);
-  const { status, isDirty, lastSavedAt, saveNow } = useDraftAutoSave(formState, save, { enabled: !readOnly });
+  const { status, isDirty, lastSavedAt, error, saveNow, discardChanges } = useDraftAutoSave(formState, save, {
+    enabled: !readOnly,
+  });
   useEffect(() => {
-    reportSave?.({ status, isDirty, lastSavedAt, saveNow });
-  }, [status, isDirty, lastSavedAt, saveNow, reportSave]);
+    reportSave?.({ status, isDirty, lastSavedAt, error, saveNow, discardChanges });
+  }, [status, isDirty, lastSavedAt, error, saveNow, discardChanges, reportSave]);
 
   const handleUploadSubset = async (row: SourceRow, file: File) => {
     if (!row.id) return;

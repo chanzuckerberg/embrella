@@ -9,7 +9,7 @@ import { isActiveJobPhase } from '../submitPhases';
 import type { JobLogs, JobState } from '../types';
 
 // Gentler than the dataset poll; /logs reads over SSH.
-export const DEFAULT_LOG_POLL_INTERVAL_MS = 12000;
+const DEFAULT_LOG_POLL_INTERVAL_MS = 12000;
 // Mirrors the backend's per-job read cooldown.
 export const SERVER_LOG_COOLDOWN_MS = 15000;
 

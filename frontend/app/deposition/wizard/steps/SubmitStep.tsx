@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Icon } from '@czi-sds/components';
 import { Alert, Box, ButtonBase, CircularProgress, LinearProgress, Stack, Typography } from '@mui/material';
 
@@ -24,8 +24,23 @@ import { STATUS_META } from '../../submissions/constants';
 
 const SYNC_TIMER_INTERVAL_MS = 1000;
 
+const DETAIL_CARD_SX = {
+  border: '1px solid',
+  borderColor: 'divider',
+  borderRadius: '8px',
+  bgcolor: 'background.paper',
+  p: { xs: '20px', lg: '28px' },
+  minWidth: 0,
+};
+
+const PHASE_CARD_SX = {
+  ...DETAIL_CARD_SX,
+  height: 'var(--submission-panel-height)',
+  overflow: 'auto',
+  '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2 },
+};
+
 const DEFAULT_SYNC_COMMAND = 'cryoetportalprep sync ./dataprep_config.yaml';
-const DEFAULT_PUSH_COMMAND = 'aws s3 sync <staged dir> <s3 bucket> --follow-symlinks';
 
 function SyncTiming({ job }: { job: DatasetJob | null | undefined }) {
   const [now, setNow] = useState(() => Date.now());
@@ -104,11 +119,10 @@ function validationBody(validation: JobValidation): string {
   return validation.warnings.length ? 'You can submit - review the warnings below before you do.' : 'You can submit.';
 }
 
-const PUSH_SUB: Record<PhaseStatus, string> = {
+const PUSH_SUB: Record<Exclude<PhaseStatus, 'warning'>, string> = {
   idle: 'Waiting on submit',
   active: 'Upload job in progress',
   done: 'Complete',
-  warning: 'Upload job in progress',
   error: 'Failed',
 };
 
@@ -140,8 +154,12 @@ function summaryLine(s: SyncSummary): string {
   return [`${s.objects.toLocaleString()} objects`, s.size, s.duration].filter(Boolean).join(' · ');
 }
 
-function EmptyCircle({ color = 'text.disabled' }: { color?: string }) {
-  return <Box sx={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid', borderColor: color }} />;
+function EmptyCircle({ color = 'text.disabled', size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Box
+      sx={{ width: size, height: size, flexShrink: 0, borderRadius: '50%', border: '2px solid', borderColor: color }}
+    />
+  );
 }
 
 function PhaseIcon({ status }: { status: PhaseStatus }) {
@@ -149,7 +167,7 @@ function PhaseIcon({ status }: { status: PhaseStatus }) {
   if (status === 'done') return <Icon sdsIcon="CheckCircle" sdsSize="s" color="green" />;
   if (status === 'warning') return <Icon sdsIcon="ExclamationMarkCircle" sdsSize="s" color="yellow" />;
   if (status === 'error') return <Icon sdsIcon="ExclamationMarkCircle" sdsSize="s" color="red" />;
-  return <EmptyCircle />;
+  return <EmptyCircle size={16} />;
 }
 
 function PhaseTile({
@@ -176,8 +194,10 @@ function PhaseTile({
         minWidth: 0,
         p: 2,
         // Divider only when tiles sit in a row; stacked (xs) it would be a stray right edge.
-        borderRight: { xs: 'none', sm: n < 3 ? '1px solid' : 'none' },
-        borderRightColor: 'divider',
+        borderRight: (theme) => ({
+          xs: 'none',
+          sm: n < 3 ? `1px solid ${theme.palette.divider}` : 'none',
+        }),
         textAlign: 'left',
         '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2 },
         display: 'flex',
@@ -213,8 +233,13 @@ function PhaseTile({
 
 function CommandBox({ text }: { text: string }) {
   return (
-    <Box sx={{ bgcolor: 'grey.100', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
-      <Typography variant="caption" sx={{ overflowWrap: 'anywhere', fontFamily: 'monospace', display: 'block' }}>
+    <Box sx={{ bgcolor: 'grey.100', border: '1px solid', borderColor: 'divider', borderRadius: '6px', p: '12px 16px' }}>
+      <Typography
+        variant="body2"
+        noWrap
+        title={text}
+        sx={{ fontFamily: 'monospace', display: 'block', lineHeight: 1.6 }}
+      >
         {text}
       </Typography>
     </Box>
@@ -223,7 +248,11 @@ function CommandBox({ text }: { text: string }) {
 
 function SyncChecklist({ items }: { items: SyncChecklistItem[] }) {
   return (
-    <Stack role="list" aria-label="Sync progress by group" spacing={1} sx={{ mt: 2 }}>
+    <Stack
+      role="list"
+      aria-label="Sync progress by group"
+      sx={{ mt: '20px', border: '1px solid', borderColor: 'divider', borderRadius: '6px', overflow: 'hidden' }}
+    >
       {groupSyncProgress(items).map((it) => {
         const complete = it.total > 0 && it.done === it.total;
         return (
@@ -231,17 +260,32 @@ function SyncChecklist({ items }: { items: SyncChecklistItem[] }) {
             key={it.label}
             role="listitem"
             aria-label={`${it.label}: ${it.done} of ${it.total}, ${complete ? 'complete' : 'incomplete'}`}
-            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '16px',
+              p: '12px 16px',
+              minHeight: 48,
+              '& + &': { borderTop: '1px solid', borderColor: 'divider' },
+            }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
               {complete ? (
                 <Icon sdsIcon="CheckCircle" sdsSize="s" color="green" />
               ) : (
-                <EmptyCircle color="primary.main" />
+                <EmptyCircle color="primary.main" size={16} />
               )}
               <Typography variant="body2">{it.label}</Typography>
             </Box>
-            <Typography variant="body2" sx={{ color: complete ? 'success.main' : 'primary.main' }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: complete ? 'success.main' : 'primary.main',
+                fontVariantNumeric: 'tabular-nums',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {it.done.toLocaleString()} / {it.total.toLocaleString()}
             </Typography>
           </Box>
@@ -253,11 +297,11 @@ function SyncChecklist({ items }: { items: SyncChecklistItem[] }) {
 
 function WarningsList({ warnings, blocking }: { warnings: ValidationWarning[]; blocking?: boolean }) {
   return (
-    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, mt: 2 }}>
+    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '6px', mt: '20px' }}>
       {warnings.map((w, i) => (
         <Box
           key={`${w.message}-${i}`}
-          sx={{ display: 'flex', gap: 1.5, p: 2, borderTop: i ? '1px solid' : 'none', borderColor: 'divider' }}
+          sx={{ display: 'flex', gap: '12px', p: '16px', borderTop: i ? '1px solid' : 'none', borderColor: 'divider' }}
         >
           <Icon sdsIcon="ExclamationMarkCircle" sdsSize="s" color={blocking ? 'red' : 'yellow'} />
           <Box>
@@ -274,8 +318,8 @@ function WarningsList({ warnings, blocking }: { warnings: ValidationWarning[]; b
   );
 }
 
-export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: StepProps) {
-  const { dataset, submit, push, resetPreparation } = useSubmitFlow(initial);
+export function SubmitStep({ dataset, readOnly }: StepProps) {
+  const { submit, push } = useSubmitFlow(dataset.id, dataset.deposition);
   const [selection, setSelection] = useState<{ datasetId: number; phase: 1 | 2 | 3 } | null>(null);
   const started = useRef(false);
 
@@ -287,12 +331,14 @@ export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: S
   const logActive = isActiveJobPhase(state, logPhase);
   const logs = useDatasetLogs(dataset.id, { state, phase: logPhase, enabled: !!job && dataset.is_owner !== false });
 
-  const runSync = () => {
+  const { mutate: prepare, reset: resetSubmit } = submit;
+  const { reset: resetPush } = push;
+  const runSync = useCallback(() => {
     setSelection(null);
-    submit.reset();
-    push.reset();
-    submit.mutate();
-  };
+    resetSubmit();
+    resetPush();
+    prepare();
+  }, [prepare, resetSubmit, resetPush]);
   const runPush = () => {
     setSelection(null);
     push.reset();
@@ -300,14 +346,14 @@ export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: S
     push.mutate();
   };
 
-  // Start preparation once when arriving with an idle job.
+  // Intentional: entering Finalize, including after reset, starts prep once per mount.
+  // The server's atomic claim prevents concurrent launches across tabs.
   useEffect(() => {
     if (!readOnly && sync === 'idle' && !submit.isPending && !started.current) {
       started.current = true;
       runSync();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fire once on first idle render
-  }, [readOnly, sync]);
+  }, [readOnly, sync, submit.isPending, runSync]);
 
   const progress = job?.sync_progress ?? null;
   const uploadProgress = job?.push_progress ?? null;
@@ -315,12 +361,9 @@ export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: S
   const warnings = job?.validation?.warnings ?? [];
   const blockingIssues = job?.validation?.blocking_issues ?? [];
   const canPush = canUpload(job);
-  const actionPending = submit.isPending || push.isPending || resetPreparation.isPending;
+  const actionPending = submit.isPending || push.isPending;
 
-  const actionError =
-    (submit.error as Error | null)?.message ||
-    (push.error as Error | null)?.message ||
-    (resetPreparation.error as Error | null)?.message;
+  const actionError = (submit.error as Error | null)?.message || (push.error as Error | null)?.message;
   const errorMessage =
     actionError || (state === 'failed' ? job?.error_message || 'Submission failed. You can try again.' : null);
 
@@ -330,7 +373,7 @@ export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: S
   const datasetLabel = dataset.dataset_id ? `${dataset.title} (#${dataset.dataset_id})` : dataset.title;
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={{ xs: '16px', lg: '24px' }} useFlexGap sx={{ '@media (max-height: 800px)': { gap: '12px' } }}>
       {/* Review summary */}
       <Box>
         <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
@@ -349,6 +392,7 @@ export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: S
           border: '1px solid',
           borderColor: 'divider',
           borderRadius: 2,
+          bgcolor: 'background.paper',
           overflow: 'hidden',
         }}
       >
@@ -386,26 +430,32 @@ export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: S
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) minmax(0, 1fr)' },
-          gap: 3,
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1.2fr) minmax(0, 1fr)' },
+          gap: { xs: '16px', lg: '24px' },
+          alignItems: 'start',
+          '--submission-panel-height': 'clamp(280px, 40dvh, 480px)',
+          '@media (max-height: 800px)': {
+            gap: '16px',
+            '--submission-panel-height': 'clamp(240px, 38dvh, 320px)',
+          },
         }}
       >
         {/* Left: phase detail + actions */}
-        <Stack spacing={2}>
+        <Stack spacing="16px" sx={{ minWidth: 0 }}>
           {focus === 1 && (
-            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>
+            <Box role="region" aria-label="Sync details" tabIndex={0} sx={{ ...PHASE_CARD_SX, p: '20px' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: '16px' }}>
                 {sync === 'done' ? 'Local sync complete' : 'Local sync on cluster'}
               </Typography>
               {summary && sync === 'done' && (
-                <Typography variant="body2" sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ mb: '20px' }}>
                   {summaryLine(summary)}
                 </Typography>
               )}
               <CommandBox text={job?.sync_command ?? DEFAULT_SYNC_COMMAND} />
               {!job?.sync_command && (
-                <Typography variant="caption" color="text.secondary">
-                  Example command; the server does not provide the actual command or paths.
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: '8px' }}>
+                  Example command
                 </Typography>
               )}
               {progress && progress.total > 0 ? (
@@ -414,13 +464,15 @@ export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: S
                     aria-label="Sync progress"
                     variant="determinate"
                     value={toPct(progress.done, progress.total)}
-                    sx={{ mt: 2 }}
+                    sx={{ mt: '16px', height: 8, borderRadius: '6px' }}
                   />
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                    <Typography variant="caption" color="text.secondary">
+                  <Box
+                    sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', mt: '8px' }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
                       {progress.done.toLocaleString()} / {progress.total.toLocaleString()} objects
                     </Typography>
-                    <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700 }}>
+                    <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 700 }}>
                       {toPct(progress.done, progress.total)}%
                       {progress.eta && sync === 'active' ? ` · ETA ${progress.eta}` : ''}
                     </Typography>
@@ -429,9 +481,13 @@ export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: S
                 </>
               ) : (
                 <>
-                  {sync === 'active' && <LinearProgress aria-label="Sync progress" sx={{ mt: 2 }} />}
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
-                    Waiting for preparation progress.
+                  {sync === 'active' && (
+                    <LinearProgress aria-label="Sync progress" sx={{ mt: '16px', height: 8, borderRadius: '6px' }} />
+                  )}
+                  <Typography variant="body2" color="text.secondary" sx={{ display: 'block', mt: '16px' }}>
+                    {sync === 'active' || sync === 'idle'
+                      ? 'Waiting for preparation progress.'
+                      : 'Detailed progress is unavailable for this preparation.'}
                   </Typography>
                 </>
               )}
@@ -439,7 +495,7 @@ export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: S
           )}
 
           {focus === 2 && (
-            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2 }}>
+            <Box role="region" aria-label="Validation details" tabIndex={0} sx={PHASE_CARD_SX}>
               {sync === 'done' && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Icon sdsIcon="CheckCircle" sdsSize="s" color="green" />
@@ -454,7 +510,7 @@ export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: S
                 </Box>
               )}
 
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mt: 2.5, mb: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mt: '24px', mb: '20px' }}>
                 Pre-flight validation
               </Typography>
               {job?.validation ? (
@@ -471,20 +527,12 @@ export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: S
               ) : (
                 <Alert severity="info">Pre-flight validation has not run. Upload requires a passed check.</Alert>
               )}
-
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
-                {job?.push_command ? 'Runs ' : 'Example upload command: '}
-                <Box component="span" sx={{ fontFamily: 'monospace' }}>
-                  {job?.push_command ?? DEFAULT_PUSH_COMMAND}
-                </Box>{' '}
-                - submits a SLURM job to upload files to S3.
-              </Typography>
             </Box>
           )}
 
           {focus === 3 && (
-            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+            <Box role="region" aria-label="Upload details" tabIndex={0} sx={PHASE_CARD_SX}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: '20px' }}>
                 {pushHeading(pushed, state)}
               </Typography>
               {pushed === 'active' && (
@@ -518,33 +566,18 @@ export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: S
           )}
 
           {!readOnly && state === 'prep_completed' && (
-            <Box>
+            <Box sx={DETAIL_CARD_SX}>
               <Button sdsType="primary" sdsStyle="solid" disabled={actionPending || !canPush} onClick={runPush}>
-                {push.isPending ? 'Submitting…' : 'Submit deposition'}
+                {push.isPending ? 'Starting upload…' : 'Upload to S3'}
               </Button>
               {!canPush && (
-                <Alert severity="warning" sx={{ mt: 1 }}>
-                  Upload requires passed validation for this preparation. Retry preparation and validation, or fix the
-                  metadata first.
+                <Alert severity="warning" sx={{ mt: '16px' }}>
+                  Validation must pass before upload. Prepare again, or edit metadata to fix the issues.
                 </Alert>
               )}
-              <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                <Button sdsType="secondary" sdsStyle="outline" disabled={actionPending} onClick={runSync}>
-                  Retry preparation and validation
-                </Button>
-                <Button
-                  sdsType="secondary"
-                  sdsStyle="outline"
-                  disabled={actionPending}
-                  onClick={() => {
-                    // Suppress auto-prep during reset so metadata can be corrected first.
-                    started.current = true;
-                    submit.reset();
-                    push.reset();
-                    resetPreparation.mutate(undefined, { onSuccess: () => onPreparationReset?.() });
-                  }}
-                >
-                  Fix and re-prepare
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '12px', mt: '16px' }}>
+                <Button sdsType="secondary" sdsStyle="solid" disabled={actionPending} onClick={runSync}>
+                  Prepare again
                 </Button>
               </Box>
             </Box>
@@ -566,7 +599,7 @@ export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: S
         </Stack>
 
         {/* Right: live log */}
-        <Stack spacing={2} sx={{ minWidth: 0 }}>
+        <Stack spacing="16px" sx={{ minWidth: 0 }}>
           <SubmissionLogPanel
             data={logs.data}
             active={logActive}
@@ -574,7 +607,10 @@ export function SubmitStep({ dataset: initial, readOnly, onPreparationReset }: S
             restricted={dataset.is_owner === false}
           />
           {isActiveJobPhase(state) && (
-            <Alert severity="info">
+            <Alert
+              severity="info"
+              sx={{ p: '16px 20px', border: '1px solid', borderColor: 'divider', borderRadius: '8px' }}
+            >
               You can close this tab. The running cluster job will continue; return to My Submissions to check its
               status.
             </Alert>

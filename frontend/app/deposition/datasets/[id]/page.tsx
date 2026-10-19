@@ -8,14 +8,16 @@ import { Alert, Box, Chip, CircularProgress, Container, Link, Typography } from 
 import { useDataset } from '../../hooks/useDataset';
 import { STATUS_META } from '../../submissions/constants';
 import { softChipSx } from '../../submissions/utils';
-import { isEditableStatus } from '../../types';
+import { usePreparationEditing } from '../../hooks/usePreparationEditing';
 import { DatasetForm } from './DatasetForm';
-import { ReadOnlyNotice } from '../../components/ReadOnlyNotice';
+import { ReopenForEditing } from '../../components/ReopenForEditing';
 
 export default function DatasetDetailPage() {
   const params = useParams<{ id: string }>();
   const id = Number(params.id);
   const { data: dataset, isPending, isError } = useDataset(Number.isFinite(id) ? id : null);
+
+  const editing = usePreparationEditing(dataset);
 
   const renderBody = () => {
     if (!Number.isFinite(id)) {
@@ -34,7 +36,7 @@ export default function DatasetDetailPage() {
 
     const label = dataset.dataset_id ? `ds-${dataset.dataset_id}` : dataset.title || '(untitled draft)';
     const meta = STATUS_META[dataset.status];
-    const readOnly = dataset.is_owner === false || !isEditableStatus(dataset.status);
+    const readOnly = editing.readOnly;
 
     return (
       <>
@@ -49,8 +51,8 @@ export default function DatasetDetailPage() {
             {dataset.title}
           </Typography>
         )}
-        {readOnly && <ReadOnlyNotice nonOwner={dataset.is_owner === false} />}
-        <DatasetForm dataset={dataset} />
+        <ReopenForEditing editing={editing} dataset={dataset} />
+        <DatasetForm dataset={dataset} readOnly={readOnly} />
       </>
     );
   };

@@ -20,16 +20,13 @@ function setLogs(data: JobLogs | undefined) {
 const passed = { status: 'passed' as const, attempt: 'prep-1', warnings: [], blocking_issues: [] };
 const prepared: DatasetJob = { id: 1, state: 'prep_completed', prep_slurm_job_id: 'prep-1', validation: passed };
 
-function setup(job: DatasetJob | null, { readOnly = false, onPreparationReset = jest.fn() } = {}) {
+function setup(job: DatasetJob | null, { readOnly = false } = {}) {
   const submit = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
   const push = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
   const dataset = { id: 1, title: 'DS', dataset_id: 2, status: 'draft', job } as Dataset;
-  const resetPreparation = { mutate: jest.fn(), isPending: false, error: null };
-  mockFlow.mockReturnValue({ dataset, submit, push, resetPreparation });
-  render(
-    <SubmitStep dataset={dataset} readOnly={readOnly} reportSave={jest.fn()} onPreparationReset={onPreparationReset} />
-  );
-  return { submit, push, resetPreparation };
+  mockFlow.mockReturnValue({ submit, push });
+  const view = render(<SubmitStep dataset={dataset} readOnly={readOnly} reportSave={jest.fn()} />);
+  return { submit, push, dataset, view };
 }
 
 beforeEach(() => {
@@ -37,15 +34,29 @@ beforeEach(() => {
   mockLogs.mockReturnValue({ data: undefined });
 });
 
-it('auto-starts sync on arrival with no manual start button', () => {
+it('auto-starts preparation once on arrival', () => {
   const { submit } = setup(null);
-  expect(submit.mutate).toHaveBeenCalled();
-  expect(screen.queryByRole('button', { name: /submit for preparation/i })).toBeNull();
+  expect(submit.mutate).toHaveBeenCalledTimes(1);
 });
 
-it('offers Submit deposition once prep is complete', () => {
+it('keeps a rejected pending attempt from retrying on rerenders, but allows manual retry and re-entry', () => {
+  const { submit, push, dataset, view } = setup({ id: 1, state: 'pending' });
+  expect(submit.mutate).toHaveBeenCalledTimes(1);
+  mockFlow.mockReturnValue({ submit: { ...submit, isError: true, error: new Error('Cluster unavailable') }, push });
+  view.rerender(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
+  expect(screen.getByText('Cluster unavailable')).toBeInTheDocument();
+  expect(submit.mutate).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Retry sync' }));
+  expect(submit.mutate).toHaveBeenCalledTimes(2);
+  view.unmount();
+
+  const reentered = setup({ id: 1, state: 'pending' });
+  expect(reentered.submit.mutate).toHaveBeenCalledTimes(1);
+});
+
+it('offers Upload to S3 once prep is complete', () => {
   const { push } = setup(prepared);
-  fireEvent.click(screen.getByRole('button', { name: /submit deposition/i }));
+  fireEvent.click(screen.getByRole('button', { name: /upload to s3/i }));
   expect(push.mutate).toHaveBeenCalled();
 });
 
@@ -63,7 +74,7 @@ it('shows success and no submit actions once pushed', () => {
 
 it('hides submit actions and does not auto-start in read-only mode', () => {
   const { submit } = setup(null, { readOnly: true });
-  expect(screen.queryByRole('button', { name: /submit deposition/i })).toBeNull();
+  expect(screen.queryByRole('button', { name: /upload to s3/i })).toBeNull();
   expect(submit.mutate).not.toHaveBeenCalled();
 });
 
@@ -82,7 +93,7 @@ it('offers retry when the launch is rejected before a job exists', () => {
   };
   const push = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
   const dataset = { id: 1, title: 'DS', dataset_id: 2, status: 'draft', job: null } as Dataset;
-  mockFlow.mockReturnValue({ dataset, submit, push, resetPreparation: { isPending: false, error: null } });
+  mockFlow.mockReturnValue({ submit, push });
   render(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
   expect(screen.getByText('Missing dataset ids')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /retry sync/i })).toBeInTheDocument();
@@ -118,7 +129,7 @@ it('blocks submit on a failing validation', () => {
     validation: { ...passed, status: 'failed', blocking_issues: [{ message: 'bad voxel spacing' }] },
   });
   expect(screen.getByText('Validation found blocking issues')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /submit deposition/i })).toBeDisabled();
+  expect(screen.getByRole('button', { name: /upload to s3/i })).toBeDisabled();
 });
 
 it('recovers a failed push by restarting prep, not re-pushing', () => {
@@ -169,10 +180,8 @@ it('updates sync elapsed time, freezes on completion and resets on restart', () 
     const job: DatasetJob = { id: 1, state: 'prep_running', started_at: '2026-10-14T12:00:00Z' };
     const dataset = { id: 1, title: 'DS', status: 'syncing', job } as Dataset;
     mockFlow.mockReturnValue({
-      dataset,
       submit: { isPending: false },
       push: {},
-      resetPreparation: { isPending: false, error: null },
     });
     const props = { dataset, readOnly: true, reportSave: jest.fn() };
     const view = render(<SubmitStep {...props} />);
@@ -237,7 +246,7 @@ it.each(['prep', 'push'])('shows one request error instead of the saved %s failu
       push_slurm_job_id: phase === 'push' ? '99' : null,
     },
   } as Dataset;
-  mockFlow.mockReturnValue({ dataset, submit, push, resetPreparation: { isPending: false, error: null } });
+  mockFlow.mockReturnValue({ submit, push });
   render(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
   expect(screen.getAllByRole('alert')).toHaveLength(1);
   expect(screen.getByRole('alert')).toHaveTextContent("Couldn't reach the cluster to submit. Please try again.");
@@ -263,7 +272,7 @@ it('lets users review each phase without launching another job', () => {
   expect(screen.queryByText('push output')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: /Pre-flight validation/ }));
   expect(screen.getByText('Pre-flight validation has not run. Upload requires a passed check.')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Submit deposition' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Upload to S3' })).toBeNull();
   expect(screen.getByText('Sync log (tail)')).toBeInTheDocument();
   expect(screen.getByText('original prep output')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /Push to S3/ }));
@@ -275,7 +284,7 @@ it('lets users review each phase without launching another job', () => {
 it('does not offer an upload action when viewing validation before sync completes', () => {
   const { submit, push } = setup({ id: 1, state: 'prep_running' });
   fireEvent.click(screen.getByRole('button', { name: /Pre-flight validation/ }));
-  expect(screen.queryByRole('button', { name: 'Submit deposition' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Upload to S3' })).toBeNull();
   expect(submit.mutate).not.toHaveBeenCalled();
   expect(push.mutate).not.toHaveBeenCalled();
 });
@@ -284,10 +293,8 @@ it('keeps a manually selected sync log open when prep completes', () => {
   const job: DatasetJob = { id: 1, state: 'prep_running' };
   const dataset = { id: 1, title: 'DS', status: 'syncing', job } as Dataset;
   mockFlow.mockReturnValue({
-    dataset,
     submit: { isPending: false },
     push: {},
-    resetPreparation: { isPending: false, error: null },
   });
   const props = { dataset, readOnly: false, reportSave: jest.fn() };
   const view = render(<SubmitStep {...props} />);
@@ -297,7 +304,7 @@ it('keeps a manually selected sync log open when prep completes', () => {
   expect(screen.getByRole('button', { name: /Sync on cluster/ })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByText('Sync log (tail)')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /Pre-flight validation/ }));
-  expect(screen.getByRole('button', { name: 'Submit deposition' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Upload to S3' })).toBeInTheDocument();
 });
 
 it.each(['Sync on cluster', 'Pre-flight validation', 'Push to S3'])(
@@ -305,7 +312,7 @@ it.each(['Sync on cluster', 'Pre-flight validation', 'Push to S3'])(
   (tile) => {
     const { push } = setup(prepared);
     fireEvent.click(screen.getByRole('button', { name: new RegExp(tile) }));
-    fireEvent.click(screen.getByRole('button', { name: 'Submit deposition' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Upload to S3' }));
     expect(push.mutate).toHaveBeenCalledTimes(1);
   }
 );
@@ -337,9 +344,9 @@ it.each([null, { ...passed, status: 'unavailable' as const }, { ...passed, attem
   'blocks upload without a current pass: %j',
   (validation) => {
     const { push } = setup({ ...prepared, validation });
-    const button = screen.getByRole('button', { name: 'Submit deposition' });
+    const button = screen.getByRole('button', { name: 'Upload to S3' });
     expect(button).toBeDisabled();
-    expect(screen.getByText(/Upload requires passed validation for this preparation/)).toBeInTheDocument();
+    expect(screen.getByText(/Validation must pass before upload/)).toBeInTheDocument();
     fireEvent.click(button);
     expect(push.mutate).not.toHaveBeenCalled();
   }
@@ -367,33 +374,9 @@ it('does not describe an unavailable result as a pass', () => {
 
 it('retries preparation and validation from a prepared job', () => {
   const { submit, push } = setup({ ...prepared, validation: null });
-  fireEvent.click(screen.getByRole('button', { name: 'Retry preparation and validation' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Prepare again' }));
   expect(submit.mutate).toHaveBeenCalledTimes(1);
   expect(push.mutate).not.toHaveBeenCalled();
-});
-
-it('resets to metadata correction on "Fix and re-prepare" without auto-starting prep', () => {
-  const submit = { mutate: jest.fn(), reset: jest.fn(), isPending: false };
-  const push = { reset: jest.fn(), isPending: false };
-  const resetPreparation = { mutate: jest.fn(), isPending: false };
-  const dataset = { id: 1, deposition: 1, title: 'DS', status: 'syncing', job: prepared } as Dataset;
-  const onPreparationReset = jest.fn();
-  mockFlow.mockReturnValue({ dataset, submit, push, resetPreparation });
-  const props = { dataset, readOnly: false, reportSave: jest.fn(), onPreparationReset };
-  const view = render(<SubmitStep {...props} />);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Fix and re-prepare' }));
-  expect(resetPreparation.mutate).toHaveBeenCalledTimes(1);
-  // onPreparationReset fires only once the reset mutation succeeds.
-  expect(onPreparationReset).not.toHaveBeenCalled();
-  act(() => resetPreparation.mutate.mock.calls[0][1].onSuccess());
-  expect(onPreparationReset).toHaveBeenCalledTimes(1);
-
-  // Back at an editable draft, landing on the step must not auto-start another prep.
-  const pending = { ...dataset, status: 'draft', job: { id: 1, state: 'pending' } };
-  mockFlow.mockReturnValue({ dataset: pending, submit, push, resetPreparation });
-  view.rerender(<SubmitStep {...props} />);
-  expect(submit.mutate).not.toHaveBeenCalled();
 });
 
 it('renders grouped counts while keeping overall progress and ETA from the snapshot', () => {
@@ -430,7 +413,7 @@ it('renders grouped counts while keeping overall progress and ETA from the snaps
 it('does not fetch or display logs for non-owners', () => {
   setLogs({ logs: 'private output', source: 'stored' });
   const dataset = { id: 1, title: 'DS', is_owner: false, job: { id: 1, state: 'failed' } } as Dataset;
-  mockFlow.mockReturnValue({ dataset, submit: {}, push: {}, resetPreparation: { isPending: false, error: null } });
+  mockFlow.mockReturnValue({ submit: {}, push: {} });
   render(<SubmitStep dataset={dataset} readOnly reportSave={jest.fn()} />);
   expect(screen.getByText('Logs are visible to the submitter only.')).toBeVisible();
   expect(mockLogs).toHaveBeenCalledWith(1, expect.objectContaining({ enabled: false }));

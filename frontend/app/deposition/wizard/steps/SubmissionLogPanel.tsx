@@ -67,8 +67,9 @@ export function SubmissionLogPanel({
     <Box
       sx={{
         bgcolor: 'grey.900',
-        borderRadius: 2,
-        height: { xs: 320, md: 400 },
+        borderRadius: '8px',
+        height: 'var(--submission-panel-height, clamp(200px, 30dvh, 400px))',
+        '@media (max-height: 800px)': { height: 'var(--submission-panel-height, clamp(180px, 28dvh, 240px))' },
         minWidth: 0,
         overflow: 'hidden',
         display: 'flex',
@@ -80,13 +81,13 @@ export function SubmissionLogPanel({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          p: 2,
+          p: { xs: '12px 16px', lg: '16px 20px' },
           borderBottom: '1px solid',
           borderColor: 'grey.700',
           flexShrink: 0,
         }}
       >
-        <Typography variant="body2" sx={{ color: 'grey.100', fontWeight: 700 }}>
+        <Typography variant="body1" sx={{ color: 'grey.100', fontWeight: 700 }}>
           {phase === 'prep' ? 'Sync log (tail)' : 'Upload log (tail)'}
         </Typography>
         <Button
@@ -107,10 +108,11 @@ export function SubmissionLogPanel({
         role="region"
         aria-label={phase === 'prep' ? 'Sync log output' : 'Upload log output'}
         sx={{
-          p: 2,
+          p: { xs: '12px 16px', lg: '16px 20px' },
           '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.light', outlineOffset: -2 },
           fontFamily: 'monospace',
-          fontSize: 12,
+          fontSize: 13,
+          lineHeight: 1.8,
           color: 'grey.100',
           whiteSpace: 'pre-wrap',
           overflowWrap: 'anywhere',

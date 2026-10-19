@@ -36,7 +36,7 @@ function renderForm(dataset = DRAFT) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <DatasetForm dataset={dataset} />
+      <DatasetForm dataset={dataset} readOnly={false} />
     </QueryClientProvider>
   );
 }

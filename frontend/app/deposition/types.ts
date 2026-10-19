@@ -1,8 +1,5 @@
 export type DatasetStatus = 'draft' | 'syncing' | 'pushed' | 'failed';
 
-// Draft and failed datasets can be edited/resumed; syncing and pushed are locked.
-export const isEditableStatus = (status: DatasetStatus): boolean => status === 'draft' || status === 'failed';
-
 export interface AuthorRef {
   author_id: number; // soft-ref to People.Person
   is_primary: boolean;

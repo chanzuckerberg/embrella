@@ -7,6 +7,7 @@ export function WizardFooter({
   disableBack,
   disableNext,
   savingNext = false,
+  nextLabel = 'Next',
   readOnly = false,
   savingExit = false,
   onBack,
@@ -16,6 +17,7 @@ export function WizardFooter({
   disableBack: boolean;
   disableNext: boolean;
   savingNext?: boolean;
+  nextLabel?: string;
   readOnly?: boolean;
   savingExit?: boolean;
   onBack: () => void;
@@ -23,7 +25,7 @@ export function WizardFooter({
   onSaveAndExit: () => void;
 }) {
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'space-between', alignItems: 'center' }}>
       <Button
         sdsType="secondary"
         sdsStyle="solid"
@@ -43,7 +45,7 @@ export function WizardFooter({
         disabled={disableNext || savingNext}
         onClick={onNext}
       >
-        {savingNext ? 'Saving…' : 'Next'}
+        {savingNext ? 'Saving…' : nextLabel}
       </Button>
     </Box>
   );

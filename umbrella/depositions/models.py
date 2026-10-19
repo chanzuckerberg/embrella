@@ -125,9 +125,9 @@ class DatasetJob(models.Model):
         "failed": {"prep_submitted", "pending"},
         "completed": set(),
     }
-    # Metadata is frozen while a submission is in flight or staged; edits are
-    # allowed only in pending or failed.
-    LOCKED_STATES = frozenset(TRANSITIONS) - {"pending", "failed"}
+    # Cluster/config locks cover active, staged, and uploaded attempts. Failed
+    # attempts can be retried, but metadata edits still require reset (services.metadata).
+    CLUSTER_FROZEN_STATES = frozenset(TRANSITIONS) - {"pending", "failed"}
     DATASET_STATUS = {
         # After a reset, pending means an editable draft.
         "pending": "draft",
@@ -167,9 +167,9 @@ class DatasetJob(models.Model):
         return f"DatasetJob {self.pk} ({self.state}) for Dataset {self.dataset_id}"
 
     @property
-    def is_locked(self):
-        """Metadata is frozen because a submission is in flight or staged."""
-        return self.state in self.LOCKED_STATES
+    def cluster_is_frozen(self):
+        """The submission is active, staged, or uploaded; cluster selection is frozen."""
+        return self.state in self.CLUSTER_FROZEN_STATES
 
     @property
     def dataset_status(self):

@@ -66,11 +66,13 @@ export function DepositionForm({
     [deposition.id, queryClient]
   );
 
-  const { status, isDirty, lastSavedAt, saveNow } = useDraftAutoSave(form, save, { enabled: !readOnly });
+  const { status, isDirty, lastSavedAt, error, saveNow, discardChanges } = useDraftAutoSave(form, save, {
+    enabled: !readOnly,
+  });
 
   useEffect(() => {
-    reportSave?.({ status, isDirty, lastSavedAt, saveNow });
-  }, [status, isDirty, lastSavedAt, saveNow, reportSave]);
+    reportSave?.({ status, isDirty, lastSavedAt, error, saveNow, discardChanges });
+  }, [status, isDirty, lastSavedAt, error, saveNow, discardChanges, reportSave]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
