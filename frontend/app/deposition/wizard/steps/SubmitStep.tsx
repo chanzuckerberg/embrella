@@ -595,7 +595,11 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
             </Box>
           )}
 
-          {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
+          {errorMessage && (
+            <Alert severity="error" sx={{ whiteSpace: 'pre-line' }}>
+              {errorMessage}
+            </Alert>
+          )}
         </Stack>
 
         {/* Right: live log */}

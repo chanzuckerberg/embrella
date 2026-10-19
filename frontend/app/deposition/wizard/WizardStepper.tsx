@@ -40,17 +40,20 @@ export function WizardStepper({
   onSelect,
   skipped = [],
   disabled = false,
+  blockForward = false,
 }: {
   steps: StepDef[];
   current: number;
   onSelect: (num: number) => void;
   skipped?: number[];
   disabled?: boolean;
+  blockForward?: boolean;
 }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
       {steps.map((s, i) => {
         const isSkipped = skipped.includes(s.num);
+        const isDisabled = disabled || isSkipped || (blockForward && s.num > current);
         const state = stepState(s.num, current, isSkipped);
         return (
           <Fragment key={s.num}>
@@ -81,7 +84,7 @@ export function WizardStepper({
                 component="button"
                 type="button"
                 onClick={() => !isSkipped && onSelect(s.num)}
-                disabled={disabled || isSkipped}
+                disabled={isDisabled}
                 aria-label={`Step ${s.num}: ${s.title}${isSkipped ? ' (skipped)' : ''}`}
                 aria-current={state === 'current' ? 'step' : undefined}
                 sx={{
@@ -89,7 +92,7 @@ export function WizardStepper({
                   height: { xs: 32, sm: 40 },
                   borderRadius: '50%',
                   border: '1px solid',
-                  cursor: disabled || isSkipped ? 'not-allowed' : 'pointer',
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',

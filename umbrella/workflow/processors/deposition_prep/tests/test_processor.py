@@ -8,6 +8,7 @@ PARAMS = {
     "dataset_id": 2,
     "output_dir": "/staged/dep_1/ds_2",
     "config_yaml": "deposition_id: 1\n",
+    "portal_metadata": {"dataset_identifier": 2, "dataset_title": "Reviewed dataset"},
     "config_path": "/staged/dep_1/ds_2/dataprep_config.yaml",
     "copick_config": "/staged/dep_1/ds_2/copick.json",
     "target_dir": "/staged/dep_1/ds_2",
@@ -28,6 +29,8 @@ def test_runs_sync_deposit_and_validation():
     assert '--picks "VLP:relionrefine/2"' in script
     # Pre-flight validation runs via the embedded script; behavior is covered by test_validation_runner.py.
     assert "DEPOSITION_VALIDATION=" in script
+    assert script.index("cryoetportalprep sync") < script.index("END_DEPOSITION_METADATA")
+    assert script.index("END_DEPOSITION_METADATA") < script.index("END_DEPOSITION_VALIDATION")
 
 
 def test_session_filter_scopes_sync_to_this_datasets_sessions():
@@ -92,20 +95,30 @@ def test_script_writes_config_without_shell_expansion_and_preserves_group_access
     import stat
     import subprocess
 
+    import yaml
+
     output_dir = tmp_path / "deposition with spaces"
     config_path = output_dir / "dataprep_config.yaml"
     unwanted = tmp_path / "expanded"
     payload = f'END_CONFIG\n$(touch "{unwanted}")\n`touch "{unwanted}"`\n$HOME'
+    metadata = {"dataset_identifier": 2, "dataset_title": "END_DEPOSITION_METADATA\n" + payload}
     script = _render(
         output_dir=str(output_dir),
         config_path=str(config_path),
         config_yaml=payload,
+        portal_metadata=metadata,
         copick_flags="",
     )
-    stubs = 'ml() { :; }; conda() { :; }; cryoetportalprep() { test -r "$2"; };\n'
+    stubs = """ml() { :; }; conda() { :; }; cryoetportalprep() {
+      test -r "$2" || return
+      mkdir -p "$output_dir/2"
+      echo 'datasets: [{metadata: {dataset_identifier: 2, dataset_title: TODO_DATASET_TITLE}}]' > "$output_dir/2/portal_dataset_config.yaml"
+    };\n"""
     result = subprocess.run(["bash"], input=stubs + script, text=True, capture_output=True)
     assert result.returncode == 0, result.stderr
     assert config_path.read_text() == payload + "\n"
+    portal = yaml.safe_load((output_dir / "2" / "portal_dataset_config.yaml").read_text())
+    assert portal["datasets"][0]["metadata"] == metadata
     assert not unwanted.exists()
     assert stat.S_IMODE(config_path.stat().st_mode) & 0o060 == 0o060
     assert list(output_dir.glob("*.tmp.*")) == []

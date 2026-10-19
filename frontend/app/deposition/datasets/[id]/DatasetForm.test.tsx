@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { DatasetForm } from './DatasetForm';
 import * as api from '../../services/depositionApi';
@@ -8,6 +8,7 @@ import type { Dataset } from '../../types';
 
 jest.mock('../../services/depositionApi', () => ({
   updateDataset: jest.fn(),
+  fetchDeposition: jest.fn(),
   fetchPeopleByIds: jest
     .fn()
     .mockResolvedValue([
@@ -32,11 +33,11 @@ const DRAFT = {
   authors_json: [{ author_id: 7, is_primary: false, is_corresponding: true, author_list_order: 0 }],
 } as Dataset;
 
-function renderForm(dataset = DRAFT) {
+function renderForm(dataset = DRAFT, reportBlocking?: (count: number) => void) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <DatasetForm dataset={dataset} readOnly={false} />
+      <DatasetForm dataset={dataset} readOnly={false} reportBlocking={reportBlocking} />
     </QueryClientProvider>
   );
 }
@@ -71,4 +72,31 @@ describe('DatasetForm authors (#1003)', () => {
       jest.useRealTimers();
     }
   });
+});
+
+it('distinguishes unknown authors from missing authors and allows retry after loading fails', async () => {
+  let rejectAuthors!: (reason: Error) => void;
+  (api.fetchDeposition as jest.Mock)
+    .mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          rejectAuthors = reject;
+        })
+    )
+    .mockResolvedValueOnce({ id: 1, authors_json: DRAFT.authors_json });
+  const reportBlocking = jest.fn();
+  renderForm(
+    { ...DRAFT, description: 'Reviewed', sample: { sample_type: 'in_vitro' }, is_authors_same_as_deposition: true },
+    reportBlocking
+  );
+  expect(screen.getByText('Loading deposition authors…')).toBeInTheDocument();
+  expect(screen.queryByText(/Add at least one dataset author/)).not.toBeInTheDocument();
+  expect(reportBlocking).toHaveBeenLastCalledWith(1);
+  await act(async () => {
+    rejectAuthors(new Error('Network unavailable'));
+  });
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+  await waitFor(() => expect(reportBlocking).toHaveBeenLastCalledWith(0));
+  expect(api.fetchDeposition).toHaveBeenCalledTimes(2);
+  expect(screen.queryByText(/Could not load deposition authors/)).not.toBeInTheDocument();
 });

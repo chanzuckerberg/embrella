@@ -20,6 +20,12 @@ export interface BioRequirements {
   requiredBioField: RequiredBioField;
 }
 
+export function isKnownSampleType(sampleType?: string): boolean {
+  return (
+    ORGANISM_EXEMPT.has(sampleType ?? '') || Object.prototype.hasOwnProperty.call(REQUIRED_BIO_FIELD, sampleType ?? '')
+  );
+}
+
 export function bioRequirements(sampleType?: string): BioRequirements {
   const t = sampleType ?? '';
   return {

@@ -244,11 +244,13 @@ push reads those same subdirectories.
 
 ### Pre-flight validation {#deposition-validation}
 
-After sync, prep runs `cryoetportalprep push <config> --dry-run` for the current
-dataset only. Upload is enabled only when this passes for the current prep attempt.
-Failed, missing or unavailable results block upload, and users can retry preparation
-or choose **Fix and re-prepare** to edit metadata first. Diagnostics are visible only
-to the submission owner.
+After sync, prep replaces the placeholder dataset fields the CLI generates in
+`portal_dataset_config.yaml` with the metadata saved in the wizard, then runs
+`cryoetportalprep push <config> --dry-run` for the current dataset only. Upload is
+enabled only when this passes for the current prep attempt. Failed, missing or
+unavailable results block upload, and users can retry preparation or choose
+**Edit metadata** to make corrections. Diagnostics are visible only to the
+submission owner.
 
 The result comes from the dry run's **exit code** (messages are best-effort text
 matches), so the installed CLI must exit nonzero on an invalid config.

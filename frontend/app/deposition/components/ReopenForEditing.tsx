@@ -15,7 +15,12 @@ export function ReopenForEditing({
   return (
     <>
       {editing.canReopen && (
-        <Button sdsType="secondary" sdsStyle="solid" onClick={editing.requestEdit} sx={{ mb: '16px' }}>
+        <Button
+          sdsType="secondary"
+          sdsStyle="solid"
+          onClick={editing.requestEdit}
+          sx={{ mb: '16px', alignSelf: 'flex-start' }}
+        >
           Edit metadata
         </Button>
       )}

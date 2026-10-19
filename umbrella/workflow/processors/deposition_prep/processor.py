@@ -2,6 +2,8 @@
 ``sync -> copick deposit -> pre-flight validation (push --dry-run, scoped to this dataset)``
 """
 
+import base64
+import json
 import logging
 import os
 import shlex
@@ -28,7 +30,7 @@ class DepositionPrepProcessor(BaseProcessor):
     def validate_parameters(self, params: Dict[str, Any]) -> List[str]:
         errors = [
             f"{key} is required"
-            for key in ("output_dir", "config_path", "config_yaml", "dataset_id")
+            for key in ("output_dir", "config_path", "config_yaml", "dataset_id", "portal_metadata")
             if not params.get(key)
         ]
         if params.get("copick_flags") and not (params.get("copick_config") and params.get("target_dir")):
@@ -47,6 +49,11 @@ class DepositionPrepProcessor(BaseProcessor):
         while config_delimiter in config_yaml.splitlines():
             config_delimiter += "_"
         return template.render(
+            metadata_code=(Path(__file__).parent.parent / "deposition_metadata.py").read_text(),
+            portal_metadata=base64.b64encode(json.dumps(params["portal_metadata"]).encode()).decode(),
+            portal_config_path=shlex.quote(
+                str(Path(params["output_dir"]) / str(params["dataset_id"]) / "portal_dataset_config.yaml")
+            ),
             progress_code=(Path(__file__).parent.parent / "deposition_progress.py").read_text(),
             validation_code=(Path(__file__).parent.parent / "deposition_validation.py").read_text(),
             dataset_id=shlex.quote(str(params["dataset_id"])),

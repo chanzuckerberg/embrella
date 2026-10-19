@@ -1,11 +1,12 @@
 """Tests for the dataset-config YAML serializer."""
 
 import pytest
-import yaml
 from cryo_grids.models import Sample
+from people.models import Institution, Person
 
 from depositions.models import Dataset, DatasetFunding, Deposition
-from depositions.services.config_yaml import build_dataset_metadata, dataset_config_yaml
+from depositions.services.config_yaml import build_dataset_metadata, dataset_metadata_patch
+from depositions.services.exceptions import SubmissionValidationError
 
 
 @pytest.mark.django_db
@@ -67,21 +68,70 @@ def test_omits_empty_optional_fields():
 
 
 @pytest.mark.django_db
-def test_renders_valid_yaml():
-    dep = Deposition.objects.create(title="Dep")
-    ds = Dataset.objects.create(deposition=dep, dataset_id=10002, title="DS", description="d")
-    text = dataset_config_yaml(ds)
-    parsed = yaml.safe_load(text)
-    assert parsed["datasets"][0]["metadata"]["dataset_title"] == "DS"
-    assert parsed["datasets"][0]["metadata"]["dataset_identifier"] == 10002
+@pytest.mark.parametrize("inherit_authors", [True, False])
+def test_resolves_ordered_people_without_requiring_email(inherit_authors):
+    institution = Institution.objects.create(name="Biohub")
+    first = Person.objects.create(
+        given_name="Ada", family_name="Lovelace", institution=institution, orcid="0000-0002-1825-0097"
+    )
+    second = Person.objects.create(given_name="Grace", family_name="Hopper", contact_email="grace@example.org")
+    authors = [
+        {"author_id": second.pk, "author_list_order": 1},
+        {"author_id": first.pk, "is_primary": True, "is_corresponding": True, "author_list_order": 0},
+    ]
+    dep = Deposition.objects.create(title="Dep", authors_json=authors if inherit_authors else [])
+    ds = Dataset.objects.create(
+        deposition=dep,
+        title="DS",
+        is_authors_same_as_deposition=inherit_authors,
+        authors_json=[] if inherit_authors else authors,
+    )
+    assert build_dataset_metadata(ds)["authors"] == [
+        {
+            "name": "Ada Lovelace",
+            "ORCID": first.orcid,
+            "affiliation_name": "Biohub",
+            "primary_author_status": True,
+            "corresponding_author_status": True,
+        },
+        {"name": "Grace Hopper", "email": "grace@example.org"},
+    ]
 
 
 @pytest.mark.django_db
-def test_people_ref_authors_are_skipped_until_873():
-    # author_id refs (no full_name) can't be resolved here — #873 does that.
+def test_missing_directory_author_is_an_actionable_error():
     dep = Deposition.objects.create(
         title="Dep",
         authors_json=[{"author_id": 7, "is_primary": True, "author_list_order": 0}],
     )
     ds = Dataset.objects.create(deposition=dep, title="DS", description="d", is_authors_same_as_deposition=True)
-    assert "authors" not in build_dataset_metadata(ds)
+    with pytest.raises(SubmissionValidationError, match="Review the authors"):
+        build_dataset_metadata(ds)
+
+
+@pytest.mark.django_db
+def test_patch_clears_empty_optional_template_fields():
+    dep = Deposition.objects.create(title="Dep")
+    ds = Dataset.objects.create(deposition=dep, dataset_id=10002, title="DS", description="Reviewed")
+    patch = dataset_metadata_patch(ds)
+    assert patch["dataset_title"] == "DS"
+    assert patch["dataset_description"] == "Reviewed"
+    assert patch["dataset_identifier"] == 10002
+    assert patch["funding"] is None
+    assert patch["tissue"] is None
+    assert patch["disease"] is None
+    assert "dates" not in patch
+
+
+@pytest.mark.django_db
+def test_blank_draft_funding_and_biological_rows_are_omitted():
+    dep = Deposition.objects.create(title="Dep")
+    sample = Sample.objects.create(
+        name="blank-optional-fields", sample_type="in_vitro", organism_name=" ", tissue_name=" "
+    )
+    ds = Dataset.objects.create(deposition=dep, title="DS", sample=sample)
+    DatasetFunding.objects.create(dataset=ds, funding_agency_name=" ", grant_id=" ")
+    meta = build_dataset_metadata(ds)
+    assert "organism" not in meta
+    assert "tissue" not in meta
+    assert "funding" not in meta

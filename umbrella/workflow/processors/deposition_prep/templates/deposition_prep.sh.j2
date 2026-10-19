@@ -48,6 +48,16 @@ cryoetportalprep sync {{ config_path }}{{ session_flags }}
 copick deposit --config {{ copick_config }} --target-dir {{ target_dir }} {{ copick_flags }}
 {% endif -%}
 
+# Keep generated sources and reconstruction sections; replace only wizard-owned dataset fields.
+python - {{ portal_config_path }} <<'END_DEPOSITION_METADATA'
+{{ metadata_code }}
+import base64
+import json
+import sys
+
+apply_metadata(sys.argv[1], json.loads(base64.b64decode("{{ portal_metadata }}", validate=True)))
+END_DEPOSITION_METADATA
+
 # Allow the reporter to publish its final snapshot without holding the job open.
 touch "$progress_file.done" 2>/dev/null || true
 for ((i=0; i<50; i++)); do

@@ -40,14 +40,20 @@ function toForm(d: Deposition): FormState {
 export function DepositionForm({
   deposition,
   reportSave,
+  reportBlocking,
   readOnly = false,
 }: {
   deposition: Deposition;
   reportSave?: (state: AutoSaveState) => void;
+  reportBlocking?: (count: number) => void;
   readOnly?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<FormState>(() => toForm(deposition));
+  const titleMissing = !form.title.trim();
+  useEffect(() => {
+    reportBlocking?.(!readOnly && titleMissing ? 1 : 0);
+  }, [readOnly, titleMissing, reportBlocking]);
 
   const save = useCallback(
     async (payload: FormState) => {
@@ -90,6 +96,8 @@ export function DepositionForm({
               value={form.title}
               onChange={(e) => set('title', e.target.value)}
               required
+              error={!readOnly && titleMissing}
+              helperText={!readOnly && titleMissing ? 'Deposition title is required.' : undefined}
               fullWidth
               size="small"
               InputProps={{ readOnly }}

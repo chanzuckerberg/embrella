@@ -1,6 +1,8 @@
 """Serialize a deposition Dataset to the cryoET portal dataset-config metadata block."""
 
-import yaml
+from people.models import Person
+
+from depositions.services.exceptions import SubmissionValidationError
 
 _ONTOLOGY_FIELDS = [
     ("tissue", "tissue_name", "tissue_id"),
@@ -11,29 +13,62 @@ _ONTOLOGY_FIELDS = [
     ("disease", "disease_name", "disease_ontology_id"),
 ]
 
+DATASET_METADATA_FIELDS = {
+    "dataset_title",
+    "dataset_description",
+    "dataset_identifier",
+    "authors",
+    "funding",
+    "sample_type",
+    "organism",
+    "assay",
+    "sample_preparation",
+    "grid_preparation",
+    "other_setup",
+    "cross_references",
+    *[field[0] for field in _ONTOLOGY_FIELDS],
+}
+
 
 def _name_id(name, oid):
     """A {name, id} block, omitting empty parts."""
     block = {}
-    if name:
-        block["name"] = name
-    if oid:
-        block["id"] = oid
+    if name and name.strip():
+        block["name"] = name.strip()
+    if oid and oid.strip():
+        block["id"] = oid.strip()
     return block or None
 
 
-def _map_author(entry):
-    """Map a authors to the portal author shape."""
+def _map_author(entry, people):
+    """Resolve directory references, retaining support for saved inline authors."""
     if not isinstance(entry, dict):
         return None
-    name = (entry.get("full_name") or "").strip()
+    email = None
+    person_id = entry.get("author_id")
+    if person_id is not None:
+        person = people.get(person_id)
+        if person is None:
+            raise SubmissionValidationError(
+                "An author is no longer in the people directory. Review the authors before preparing."
+            )
+        name = str(person)
+        orcid = person.orcid
+        affiliation = person.institution.name if person.institution else ""
+        email = person.contact_email
+    else:
+        name = (entry.get("full_name") or "").strip()
+        orcid = entry.get("orcid")
+        affiliation = entry.get("affiliation")
     if not name:
         return None
     author = {"name": name}
-    if entry.get("orcid"):
-        author["ORCID"] = entry["orcid"]
-    if entry.get("affiliation"):
-        author["affiliation_name"] = entry["affiliation"]
+    if orcid:
+        author["ORCID"] = orcid
+    if affiliation:
+        author["affiliation_name"] = affiliation
+    if email:
+        author["email"] = email
     if entry.get("is_primary"):
         author["primary_author_status"] = True
     if entry.get("is_corresponding"):
@@ -55,8 +90,8 @@ def build_dataset_metadata(dataset) -> dict:
         if sample.sample_type:
             meta["sample_type"] = sample.sample_type
         organism = {}
-        if sample.organism_name:
-            organism["name"] = sample.organism_name
+        if sample.organism_name.strip():
+            organism["name"] = sample.organism_name.strip()
         if sample.organism_taxid is not None:
             organism["taxonomy_id"] = sample.organism_taxid
         if organism:
@@ -87,9 +122,13 @@ def build_dataset_metadata(dataset) -> dict:
 
     funding = []
     for f in dataset.funding.all():
-        row = {"funding_agency_name": f.funding_agency_name}
-        if f.grant_id:
-            row["grant_id"] = f.grant_id
+        agency = f.funding_agency_name.strip()
+        grant = f.grant_id.strip()
+        if not agency and not grant:
+            continue
+        row = {"funding_agency_name": agency}
+        if grant:
+            row["grant_id"] = grant
         funding.append(row)
     if funding:
         meta["funding"] = funding
@@ -97,14 +136,22 @@ def build_dataset_metadata(dataset) -> dict:
     source_authors = (
         dataset.deposition.authors_json if dataset.is_authors_same_as_deposition else dataset.authors_json
     ) or []
-    authors = [a for a in (_map_author(e) for e in source_authors) if a]
+    people = (
+        Person.objects.using(dataset._state.db)
+        .select_related("institution")
+        .in_bulk(e["author_id"] for e in source_authors if isinstance(e, dict) and e.get("author_id") is not None)
+    )
+    ordered_authors = sorted(
+        ((index, entry) for index, entry in enumerate(source_authors) if isinstance(entry, dict)),
+        key=lambda item: item[1]["author_list_order"] if item[1].get("author_list_order") is not None else item[0],
+    )
+    authors = [a for a in (_map_author(e, people) for _, e in ordered_authors) if a]
     if authors:
         meta["authors"] = authors
 
     return meta
 
 
-def dataset_config_yaml(dataset) -> str:
-    """Render the dataset-config YAML."""
-    config = {"datasets": [{"metadata": build_dataset_metadata(dataset)}]}
-    return yaml.safe_dump(config, sort_keys=False, allow_unicode=True, default_flow_style=False)
+def dataset_metadata_patch(dataset):
+    """Nulls remove empty wizard-owned fields from the tool's generated template."""
+    return {**dict.fromkeys(DATASET_METADATA_FIELDS), **build_dataset_metadata(dataset)}

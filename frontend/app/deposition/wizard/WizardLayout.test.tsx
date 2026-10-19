@@ -34,7 +34,18 @@ jest.mock('../hooks/useDraftAutoSave', () => ({
   }),
 }));
 
-const DATASET = { id: 5, deposition: 1, dataset_id: 100, title: 'My dataset', status: 'draft', funding: [] } as Dataset;
+const DATASET = {
+  id: 5,
+  deposition: 1,
+  dataset_id: 100,
+  title: 'My dataset',
+  description: 'Reviewed description',
+  status: 'draft',
+  funding: [],
+  sample: { sample_type: 'in_vitro' },
+  is_authors_same_as_deposition: false,
+  authors_json: [{ author_id: 7, is_primary: true, is_corresponding: false, author_list_order: 0 }],
+} as Dataset;
 const TOMOS_ONLY = { ...DATASET, type: 'Tomos only' } as Dataset;
 
 function renderWizard(dataset: Dataset = DATASET) {
@@ -108,6 +119,41 @@ describe('WizardLayout', () => {
     renderWizard();
     fireEvent.click(screen.getByRole('button', { name: /Step 3: Dataset/ }));
     expect(await screen.findByRole('heading', { name: 'Dataset' })).toBeInTheDocument();
+  });
+
+  it('blocks Next for missing Dataset metadata while still allowing draft exit', async () => {
+    renderWizard();
+    fireEvent.click(screen.getByRole('button', { name: /Step 3: Dataset/ }));
+    const title = await screen.findByRole('textbox', { name: /^Title/ });
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+    fireEvent.change(title, { target: { value: ' ' } });
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    expect(screen.getByText('Dataset title is required.')).toBeInTheDocument();
+    const finalize = screen.getByRole('button', { name: /Step 6:/ });
+    expect(finalize).toBeDisabled();
+    fireEvent.click(finalize);
+    expect(screen.getByRole('heading', { name: 'Dataset' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Step 1:/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Save draft & exit' })).toBeEnabled();
+    fireEvent.change(title, { target: { value: 'Corrected title' } });
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+  });
+
+  it('requires the Deposition title but allows an empty optional description', async () => {
+    const { client } = renderWizard();
+    client.setQueryData(depositionKeys.deposition(1), {
+      id: 1,
+      title: '',
+      description: '',
+      authors_json: [],
+      datasets: [DATASET],
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Step 2: Deposition/ }));
+    const title = await screen.findByRole('textbox', { name: /^Title/ });
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    expect(screen.getByText('Deposition title is required.')).toBeInTheDocument();
+    fireEvent.change(title, { target: { value: 'Saved deposition title' } });
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
   });
 
   it.each([

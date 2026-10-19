@@ -6,7 +6,7 @@ import type { StepProps } from '../wizardTypes';
 import { useDeposition } from '../../hooks/useDeposition';
 import { DepositionForm } from '../../depositions/DepositionForm';
 
-export function DepositionStep({ dataset, reportSave, readOnly }: StepProps) {
+export function DepositionStep({ dataset, reportSave, reportBlocking, readOnly }: StepProps) {
   const { data, isPending, isError } = useDeposition(dataset.deposition ?? null);
 
   if (isPending) {
@@ -31,7 +31,12 @@ export function DepositionStep({ dataset, reportSave, readOnly }: StepProps) {
           Editing is paused because another dataset in this submission has started preparation.
         </Alert>
       )}
-      <DepositionForm deposition={data} reportSave={reportSave} readOnly={readOnly || siblingLocked} />
+      <DepositionForm
+        deposition={data}
+        reportSave={reportSave}
+        reportBlocking={reportBlocking}
+        readOnly={readOnly || siblingLocked}
+      />
     </>
   );
 }
