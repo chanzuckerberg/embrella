@@ -4,6 +4,8 @@ from dataclasses import dataclass
 
 from cryo_grids.history import ChangeReason
 
+from timeline.types import Entry, EntryKind, Subject
+
 # simple-history ``history_type`` values
 CREATED = "+"
 CHANGED = "~"
@@ -59,6 +61,19 @@ def is_baseline(row) -> bool:
     return row.history_change_reason == ChangeReason.BASELINE
 
 
+def grid_entry(grid_id: int, at, kind: EntryKind, summary: str, user: str | None, detail=None) -> Entry:
+    """An entry about the grid itself, e.g. it moved, or its box did."""
+    return Entry(
+        at=at,
+        subject=Subject.GRID,
+        subject_id=grid_id,
+        kind=kind,
+        summary=summary,
+        user=user,
+        detail=detail or {},
+    )
+
+
 def username(user) -> str | None:
     return user.username if user else None
 
@@ -68,21 +83,26 @@ def attname(model, name: str) -> str:
     return model._meta.get_field(name).attname
 
 
-def names(model, ids) -> dict:
+def latest(model, ids) -> dict:
     """
-    ``{id: name}`` for ``ids``.
+    ``{id: object}`` for ``ids``: the live object, or its last history row once deleted (if tracked).
 
-    Falls back to the latest history snapshot for deleted objects, if tracked.
+    e.g. a typo label auto-deleted by update_labels comes back as its ``-`` history row
     """
     ids = {i for i in ids if i is not None}
-    found = dict(model.objects.filter(id__in=ids).values_list("id", "name"))
+    found = {obj.id: obj for obj in model.objects.filter(id__in=ids)}
 
     missing = ids - found.keys()
     if missing and hasattr(model, "history"):
         for row in model.history.filter(id__in=missing).order_by("history_date"):
-            found[row.id] = row.name
+            found[row.id] = row
 
     return found
+
+
+def names(model, ids) -> dict:
+    """``{id: name}`` for ``ids``, deleted objects included (see ``latest``)."""
+    return {i: obj.name for i, obj in latest(model, ids).items()}
 
 
 @dataclass(frozen=True)

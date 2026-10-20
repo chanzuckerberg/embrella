@@ -11,14 +11,16 @@ from timeline.sources.base import (
     DELETED,
     TRASHED,
     changes,
+    grid_entry,
     history,
     is_baseline,
     is_move,
+    latest,
     username,
     with_prev,
 )
 from timeline.sources.location import GRID
-from timeline.types import Entry, EntryKind, Subject
+from timeline.types import Entry, EntryKind
 
 CLIPPED = "clipped"
 
@@ -47,7 +49,7 @@ def grid_entries(grid_id: int, rows: list) -> list[Entry]:
 def label_entries(grid_id: int) -> list[Entry]:
     """Label added / removed entries, from GridLabel history. Typo labels are left out."""
     rows = history(GridLabel, grid_id=grid_id)
-    labels = _labels({r.label_id for r in rows})
+    labels = latest(Label, {r.label_id for r in rows})
     entries = []
 
     for row in rows:
@@ -63,25 +65,15 @@ def label_entries(grid_id: int) -> list[Entry]:
             baseline = is_baseline(row)
             at = row.added_at if baseline else row.history_date
             user = username(row.added_by) if baseline else username(row.history_user)
-            entries.append(_entry(grid_id, at, EntryKind.LABEL_ADDED, f"Label {name} added", user, detail))
+            entries.append(grid_entry(grid_id, at, EntryKind.LABEL_ADDED, f"Label {name} added", user, detail))
 
         if row.history_type == DELETED:
             user = username(row.history_user)
             entries.append(
-                _entry(grid_id, row.history_date, EntryKind.LABEL_REMOVED, f"Label {name} removed", user, detail)
+                grid_entry(grid_id, row.history_date, EntryKind.LABEL_REMOVED, f"Label {name} removed", user, detail)
             )
 
     return entries
-
-
-def _labels(ids: set) -> dict:
-    """``{id: label}``; deleted labels (e.g. auto-removed typos) come from their last history snapshot."""
-    found = {lbl.id: lbl for lbl in Label.objects.filter(id__in=ids)}
-
-    for row in Label.history.filter(id__in=ids - found.keys()).order_by("history_date"):
-        found[row.id] = row
-
-    return found
 
 
 def _is_typo(label) -> bool:
@@ -97,7 +89,7 @@ def _grid_entry(grid_id, prev, row) -> Entry | None:
         return _created(grid_id, row)
 
     if row.history_type == DELETED:
-        return _entry(grid_id, row.history_date, EntryKind.DELETED, "Grid deleted", user)
+        return grid_entry(grid_id, row.history_date, EntryKind.DELETED, "Grid deleted", user)
 
     if is_move(prev, row, GRID.fields):
         return None
@@ -110,16 +102,16 @@ def _grid_entry(grid_id, prev, row) -> Entry | None:
     kind = _reason_kind(reason) or _kind_from_diff(diff)
     summary = _summary(kind, reason, diff)
 
-    return _entry(grid_id, row.history_date, kind, summary, user)
+    return grid_entry(grid_id, row.history_date, kind, summary, user)
 
 
 def _created(grid_id, row) -> Entry:
     """Baseline rows predate history: show creation at the grid's own create_on, by its owner."""
     if not is_baseline(row):
-        return _entry(grid_id, row.history_date, EntryKind.CREATED, "Grid created", username(row.history_user))
+        return grid_entry(grid_id, row.history_date, EntryKind.CREATED, "Grid created", username(row.history_user))
 
     at = timezone.make_aware(datetime.combine(row.create_on, time.min))
-    return _entry(grid_id, at, EntryKind.CREATED, "Grid created", username(row.user))
+    return grid_entry(grid_id, at, EntryKind.CREATED, "Grid created", username(row.user))
 
 
 def _reason_kind(reason) -> EntryKind | None:
@@ -153,15 +145,3 @@ def _summary(kind, reason, diff) -> str:
         return f"Edited {', '.join(FIELD_NAMES.get(name, name) for name in diff)}"
 
     return kind.capitalize()
-
-
-def _entry(grid_id, at, kind, summary, user, detail=None) -> Entry:
-    return Entry(
-        at=at,
-        subject=Subject.GRID,
-        subject_id=grid_id,
-        kind=kind,
-        summary=summary,
-        user=user,
-        detail=detail or {},
-    )

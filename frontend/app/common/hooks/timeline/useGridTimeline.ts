@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { DJANGO_URL, API } from '@app/common/constants/api';
+import { fetchResource } from '@app/common/queries/fetchResource';
 import type { TimelineEntry } from '@app/common/types/timeline';
 
 /**
@@ -9,9 +10,7 @@ export const useGridTimeline = (gridId: number | null) =>
   useQuery({
     queryKey: ['grid-timeline', gridId],
     queryFn: async (): Promise<TimelineEntry[]> => {
-      const response = await fetch(`${DJANGO_URL}${API.GRID_TIMELINE.replace('grid_id', String(gridId))}`, {
-        credentials: 'include',
-      });
+      const response = await fetchResource(`${DJANGO_URL}${API.GRID_TIMELINE.replace('grid_id', String(gridId))}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch grid timeline');

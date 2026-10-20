@@ -25,6 +25,7 @@ from timeline.sources.base import (
     SLOT,
     Spot,
     attname,
+    grid_entry,
     history,
     is_baseline,
     is_move,
@@ -32,7 +33,7 @@ from timeline.sources.base import (
     names,
     username,
 )
-from timeline.types import Entry, EntryKind, Subject
+from timeline.types import Entry, EntryKind
 
 # Baseline snapshots predate history: the state held since "forever"
 BEGINNING = datetime.min.replace(tzinfo=UTC)
@@ -170,17 +171,9 @@ def _move_entries(grid_id: int, level: Level, found: list) -> list[Entry]:
         origin = _spot(prev, level, parents) if prev else None
         target = _spot(row, level, parents)
 
-        entries.append(
-            Entry(
-                at=row.history_date,
-                subject=Subject.GRID,
-                subject_id=grid_id,
-                kind=EntryKind.MOVED,
-                summary=move_summary(level.via.capitalize(), level.parent, origin, target, level.unit),
-                user=username(row.history_user),
-                detail={"via": level.via},
-            )
-        )
+        summary = move_summary(level.via.capitalize(), level.parent, origin, target, level.unit)
+        user = username(row.history_user)
+        entries.append(grid_entry(grid_id, row.history_date, EntryKind.MOVED, summary, user, {"via": level.via}))
 
     return entries
 
