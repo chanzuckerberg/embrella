@@ -25,17 +25,6 @@ CLIPPED = "clipped"
 # attname → readable name, e.g. "grid_cassette_id" → "grid cassette"
 FIELD_NAMES = {f.attname: str(f.verbose_name) for f in CryoGrid._meta.concrete_fields}
 
-# Reasons that name the action outright; the diff only fills in details
-REASON_KINDS = {
-    ChangeReason.EDITED: EntryKind.EDITED,
-    ChangeReason.TRASHED: EntryKind.TRASHED,
-    ChangeReason.RESTORED: EntryKind.RESTORED,
-    ChangeReason.CLIPPED: EntryKind.CLIPPED,
-    ChangeReason.UNCLIPPED: EntryKind.UNCLIPPED,
-    ChangeReason.BOX_DELETED: EntryKind.TRASHED,
-    ChangeReason.PUCK_DELETED: EntryKind.TRASHED,
-}
-
 # Why a grid was trashed when it wasn't the user's direct action
 TRASH_CAUSES = {
     ChangeReason.BOX_DELETED: "box deleted",
@@ -118,7 +107,7 @@ def _grid_entry(grid_id, prev, row) -> Entry | None:
     if not diff and not reason:
         return None
 
-    kind = REASON_KINDS.get(reason) or _kind_from_diff(diff)
+    kind = _reason_kind(reason) or _kind_from_diff(diff)
     detail = {"reason": reason, "changes": {name: list(values) for name, values in diff.items()}}
     summary = _summary(kind, reason, diff)
 
@@ -132,6 +121,17 @@ def _created(grid_id, row) -> Entry:
 
     at = timezone.make_aware(datetime.combine(row.create_on, time.min))
     return _entry(grid_id, at, EntryKind.CREATED, "Grid created", username(row.user))
+
+
+def _reason_kind(reason) -> EntryKind | None:
+    """Reasons name the action outright, e.g. ``clipped`` → CLIPPED; container deletions trash the grid."""
+    if reason in TRASH_CAUSES:
+        return EntryKind.TRASHED
+
+    try:
+        return EntryKind(reason)
+    except ValueError:  # No reason, or one without a kind of its own
+        return None
 
 
 def _kind_from_diff(diff: dict) -> EntryKind:
