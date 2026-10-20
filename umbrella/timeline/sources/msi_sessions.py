@@ -17,7 +17,6 @@ def msi_session_entries(grid_id: int) -> list[Entry]:
             kind=EntryKind.CREATED,
             summary=f"MSI session {session.name} created",
             user=username(session.user),
-            detail={"name": session.name},
         )
         for session in sessions
     ]

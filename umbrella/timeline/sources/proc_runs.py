@@ -15,7 +15,6 @@ def proc_run_entries(grid_id: int) -> list[Entry]:
             subject_id=run.id,
             kind=EntryKind.CREATED,
             summary=f"Proc run {run.name} ({run.proc_plan.name}) created on {run.msi_session.name}",
-            detail={"name": run.name, "proc_plan": run.proc_plan.name, "msi_session": run.msi_session.name},
         )
         for run in runs
     ]

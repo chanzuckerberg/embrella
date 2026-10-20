@@ -30,7 +30,6 @@ from timeline.sources.base import (
     is_move,
     move_summary,
     names,
-    spot_text,
     username,
 )
 from timeline.types import Entry, EntryKind, Subject
@@ -170,13 +169,6 @@ def _move_entries(grid_id: int, level: Level, found: list) -> list[Entry]:
     for prev, row in found:
         origin = _spot(prev, level, parents) if prev else None
         target = _spot(row, level, parents)
-        detail = {
-            "via": level.via,
-            "container": row.name,
-            "from": spot_text(origin, level.parent, level.unit) if origin else None,
-            "to": spot_text(target, level.parent, level.unit),
-            "reason": row.history_change_reason,
-        }
 
         entries.append(
             Entry(
@@ -186,7 +178,7 @@ def _move_entries(grid_id: int, level: Level, found: list) -> list[Entry]:
                 kind=EntryKind.MOVED,
                 summary=move_summary(level.via.capitalize(), level.parent, origin, target, level.unit),
                 user=username(row.history_user),
-                detail=detail,
+                detail={"via": level.via},
             )
         )
 

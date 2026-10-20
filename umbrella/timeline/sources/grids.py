@@ -108,10 +108,9 @@ def _grid_entry(grid_id, prev, row) -> Entry | None:
         return None
 
     kind = _reason_kind(reason) or _kind_from_diff(diff)
-    detail = {"reason": reason, "changes": {name: list(values) for name, values in diff.items()}}
     summary = _summary(kind, reason, diff)
 
-    return _entry(grid_id, row.history_date, kind, summary, user, detail)
+    return _entry(grid_id, row.history_date, kind, summary, user)
 
 
 def _created(grid_id, row) -> Entry:

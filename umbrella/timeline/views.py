@@ -15,7 +15,7 @@ MOVE_EXAMPLE = {
     "kind": "moved",
     "summary": "Grid moved: BoxA position 1 to BoxB position 2",
     "user": "jdoe",
-    "detail": {"reason": "moved", "changes": {"grid_box_id": [7, 9], "position_in_box": [1, 2]}},
+    "detail": {"via": "grid"},
 }
 
 
