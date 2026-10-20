@@ -3,6 +3,7 @@
 import pytest
 import yaml
 from cryo_grids.models import Sample
+from django.contrib.auth.models import User
 from django.utils import timezone
 from stores.models import Cluster, DataKind, PathType
 from stores.paths import resolve_dir
@@ -294,9 +295,34 @@ def _passed_validation(attempt):
     return {"status": "passed", "attempt": attempt, "dataset_id": 2, "warnings": [], "blocking_issues": []}
 
 
+@pytest.mark.parametrize(
+    "phase,username,email,expected",
+    [
+        ("prep", "owner", "owner@example.org", "owner@example.org"),
+        ("push", "owner", "owner@example.org", "owner@example.org"),
+        ("prep", "owner@example.org", "", "owner@example.org"),
+        ("prep", "owner", "owner@example.org\n#SBATCH --output=/tmp/injected", None),
+    ],
+)
+def test_jobs_notify_the_owner_without_changing_service_account_auth(dataset, mocks, phase, username, email, expected):
+    owner = User.objects.create_user(username=username, email=email)
+    dataset.deposition.submitter_user = owner
+    dataset.deposition.save(update_fields=["submitter_user"])
+    if phase == "prep":
+        submit.submit_dataset_prep(dataset)
+    else:
+        DatasetJob.objects.create(
+            dataset=dataset, state="prep_completed", prep_slurm_job_id="p1", validation=_passed_validation("p1")
+        )
+        submit.submit_dataset_push(dataset)
+    launched = mocks["launched"]
+    assert launched["params"].get("slurm_mail_user") == expected
+    assert launched["auth"] is mocks["auth"]
+
+
 @pytest.mark.django_db
 class TestSubmitDatasetPush:
-    def test_push_runs_as_service_account_with_no_app_email_params(self, dataset, mocks):
+    def test_push_without_an_owner_uses_service_auth_and_omits_mail_recipient(self, dataset, mocks):
         DatasetJob.objects.create(
             dataset=dataset, state="prep_completed", prep_slurm_job_id="p1", validation=_passed_validation("p1")
         )
