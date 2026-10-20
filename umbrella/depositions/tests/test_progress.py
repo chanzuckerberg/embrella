@@ -18,10 +18,12 @@ def snapshot(**fields):
 
 
 @pytest.mark.django_db
-def test_collect_rejects_regressions_and_old_attempts_and_sanitizes_api(monkeypatch):
+@pytest.mark.parametrize("phase", ["prep", "push"])
+def test_collect_rejects_regressions_and_old_attempts_and_sanitizes_api(monkeypatch, phase):
     dep = Deposition.objects.create(title="Dep")
     ds = Dataset.objects.create(deposition=dep, title="DS", dataset_id=2)
-    job = DatasetJob.objects.create(dataset=ds, state="prep_running", prep_slurm_job_id="123")
+    job = DatasetJob.objects.create(dataset=ds, state=f"{phase}_running", **{f"{phase}_slurm_job_id": "123"})
+    field = "sync_progress" if phase == "prep" else "push_progress"
     raw = snapshot(
         items=[
             {"label": "/private/source", "done": 1, "total": 1},
@@ -30,16 +32,19 @@ def test_collect_rejects_regressions_and_old_attempts_and_sanitizes_api(monkeypa
     )
     monkeypatch.setattr(progress, "get_processor", lambda _: SimpleNamespace(get_script_directory=lambda **kw: "/jobs"))
     monkeypatch.setattr(progress.clusterio, "read_remote_file_tail", lambda *a, **kw: json.dumps(raw))
-    progress.collect(job, "prep", "cluster-a", "123", {"username": "service"})
+    progress.collect(job, phase, "cluster-a", "123", {"username": "service"})
     job.refresh_from_db()
-    saved = job.sync_progress
+    saved = getattr(job, field)
     for fields, attempt in [({"done": 4}, "123"), ({"updated_at": 109}, "123"), ({"done": 6}, "old")]:
         raw.update(fields)
-        progress.collect(job, "prep", "cluster-a", attempt, {"username": "service"})
+        progress.collect(job, phase, "cluster-a", attempt, {"username": "service"})
         job.refresh_from_db()
-        assert job.sync_progress == saved
-    public = DatasetJobSerializer(job).data["sync_progress"]
-    assert public == {"done": 5, "total": 10, "eta": "10s", "items": [{"label": "Frames", "done": 5, "total": 10}]}
+        assert getattr(job, field) == saved
+    public = DatasetJobSerializer(job).data[field]
+    expected = {"done": 5, "total": 10, "eta": "10s"}
+    if phase == "prep":
+        expected["items"] = [{"label": "Frames", "done": 5, "total": 10}]
+    assert public == expected
     assert "/private" not in json.dumps(public)
     assert "started_at" not in public
 
@@ -88,10 +93,69 @@ def test_reporter_counts_real_staged_files_and_followed_link_bytes(tmp_path):
     (root / "session_Position_1_TS.mrc").symlink_to(source / "Position_1.mrc")
     assert reporter.prep_sample(root, inventory, False)["done"] == 1
     assert reporter.prep_sample(root, inventory, True)["summary"] == {"objects": 1, "bytes": 3}
-    # AWS uses carriage returns and human-readable byte units.
-    assert reporter.upload_sample("Completed 1.0 MiB/4.0 MiB\rCompleted 2.0 MiB/4.0 MiB") == {
+
+
+@pytest.mark.parametrize("estimated", ["", "~"])
+def test_upload_progress_reads_latest_aws_total(estimated):
+    text = f"Completed 1.0 MiB/{estimated}4.0 MiB\rCompleted 2.0 MiB/{estimated}4.0 MiB (31.0 MiB/s)"
+    assert reporter.upload_sample(text) == {
         "done": 2 * 1024**2,
         "total": 4 * 1024**2,
+        "estimated": bool(estimated),
+    }
+
+
+@pytest.mark.parametrize("separator", ["\n", "\r", "\r\n"])
+def test_upload_reporter_counts_completed_files_across_reads(tmp_path, monkeypatch, separator):
+    source = tmp_path / "upload.log"
+    source.write_bytes(
+        (
+            f"(calculating...)Completed 2.0 MiB/~4.0 MiB (1.0 MiB/s) with ~1 file(s) remaining{separator}"
+            f"upload: one.mrc to s3://example/one.mrc{separator}up"
+        ).encode()
+    )
+    path = tmp_path / "progress.json"
+    samples = []
+    monkeypatch.setattr(reporter, "write_snapshot", lambda _, sample: samples.append(sample.copy()))
+
+    def advance(_):
+        if len(samples) == 1:
+            with source.open("ab") as handle:
+                handle.write(
+                    (
+                        f"load: two.mrc to s3://example/two.mrc{separator}"
+                        f"Completed 4.0 MiB/4.0 MiB (1.0 MiB/s) with 0 file(s) remaining{separator}"
+                    ).encode()
+                )
+        else:
+            path.with_suffix(".json.done").touch()
+
+    monkeypatch.setattr(reporter.time, "sleep", advance)
+    reporter.report("push", str(path), str(source))
+    assert samples[0]["objects"] == {"done": 1, "total": 2, "estimated": True}
+    assert samples[1]["objects"] == samples[2]["objects"] == {"done": 2, "total": 2, "estimated": False}
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("estimated", [False, True])
+def test_upload_counts_and_elapsed_are_collected_and_serialized(monkeypatch, estimated):
+    dep = Deposition.objects.create(title="Dep")
+    ds = Dataset.objects.create(deposition=dep, title="DS")
+    job = DatasetJob.objects.create(dataset=ds, state="push_running", push_slurm_job_id="123")
+    objects = {"done": 2, "total": 4, "estimated": estimated}
+    raw = snapshot(estimated=estimated, objects={**objects, "path": "/private/source"})
+    monkeypatch.setattr(progress, "get_processor", lambda _: SimpleNamespace(get_script_directory=lambda **kw: "/jobs"))
+    monkeypatch.setattr(progress.clusterio, "read_remote_file_tail", lambda *a, **kw: json.dumps(raw))
+    progress.collect(job, "push", "cluster-a", "123", {"username": "service"})
+    job.refresh_from_db()
+    public = DatasetJobSerializer(job).data["push_progress"]
+    assert public == {
+        "done": 5,
+        "total": 10,
+        "eta": None if estimated else "10s",
+        "elapsed": "10s",
+        "estimated": estimated,
+        "objects": objects,
     }
 
 
@@ -177,7 +241,8 @@ def test_prep_inventory_matches_expected_staged_names(tmp_path):
 
 
 @pytest.mark.django_db
-def test_syncer_stores_final_summary_on_completion(monkeypatch):
+@pytest.mark.parametrize("phase", ["prep", "push"])
+def test_syncer_preserves_final_progress_and_sync_summary(monkeypatch, phase):
     import workflow.syncers
 
     from depositions import tasks
@@ -186,7 +251,10 @@ def test_syncer_stores_final_summary_on_completion(monkeypatch):
     dep = Deposition.objects.create(title="Dep")
     ds = Dataset.objects.create(deposition=dep, title="DS")
     job = DatasetJob.objects.create(
-        dataset=ds, state="prep_running", prep_slurm_job_id="123", started_at=now - timedelta(seconds=20)
+        dataset=ds,
+        state=f"{phase}_running",
+        started_at=now - timedelta(seconds=20),
+        **{f"{phase}_slurm_job_id": "123"},
     )
     raw = snapshot(complete=True, done=10, summary={"objects": 10, "bytes": 2048})
     monkeypatch.setattr(progress, "get_processor", lambda _: SimpleNamespace(get_script_directory=lambda **kw: "/jobs"))
@@ -199,14 +267,16 @@ def test_syncer_stores_final_summary_on_completion(monkeypatch):
             get_job_info_from_sacct=lambda: {"state": "COMPLETED", "exit_code": "0:0"}, is_job_terminal=lambda _: True
         ),
     )
-    tasks.run_deposition_job_syncer(job.pk, "prep", "cluster-a", "123")
+    tasks.run_deposition_job_syncer(job.pk, phase, "cluster-a", "123")
     job.refresh_from_db()
-    assert job.state == "prep_completed"
+    assert job.state == ("prep_completed" if phase == "prep" else "completed")
     public = DatasetJobSerializer(job).data
-    assert public["sync_summary"]["objects"] == 10
-    assert public["sync_summary"]["size"] == "2.0 KiB"
-    assert public["sync_summary"]["duration"]
-    assert public["sync_progress"]["done"] == public["sync_progress"]["total"] == 10
+    if phase == "prep":
+        assert public["sync_summary"]["objects"] == 10
+        assert public["sync_summary"]["size"] == "2.0 KiB"
+        assert public["sync_summary"]["duration"]
+    field = "sync_progress" if phase == "prep" else "push_progress"
+    assert public[field]["done"] == public[field]["total"] == 10
 
 
 @pytest.mark.parametrize("phase", ["prep", "push"])

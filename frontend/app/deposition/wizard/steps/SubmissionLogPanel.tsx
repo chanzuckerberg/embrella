@@ -34,7 +34,12 @@ export function SubmissionLogPanel({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const stick = useRef(true); // follow the tail until the user scrolls up to read earlier lines
   const text = restricted ? '' : (data?.logs ?? '');
-  const lines = text.split('\n').filter(Boolean);
+  const lines = text.split(phase === 'push' ? /\r\n|\r|\n/ : '\n').filter((line) => {
+    if (!line) return false;
+    return (
+      phase !== 'push' || !/^\s*(?:\(calculating\.\.\.\)\s*)?Completed\s+[\d.,]+\s*(?:Bytes|[KMGTPE]?i?B)\//.test(line)
+    );
+  });
   useEffect(() => {
     stick.current = true;
   }, [phase]);
@@ -47,7 +52,10 @@ export function SubmissionLogPanel({
     const el = e.currentTarget;
     stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
   };
-  const note = logNote(data?.source, lines.length > 0, active, restricted);
+  const note =
+    !restricted && text && !lines.length && phase === 'push'
+      ? 'Upload progress is shown in the progress panel.'
+      : logNote(data?.source, lines.length > 0, active, restricted);
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(text);
@@ -95,7 +103,7 @@ export function SubmissionLogPanel({
           sdsStyle="minimal"
           size="small"
           onClick={copy}
-          disabled={!lines.length}
+          disabled={!text}
           sx={{ color: 'grey.100', '&.Mui-disabled': { color: 'grey.500' } }}
         >
           Copy

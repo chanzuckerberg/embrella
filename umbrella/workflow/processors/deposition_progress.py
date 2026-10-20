@@ -92,7 +92,8 @@ def prep_sample(root, inventory, complete):
     return sample
 
 
-_AWS_PROGRESS = re.compile(r"Completed\s+([\d.,]+)\s*(Bytes|[KMGTPE]?i?B)/([\d.,]+)\s*(Bytes|[KMGTPE]?i?B)")
+_AWS_PROGRESS = re.compile(r"Completed\s+([\d.,]+)\s*(Bytes|[KMGTPE]?i?B)/(~?)([\d.,]+)\s*(Bytes|[KMGTPE]?i?B)")
+_AWS_REMAINING = re.compile(r"with\s+(~?)([\d,]+)\s+file\(s\)\s+remaining")
 
 
 def transfer_bytes(value, unit):
@@ -104,8 +105,17 @@ def upload_sample(text):
     matches = list(_AWS_PROGRESS.finditer(text))
     if not matches:
         return None
-    done, done_unit, total, total_unit = matches[-1].groups()
-    return {"done": transfer_bytes(done, done_unit), "total": transfer_bytes(total, total_unit)}
+    done, done_unit, estimated, total, total_unit = matches[-1].groups()
+    sample = {
+        "done": transfer_bytes(done, done_unit),
+        "total": transfer_bytes(total, total_unit),
+        "estimated": bool(estimated),
+    }
+    remaining = list(_AWS_REMAINING.finditer(text))
+    if remaining:
+        estimated, count = remaining[-1].groups()
+        sample.update(remaining=int(count.replace(",", "")), objects_estimated=bool(estimated))
+    return sample
 
 
 def write_snapshot(path, data):
@@ -122,6 +132,8 @@ def report(phase, snapshot_path, source, dataset_id=None):
     initial_done = None
     offset = 0
     carry = ""
+    upload_carry = ""
+    objects_done = 0
     if phase == "prep":
         root, inventory = prep_inventory(source, dataset_id)
     while True:
@@ -130,16 +142,28 @@ def report(phase, snapshot_path, source, dataset_id=None):
             sample = prep_sample(root, inventory, complete)
         else:
             try:
+                # Universal newlines normalize AWS's carriage-return updates before counting uploads.
                 with open(source) as handle:
                     handle.seek(offset)
-                    text = carry + handle.read()
+                    chunk = handle.read()
+                    text = carry + chunk
                     offset = handle.tell()
+                lines = (upload_carry + chunk).split("\n")
+                upload_carry = lines.pop()
+                objects_done += sum(line.startswith("upload: ") for line in lines)
                 sample = upload_sample(text) or previous.copy()
                 carry = text[-2048:]
             except FileNotFoundError:
                 sample = previous.copy()
             if complete:
                 sample["done"] = max(sample["done"], sample["total"])
+                sample["estimated"] = False
+            objects_total = objects_done + sample["remaining"] if "remaining" in sample else None
+            sample["objects"] = {
+                "done": objects_done,
+                "total": objects_done if complete else objects_total,
+                "estimated": not complete and sample.get("objects_estimated", True),
+            }
         sample["done"] = max(previous["done"], sample["done"])
         sample["total"] = max(sample["done"], sample["total"])
         if initial_done is None:
