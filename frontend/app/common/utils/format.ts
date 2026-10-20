@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format, formatDistanceToNowStrict } from 'date-fns';
 
 /**
  * Turning values into text for people to read.
@@ -9,6 +9,8 @@ import { format } from 'date-fns';
 
 export const FORMAT_PATTERN = {
   YYYY_MM_DD: 'yyyy-MM-dd',
+  MMM_D_YYYY: 'MMM d yyyy',
+  MMM_D_YYYY_HH_MM: 'MMM d yyyy HH:mm',
 };
 
 /**
@@ -21,6 +23,12 @@ export function formatDate(dateStr: string, formatStr = FORMAT_PATTERN.YYYY_MM_D
   const date = new Date(dateStr);
   return format(date, formatStr);
 }
+
+/**
+ * Relative time, e.g. "3 hours ago", "2 years ago".
+ */
+export const formatTimeAgo = (dateStr: string): string =>
+  formatDistanceToNowStrict(new Date(dateStr), { addSuffix: true });
 
 /*
  * Converts a camelCase string to a human readable string.
