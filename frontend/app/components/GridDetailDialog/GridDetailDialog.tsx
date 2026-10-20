@@ -185,7 +185,7 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
               </TabPanel>
 
               <TabPanel value={activeTab} index={1}>
-                <HistoryTab gridDetails={gridDetails} />
+                <HistoryTab gridId={gridId} />
               </TabPanel>
 
               {/* Location Section (hidden when grid is trashed) */}
