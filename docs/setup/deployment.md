@@ -215,9 +215,15 @@ the submitting user.
     /srv/portal/staging/{deposition_id}/
     ```
 
-3.  Make approved AWS credentials available on the compute node. Directory
-    permissions do not grant AWS access; the upload job needs them to reach S3.
-    The S3 target is configured separately through `deposition_sync_destination`.
+3.  Make AWS credentials available to the service account on the compute nodes,
+    with access to the S3 destination set by `deposition_sync_destination`.
+    Directory permissions do not grant AWS access.
+
+    To use a named profile from the service account's `~/.aws` files, set
+    `DEPOSITION_AWS_PROFILE` in the backend and worker environment. If unset,
+    upload jobs use the account's existing AWS configuration or role.
+    Restart the backend and worker with the updated environment. Jobs already
+    submitted keep their previous profile.
 
 Prep writes its config and dataset subdirectories beneath the staging path, and
 push reads those same subdirectories.

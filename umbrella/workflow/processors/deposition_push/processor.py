@@ -8,6 +8,7 @@ import shlex
 from pathlib import Path
 from typing import Any, Dict, List
 
+from django.conf import settings
 from jinja2 import Environment, FileSystemLoader
 
 from workflow.context import RunContext
@@ -51,6 +52,7 @@ class DepositionPushProcessor(BaseProcessor):
             staged_dir=shlex.quote(params["staged_dir"]),
             s3_dest=shlex.quote(params["s3_dest"]),
             prologue=params.get("prologue", DEFAULT_PROLOGUE),
+            aws_profile=shlex.quote(settings.DEPOSITION_AWS_PROFILE) if settings.DEPOSITION_AWS_PROFILE else "",
             exclude_patterns=EXCLUDE_PATTERNS,
             cluster=run_context.cluster_id,
             slurm_directives=self.generate_slurm_directives(params),
