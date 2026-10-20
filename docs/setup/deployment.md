@@ -228,6 +228,13 @@ the submitting user.
 Prep writes its config and dataset subdirectories beneath the staging path, and
 push reads those same subdirectories.
 
+Prep and upload jobs request completion and failure emails to the submission
+owner's email address. Delivery depends on the cluster's SLURM mail configuration.
+
+Uploads use `aws s3 sync --delete` to remove destination objects absent from the
+prepared dataset. Before uploading, the job requires an S3 destination ending in
+five-digit deposition and dataset IDs; bucket roots and shared prefixes are rejected.
+
 !!! note
 
     Check for an existing cluster-specific `deposition_staging` row before

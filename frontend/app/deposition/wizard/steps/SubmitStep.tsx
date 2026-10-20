@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Icon } from '@czi-sds/components';
 import { Alert, Box, ButtonBase, CircularProgress, LinearProgress, Stack, Typography } from '@mui/material';
+import { ConfirmDialog } from '@app/common/components/Forms/ConfirmDialog';
 
 import { formatBinaryBytes } from '@app/common/utils/format';
 
@@ -22,7 +23,6 @@ import { useDatasetLogs } from '../../hooks/useDatasetLogs';
 import { canUpload, isActiveJobPhase, submissionPhases, type PhaseStatus, type SubmitPhase } from '../../submitPhases';
 import { groupSyncProgress } from '../../syncProgressGroups';
 import { SubmissionLogPanel } from './SubmissionLogPanel';
-import { STATUS_META } from '../../submissions/constants';
 
 const SYNC_TIMER_INTERVAL_MS = 1000;
 
@@ -131,7 +131,6 @@ const PUSH_SUB: Record<Exclude<PhaseStatus, 'warning'>, string> = {
 function pushHeading(status: PhaseStatus, state: JobState | undefined): string {
   if (status === 'idle') return 'Upload not started';
   if (state === 'push_submitted') return 'Waiting for upload to start';
-  if (status === 'done') return STATUS_META.pushed.label;
   if (status === 'error') return 'Push failed';
   return 'Pushing to S3';
 }
@@ -139,7 +138,7 @@ function pushHeading(status: PhaseStatus, state: JobState | undefined): string {
 function uploadNote(state: JobState | undefined): string {
   if (state === 'push_submitted') return 'Upload job submitted.';
   if (state === 'push_running') return 'Waiting for upload progress.';
-  return 'Files have been uploaded to S3. Portal indexing and publication are separate steps.';
+  return 'Files have been uploaded to S3.';
 }
 
 function summaryLine(s: SyncSummary): string {
@@ -311,7 +310,8 @@ function WarningsList({ warnings, blocking }: { warnings: ValidationWarning[]; b
 }
 
 export function SubmitStep({ dataset, readOnly }: StepProps) {
-  const { submit, push } = useSubmitFlow(dataset.id, dataset.deposition);
+  const { submit, push, cancel: cancelUpload } = useSubmitFlow(dataset.id, dataset.deposition);
+  const [cancelJobId, setCancelJobId] = useState<string | null>(null);
   const [selection, setSelection] = useState<{ datasetId: number; phase: 1 | 2 | 3 } | null>(null);
   const started = useRef(false);
 
@@ -354,7 +354,12 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
   const warnings = job?.validation?.warnings ?? [];
   const blockingIssues = job?.validation?.blocking_issues ?? [];
   const canPush = canUpload(job);
-  const actionPending = submit.isPending || push.isPending;
+  const actionPending = submit.isPending || push.isPending || cancelUpload.isPending;
+  const uploadActive = isActiveJobPhase(state, 'push');
+  let uploadHeading = pushHeading(pushed, state);
+  if (uploadActive && uploadProgress) uploadHeading = 'Uploading to S3';
+  if (job?.error_message === 'Upload cancelled.') uploadHeading = 'Upload cancelled';
+  const cancellationRequested = cancelUpload.isSuccess && cancelUpload.variables === job?.push_slurm_job_id;
 
   const actionError = (submit.error as Error | null)?.message || (push.error as Error | null)?.message;
   const errorMessage =
@@ -437,14 +442,16 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
         <Stack spacing="16px" sx={{ minWidth: 0 }}>
           {focus === 1 && (
             <Box role="region" aria-label="Sync details" tabIndex={0} sx={{ ...PHASE_CARD_SX, p: '20px' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: '16px' }}>
-                {sync === 'done' ? 'Local sync complete' : 'Local sync on cluster'}
-              </Typography>
-              {summary && sync === 'done' && (
-                <Typography variant="body2" sx={{ mb: '20px' }}>
-                  {summaryLine(summary)}
+              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', mb: '20px' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  {sync === 'done' ? 'Local sync complete' : 'Local sync on cluster'}
                 </Typography>
-              )}
+                {summary && sync === 'done' && (
+                  <Typography variant="body2" color="text.secondary">
+                    · {summaryLine(summary)}
+                  </Typography>
+                )}
+              </Box>
               <CommandBox text={job?.sync_command ?? DEFAULT_SYNC_COMMAND} />
               {progress && progress.total > 0 ? (
                 <>
@@ -485,14 +492,14 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
           {focus === 2 && (
             <Box role="region" aria-label="Validation details" tabIndex={0} sx={PHASE_CARD_SX}>
               {sync === 'done' && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                   <Icon sdsIcon="CheckCircle" sdsSize="s" color="green" />
                   <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                     Local sync complete
                   </Typography>
                   {summary && (
                     <Typography variant="caption" color="text.secondary">
-                      {summaryLine(summary)}
+                      · {summaryLine(summary)}
                     </Typography>
                   )}
                 </Box>
@@ -519,10 +526,69 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
           )}
 
           {focus === 3 && (
-            <Box role="region" aria-label="Upload details" tabIndex={0} sx={PHASE_CARD_SX}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: '20px' }}>
-                {pushHeading(pushed, state)}
-              </Typography>
+            <Box
+              role="region"
+              aria-label="Upload details"
+              tabIndex={0}
+              sx={{ ...PHASE_CARD_SX, ...(pushed === 'done' ? { height: 'auto' } : {}) }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  flexWrap: 'wrap',
+                  gap: '16px',
+                  mb: '20px',
+                }}
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  {pushed === 'done' ? (
+                    <Alert severity="success" icon={<Icon sdsIcon="CheckCircle" sdsSize="s" color="green" />}>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                        Upload complete
+                      </Typography>
+                      <Typography variant="body2">{uploadNote(state)}</Typography>
+                    </Alert>
+                  ) : (
+                    <Typography variant="h6" color="text.secondary">
+                      {uploadHeading}
+                    </Typography>
+                  )}
+                  {uploadProgress?.objects && (
+                    <Typography variant="h4" sx={{ fontVariantNumeric: 'tabular-nums', mt: '4px' }}>
+                      <Box component="span" sx={{ fontWeight: 700 }}>
+                        {uploadProgress.objects.done.toLocaleString()}
+                      </Box>
+                      <Box component="span" sx={{ color: 'text.secondary' }}>
+                        {uploadProgress.objects.total !== null &&
+                          ` / ${uploadProgress.objects.estimated ? '~' : ''}${uploadProgress.objects.total.toLocaleString()}`}
+                        {' objects uploaded'}
+                      </Box>
+                    </Typography>
+                  )}
+                </Box>
+                {!readOnly && uploadActive && job?.push_slurm_job_id && (
+                  <Box sx={{ '& button': { whiteSpace: 'nowrap' } }}>
+                    <Button
+                      sdsType="secondary"
+                      sdsStyle="outline"
+                      disabled={actionPending || cancellationRequested}
+                      onClick={() => {
+                        cancelUpload.reset();
+                        setCancelJobId(job.push_slurm_job_id ?? null);
+                      }}
+                    >
+                      {cancellationRequested ? 'Cancellation requested' : 'Cancel upload'}
+                    </Button>
+                    {cancellationRequested && (
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        Waiting for the cluster to confirm cancellation.
+                      </Typography>
+                    )}
+                  </Box>
+                )}
+              </Box>
               {pushed === 'active' && (
                 <LinearProgress
                   aria-label="Upload progress"
@@ -532,49 +598,41 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
                       : 'indeterminate'
                   }
                   value={uploadProgress ? toPct(uploadProgress.done, uploadProgress.total) : undefined}
-                  sx={{ my: 1 }}
+                  sx={{ height: 8, borderRadius: '6px', mb: '20px' }}
                 />
               )}
-              {uploadProgress && uploadProgress.total > 0 && (
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                  {formatBinaryBytes(uploadProgress.done)} / {uploadTotalEstimated ? '~' : ''}
-                  {formatBinaryBytes(uploadProgress.total)}
-                  {uploadTotalEstimated
-                    ? ' · Calculating total…'
-                    : ` · ${toPct(uploadProgress.done, uploadProgress.total)}%`}
-                  {uploadProgress.eta && pushed === 'active' && !uploadTotalEstimated
-                    ? ` · ETA ${uploadProgress.eta}`
-                    : ''}
+              <Box
+                sx={{ display: 'flex', flexWrap: 'wrap', columnGap: '24px', rowGap: '8px', color: 'text.secondary' }}
+              >
+                {uploadProgress && uploadProgress.total > 0 && (
+                  <Typography variant="body2">
+                    Size{' '}
+                    <Box component="span" sx={{ color: 'text.primary' }}>
+                      {formatBinaryBytes(uploadProgress.done)} / {uploadTotalEstimated ? '~' : ''}
+                      {formatBinaryBytes(uploadProgress.total)}
+                    </Box>
+                    {!uploadTotalEstimated && ` · ${toPct(uploadProgress.done, uploadProgress.total)}%`}
+                    {uploadProgress.eta && pushed === 'active' && !uploadTotalEstimated
+                      ? ` · ETA ${uploadProgress.eta}`
+                      : ''}
+                  </Typography>
+                )}
+                {uploadProgress?.elapsed && <Typography variant="body2">Elapsed: {uploadProgress.elapsed}</Typography>}
+                {job?.push_slurm_job_id && <Typography variant="body2">SLURM job {job.push_slurm_job_id}</Typography>}
+              </Box>
+              {uploadTotalEstimated && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: '16px' }}>
+                  Calculating total… Totals are estimates until the file list is complete.
                 </Typography>
               )}
               {uploadProgress?.objects && (
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  {uploadProgress.objects.done.toLocaleString()}
-                  {uploadProgress.objects.total !== null &&
-                    ` / ${uploadProgress.objects.estimated ? '~' : ''}${uploadProgress.objects.total.toLocaleString()}`}
-                  {' objects uploaded'}
+                <Typography variant="body2" color="text.secondary" sx={{ mt: uploadTotalEstimated ? '4px' : '16px' }}>
+                  Unchanged files skipped by sync aren’t counted.
                 </Typography>
               )}
-              {uploadProgress?.elapsed && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  Elapsed: {uploadProgress.elapsed}
-                </Typography>
-              )}
-              {uploadProgress?.objects && (
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                  Counts exclude unchanged files skipped by sync.
-                </Typography>
-              )}
-              {job?.push_slurm_job_id && (
-                <Typography variant="caption" color="text.secondary">
-                  SLURM job {job.push_slurm_job_id}
-                </Typography>
-              )}
-              {(pushed === 'active' || pushed === 'done') && (
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                  {uploadProgress && uploadProgress.total > 0 && pushed === 'active'
-                    ? 'Uploading to S3.'
-                    : uploadNote(state)}
+              {pushed === 'active' && !uploadProgress && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: '16px' }}>
+                  {uploadNote(state)}
                 </Typography>
               )}
             </Box>
@@ -636,6 +694,23 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
           )}
         </Stack>
       </Box>
+      <ConfirmDialog
+        open={!readOnly && uploadActive && cancelJobId !== null && cancelJobId === job?.push_slurm_job_id}
+        onClose={() => {
+          if (!cancelUpload.isPending) setCancelJobId(null);
+        }}
+        onConfirm={() => {
+          if (cancelJobId) cancelUpload.mutate(cancelJobId, { onSuccess: () => setCancelJobId(null) });
+        }}
+        title="Cancel upload?"
+        heading="Stop this upload"
+        body="The cluster upload job will be cancelled. Files already uploaded to S3 will remain."
+        confirmText="Cancel upload"
+        submittingText="Cancelling…"
+        cancelText="Keep uploading"
+        isSubmitting={cancelUpload.isPending}
+        error={cancelUpload.error?.message}
+      />
     </Stack>
   );
 }
