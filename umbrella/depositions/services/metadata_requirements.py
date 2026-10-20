@@ -38,8 +38,14 @@ def metadata_issues(metadata, deposition_title):
     ):
         if not _filled(value):
             issues.append(f"{label} is required.")
-    if not metadata.get("authors"):
+    authors = metadata.get("authors") or []
+    if not authors:
         issues.append("Add at least one dataset author, or use the deposition authors.")
+    else:
+        if not any(author.get("primary_author_status") for author in authors):
+            issues.append("Choose at least one primary dataset author.")
+        if not any(author.get("corresponding_author_status") for author in authors):
+            issues.append("Choose at least one corresponding dataset author.")
 
     sample_type = metadata.get("sample_type")
     if sample_type not in dict(SAMPLE_TYPE_CHOICES):

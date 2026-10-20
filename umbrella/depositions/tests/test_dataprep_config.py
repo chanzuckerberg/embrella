@@ -68,6 +68,8 @@ def test_builds_deployment_config_with_reserved_ids(dataset):
     assert config["sync_destination"] == "s3://cryoetportal-biohub-hpc-globus/CZII"
     assert config["datasets"]["dataset_202"]["dataset_id"] == 202
     assert _session(config) == RAW_SESSION
+    metadata = config["datasets"]["dataset_202"]["metadata"]
+    assert metadata["dataset_title"] == dataset.title
 
 
 def test_includes_every_dataset_in_the_deposition(dataset, test_session_plan):
@@ -157,7 +159,7 @@ def test_assembles_all_sessions_and_round_trips_yaml(dataset, test_session_plan)
     assert _session(parsed, "24nov11")["paths"]["aretomo3"] == raw["paths"]["aretomo3"]
     assert _session(parsed, "24nov11")["acquisition"]["pixel_spacing"] == 2
     assert parsed["sync_destination"] == "s3://test-bucket/review"
-    assert "metadata:" not in text  # The portal metadata YAML is a different artifact.
+    assert parsed["datasets"]["dataset_202"]["metadata"]["dataset_title"] == dataset.title
 
 
 @pytest.mark.parametrize("missing_id", ["deposition", "dataset"])

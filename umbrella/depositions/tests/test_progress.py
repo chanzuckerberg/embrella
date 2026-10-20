@@ -236,7 +236,6 @@ def test_generated_scripts_publish_progress_and_preserve_command_failure(tmp_pat
                 "config_path": str(output / "config.yaml"),
                 "config_yaml": yaml.safe_dump(config),
                 "dataset_id": 2,
-                "portal_metadata": {"dataset_identifier": 2, "dataset_title": "Reviewed dataset"},
                 "prep_env": "test",
             },
             SimpleNamespace(cluster_id="cluster-a"),

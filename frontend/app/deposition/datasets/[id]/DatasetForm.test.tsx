@@ -30,7 +30,7 @@ const DRAFT = {
   title: 'My dataset',
   status: 'draft',
   funding: [],
-  authors_json: [{ author_id: 7, is_primary: false, is_corresponding: true, author_list_order: 0 }],
+  authors_json: [{ author_id: 7, is_primary: true, is_corresponding: true, author_list_order: 0 }],
 } as Dataset;
 
 function renderForm(dataset = DRAFT, reportBlocking?: (count: number) => void) {

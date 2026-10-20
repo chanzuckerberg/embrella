@@ -39,36 +39,47 @@ def validate(config_path, dataset_id):
             # Preserve mtime so push does not mistake the scoped copy for a post-sync edit.
             source_stat = source.stat()
             os.utime(scoped, ns=(source_stat.st_atime_ns, source_stat.st_mtime_ns))
-            with tempfile.TemporaryFile(mode="w+b") as output:
+            with tempfile.TemporaryFile(mode="w+b") as output, tempfile.TemporaryFile(mode="w+b") as errors:
                 completed = subprocess.run(
-                    ["cryoetportalprep", "push", str(scoped), "--dry-run"],
+                    ["cryoetportalprep", "push", str(scoped), "--dry-run", "--format", "json"],
                     stdout=output,
-                    stderr=subprocess.STDOUT,
+                    stderr=errors,
                     check=False,
                 )
-                output.seek(0, 2)
-                size = output.tell()
-                output.seek(max(0, size - 32000))
-                text = ANSI.sub("", output.read().decode("utf-8", errors="replace"))
-            lines = text.splitlines()
-            # Indent any echoed line that mimics our marker so the CLI's output can't forge the result.
-            print("\n".join(f" {ln}" if ln.startswith(MARKER) else ln for ln in lines))
-        # Exit code decides pass/fail; messages are best-effort text matches.
-        if completed.returncode == 0:
-            result["status"] = "passed"
-            result["warnings"] = [{"message": ln[:500]} for ln in lines if re.search(r"\bwarn", ln, re.IGNORECASE)][:20]
-        else:
-            result["status"] = "failed"
-            issues = [
-                {"message": ln[:500]}
-                for ln in lines
-                if ln.lstrip().startswith("- ") or re.search(r"\b(error|failed|exception|invalid)\b", ln, re.IGNORECASE)
-            ][:20]
-            # A failed result must carry a reason, even when no line matched.
-            result["blocking_issues"] = issues or [
-                {"message": f"Dry-run validation exited with code {completed.returncode}."}
-            ]
+                errors.seek(0, 2)
+                errors.seek(max(0, errors.tell() - 32000))
+                text = ANSI.sub("", errors.read().decode("utf-8", errors="replace"))
+                print("\n".join(f" {line}" if line.startswith(MARKER) else line for line in text.splitlines()))
+                output.seek(0)
+                report = json.loads(output.read(2_000_000))
+            if not isinstance(report, dict) or not isinstance(report.get("valid"), bool):
+                raise ValueError("Invalid CLI validation report")
+            issues = report.get("issues")
+            if not isinstance(issues, list):
+                raise ValueError("Missing CLI validation issues")
+            for issue in issues:
+                if (
+                    not isinstance(issue, dict)
+                    or issue.get("severity") not in ("error", "warning")
+                    or not isinstance(issue.get("message"), str)
+                ):
+                    raise ValueError("Invalid CLI validation issue")
+                severity = issue["severity"]
+                message = issue["message"]
+                print(f"{severity}: " + message.replace("\n", "\n "))
+                item = {"message": message[:500], "path": str(issue.get("path") or "")[:500]}
+                target = result["warnings"] if severity == "warning" else result["blocking_issues"]
+                if len(target) < 20:
+                    target.append(item)
+            passed = completed.returncode == 0 and report["valid"] and not result["blocking_issues"]
+            result["status"] = "passed" if passed else "failed"
+            if not passed and not result["blocking_issues"]:
+                result["blocking_issues"] = [
+                    {"message": f"Dry-run validation exited with code {completed.returncode}."}
+                ]
     except Exception:
+        result["status"] = "unavailable"
+        result["warnings"] = []
         result["blocking_issues"] = [{"message": "Could not run pre-flight validation. Retry preparation."}]
     print(MARKER + json.dumps(result), flush=True)
     return result

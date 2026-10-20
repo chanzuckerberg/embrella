@@ -5,7 +5,7 @@ from cryo_grids.models import Sample
 from people.models import Institution, Person
 
 from depositions.models import Dataset, DatasetFunding, Deposition
-from depositions.services.config_yaml import build_dataset_metadata, dataset_metadata_patch
+from depositions.services.config_yaml import build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
 
 
@@ -42,7 +42,7 @@ def test_maps_core_fields():
     meta = build_dataset_metadata(ds)
     assert meta["dataset_title"] == "VLP dataset"
     assert meta["dataset_description"] == "desc"
-    assert meta["dataset_identifier"] == 10001
+    assert "dataset_identifier" not in meta  # The CLI assigns the reserved ID.
     assert meta["sample_type"] == "cell_line"
     assert meta["organism"] == {"name": "Homo sapiens", "taxonomy_id": 9606}
     assert meta["tissue"] == {"name": "brain", "id": "UBERON:0000955"}
@@ -63,7 +63,7 @@ def test_omits_empty_optional_fields():
     ds = Dataset.objects.create(deposition=dep, title="Bare", description="")
     meta = build_dataset_metadata(ds)
     assert meta == {"dataset_title": "Bare", "dataset_description": ""}
-    for absent in ("organism", "tissue", "assay", "funding", "cross_references", "authors", "dataset_identifier"):
+    for absent in ("organism", "tissue", "funding", "cross_references", "authors", "dataset_identifier"):
         assert absent not in meta
 
 
@@ -76,8 +76,8 @@ def test_resolves_ordered_people_without_requiring_email(inherit_authors):
     )
     second = Person.objects.create(given_name="Grace", family_name="Hopper", contact_email="grace@example.org")
     authors = [
-        {"author_id": second.pk, "author_list_order": 1},
-        {"author_id": first.pk, "is_primary": True, "is_corresponding": True, "author_list_order": 0},
+        {"author_id": first.pk, "is_primary": True, "is_corresponding": True},
+        {"author_id": second.pk},
     ]
     dep = Deposition.objects.create(title="Dep", authors_json=authors if inherit_authors else [])
     ds = Dataset.objects.create(
@@ -107,20 +107,6 @@ def test_missing_directory_author_is_an_actionable_error():
     ds = Dataset.objects.create(deposition=dep, title="DS", description="d", is_authors_same_as_deposition=True)
     with pytest.raises(SubmissionValidationError, match="Review the authors"):
         build_dataset_metadata(ds)
-
-
-@pytest.mark.django_db
-def test_patch_clears_empty_optional_template_fields():
-    dep = Deposition.objects.create(title="Dep")
-    ds = Dataset.objects.create(deposition=dep, dataset_id=10002, title="DS", description="Reviewed")
-    patch = dataset_metadata_patch(ds)
-    assert patch["dataset_title"] == "DS"
-    assert patch["dataset_description"] == "Reviewed"
-    assert patch["dataset_identifier"] == 10002
-    assert patch["funding"] is None
-    assert patch["tissue"] is None
-    assert patch["disease"] is None
-    assert "dates" not in patch
 
 
 @pytest.mark.django_db

@@ -9,7 +9,7 @@ def complete_metadata(sample_type="in_vitro"):
     return {
         "dataset_title": "Dataset",
         "dataset_description": "Description",
-        "authors": [{"name": "Ada Lovelace"}],
+        "authors": [{"name": "Ada Lovelace", "primary_author_status": True, "corresponding_author_status": True}],
         "sample_type": sample_type,
     }
 
@@ -77,3 +77,12 @@ def test_invalid_taxonomy_id_is_not_treated_as_complete():
     metadata["organism"] = {"name": "Human", "taxonomy_id": 0}
     metadata["cell_strain"] = {"name": "Example", "id": "CVCL_1234"}
     assert metadata_issues(metadata, "Deposition") == ["Organism name and a positive NCBI Taxonomy ID are required."]
+
+
+@pytest.mark.parametrize(
+    "role,label", [("primary_author_status", "primary"), ("corresponding_author_status", "corresponding")]
+)
+def test_requires_author_roles_before_launch(role, label):
+    metadata = complete_metadata()
+    metadata["authors"][0][role] = False
+    assert metadata_issues(metadata, "Deposition") == [f"Choose at least one {label} dataset author."]

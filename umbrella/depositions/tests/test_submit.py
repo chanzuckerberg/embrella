@@ -27,7 +27,11 @@ def _raise_no_creds():
 
 @pytest.fixture
 def dataset(db, test_msi_session):
-    deposition = Deposition.objects.create(title="Dep", deposition_id=1, authors_json=[{"full_name": "Ada Lovelace"}])
+    deposition = Deposition.objects.create(
+        title="Dep",
+        deposition_id=1,
+        authors_json=[{"full_name": "Ada Lovelace", "is_primary": True, "is_corresponding": True}],
+    )
     sample = Sample.objects.create(name="submission-test-sample", sample_type="in_vitro")
     ds = Dataset.objects.create(
         deposition=deposition, title="DS", description="Reviewed description", dataset_id=2, sample=sample
@@ -118,9 +122,6 @@ class TestSubmitDatasetPrep:
         assert launched["params"]["session_names"] == [test_msi_session.name]
         assert launched["job_name"] == "deposition_prep_1_2"
         assert launched["params"]["config_yaml"] == "yaml-text"
-        assert launched["params"]["portal_metadata"]["dataset_title"] == "DS"
-        assert launched["params"]["portal_metadata"]["dataset_identifier"] == 2
-        assert launched["params"]["portal_metadata"]["funding"] is None
         staging_dir = resolve_dir("deposition_staging", cluster="cluster-a", deposition_id=1).rstrip("/")
         assert launched["params"]["config_path"] == f"{staging_dir}/dataprep_config.yaml"
         assert launched["auth"] is mocks["auth"]

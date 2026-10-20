@@ -44,7 +44,7 @@ const DATASET = {
   funding: [],
   sample: { sample_type: 'in_vitro' },
   is_authors_same_as_deposition: false,
-  authors_json: [{ author_id: 7, is_primary: true, is_corresponding: false, author_list_order: 0 }],
+  authors_json: [{ author_id: 7, is_primary: true, is_corresponding: true, author_list_order: 0 }],
 } as Dataset;
 const TOMOS_ONLY = { ...DATASET, type: 'Tomos only' } as Dataset;
 

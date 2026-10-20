@@ -1,4 +1,4 @@
-import type { DatasetFunding, DatasetSample } from '../../types';
+import type { AuthorRef, DatasetFunding, DatasetSample } from '../../types';
 import { BIO_ROWS } from './sections/bioClassificationRows';
 import { bioRequirements, isKnownSampleType } from './sections/bioRequirements';
 
@@ -11,12 +11,17 @@ export function datasetMetadataIssues(
     assay_ontology_id: string;
     funding: DatasetFunding[];
   },
-  authorCount: number | undefined
+  authors: AuthorRef[] | undefined
 ): string[] {
   const issues: string[] = [];
   if (!form.title.trim()) issues.push('Dataset title is required.');
   if (!form.description.trim()) issues.push('Dataset description is required.');
-  if (authorCount === 0) issues.push('Add at least one dataset author, or use the deposition authors.');
+  if (authors?.length === 0) issues.push('Add at least one dataset author, or use the deposition authors.');
+  else if (authors) {
+    if (!authors.some((author) => author.is_primary)) issues.push('Choose at least one primary dataset author.');
+    if (!authors.some((author) => author.is_corresponding))
+      issues.push('Choose at least one corresponding dataset author.');
+  }
   if (!isKnownSampleType(form.sample.sample_type)) issues.push('Choose a sample type on the Dataset step.');
   const requirements = bioRequirements(form.sample.sample_type);
   const sample = form.sample;

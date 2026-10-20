@@ -13,22 +13,6 @@ _ONTOLOGY_FIELDS = [
     ("disease", "disease_name", "disease_ontology_id"),
 ]
 
-DATASET_METADATA_FIELDS = {
-    "dataset_title",
-    "dataset_description",
-    "dataset_identifier",
-    "authors",
-    "funding",
-    "sample_type",
-    "organism",
-    "assay",
-    "sample_preparation",
-    "grid_preparation",
-    "other_setup",
-    "cross_references",
-    *[field[0] for field in _ONTOLOGY_FIELDS],
-}
-
 
 def _name_id(name, oid):
     """A {name, id} block, omitting empty parts."""
@@ -82,8 +66,6 @@ def build_dataset_metadata(dataset) -> dict:
         "dataset_title": dataset.title or "",
         "dataset_description": dataset.description or "",
     }
-    if dataset.dataset_id is not None:
-        meta["dataset_identifier"] = dataset.dataset_id
 
     sample = dataset.sample
     if sample is not None:
@@ -141,17 +123,8 @@ def build_dataset_metadata(dataset) -> dict:
         .select_related("institution")
         .in_bulk(e["author_id"] for e in source_authors if isinstance(e, dict) and e.get("author_id") is not None)
     )
-    ordered_authors = sorted(
-        ((index, entry) for index, entry in enumerate(source_authors) if isinstance(entry, dict)),
-        key=lambda item: item[1]["author_list_order"] if item[1].get("author_list_order") is not None else item[0],
-    )
-    authors = [a for a in (_map_author(e, people) for _, e in ordered_authors) if a]
+    authors = [a for a in (_map_author(e, people) for e in source_authors if isinstance(e, dict)) if a]
     if authors:
         meta["authors"] = authors
 
     return meta
-
-
-def dataset_metadata_patch(dataset):
-    """Nulls remove empty wizard-owned fields from the tool's generated template."""
-    return {**dict.fromkeys(DATASET_METADATA_FIELDS), **build_dataset_metadata(dataset)}

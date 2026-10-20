@@ -119,7 +119,8 @@ export function DatasetForm({
     isFetching: authorsFetching,
     refetch: retryAuthors,
   } = useDeposition(dataset.deposition);
-  const depositionAuthorCount = deposition ? (deposition.authors_json?.length ?? 0) : undefined;
+  const depositionAuthors = deposition ? (deposition.authors_json ?? []) : undefined;
+  const depositionAuthorCount = depositionAuthors?.length;
   const [form, setForm] = useState<FormState>(() => toForm(dataset));
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
   const [active, setActive] = useState('basic');
@@ -190,9 +191,10 @@ export function DatasetForm({
   const addCrossRef = () => set('crossRefs', [...form.crossRefs, { type: 'publication', value: '' }]);
 
   const req = bioRequirements(form.sample.sample_type);
-  const authorCount = form.is_authors_same_as_deposition ? depositionAuthorCount : form.authors.length;
+  const authors = form.is_authors_same_as_deposition ? depositionAuthors : form.authors;
+  const authorCount = authors?.length;
   const awaitingAuthors = form.is_authors_same_as_deposition && depositionAuthorCount === undefined;
-  const issues = datasetMetadataIssues(form, authorCount);
+  const issues = datasetMetadataIssues(form, authors);
   useEffect(() => {
     reportBlocking?.(readOnly ? 0 : issues.length + Number(awaitingAuthors));
   }, [issues.length, awaitingAuthors, readOnly, reportBlocking]);
