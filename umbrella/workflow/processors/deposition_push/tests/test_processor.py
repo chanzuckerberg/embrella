@@ -45,13 +45,14 @@ def test_no_aws_profile_export_when_unset(settings):
 
 def test_prologue_sets_up_cluster_env():
     script = _render()
-    assert "conda activate dataportalenv" in script
+    assert "ml load anaconda" in script
     assert "ml load awscli" in script
+    assert "conda activate" not in script
 
 
-def test_fail_fast_around_conda_prologue():
+def test_fail_fast_around_module_prologue():
     script = _render()
-    assert script.index("set -e") < script.index("conda activate") < script.index("set -euo pipefail")
+    assert script.index("set -e") < script.index("ml load anaconda") < script.index("set -euo pipefail")
 
 
 def test_setup_commands_are_separate_not_chained():
