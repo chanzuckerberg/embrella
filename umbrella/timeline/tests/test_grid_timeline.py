@@ -121,6 +121,15 @@ class TestGridEntries:
 
         assert timeline(client_in, grid.id)[0]["summary"] == "Trashed (box deleted)"
 
+    def test_edit_names_fields(self, client_in, grid):
+        client_in.patch(
+            f"/cryo_grids/v1/grids/{grid.id}/update/",
+            data={"blot_time": 4.5},
+            content_type="application/json",
+        )
+
+        assert timeline(client_in, grid.id)[0]["summary"] == "Edited blot time"
+
     def test_no_reason_classified_from_diff(self, client_in, grid):
         grid.clipped = True
         grid.save()  # e.g. admin edit: no reason

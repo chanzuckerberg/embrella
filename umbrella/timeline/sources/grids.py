@@ -23,6 +23,9 @@ BOX, POSITION = (attname(CryoGrid, name) for name in LOCATION_FIELDS[CryoGrid])
 TRASHED = "trashed"
 CLIPPED = "clipped"
 
+# attname → readable name, e.g. "grid_cassette_id" → "grid cassette"
+FIELD_NAMES = {f.attname: str(f.verbose_name) for f in CryoGrid._meta.concrete_fields}
+
 # Reasons that name the action outright; the diff only fills in details
 REASON_KINDS = {
     ChangeReason.MOVED: EntryKind.MOVED,
@@ -117,7 +120,7 @@ def _grid_entry(grid_id, prev, row, boxes) -> Entry | None:
 
     kind = REASON_KINDS.get(reason) or _kind_from_diff(diff)
     detail = {"reason": reason, "changes": {name: list(values) for name, values in diff.items()}}
-    summary = _summary(kind, reason, prev, row, boxes)
+    summary = _summary(kind, reason, prev, row, boxes, diff)
 
     return _entry(grid_id, row.history_date, kind, summary, user, detail)
 
@@ -145,13 +148,17 @@ def _kind_from_diff(diff: dict) -> EntryKind:
     return EntryKind.EDITED
 
 
-def _summary(kind, reason, prev, row, boxes) -> str:
+def _summary(kind, reason, prev, row, boxes, diff) -> str:
     if kind == EntryKind.MOVED:
         origin = f" from {_slot(prev, boxes)}" if prev else ""
         return f"Moved{origin} to {_slot(row, boxes)}"
 
     if kind == EntryKind.TRASHED and reason in TRASH_CAUSES:
         return f"Trashed ({TRASH_CAUSES[reason]})"
+
+    # e.g. "Edited blot time, notes"
+    if kind == EntryKind.EDITED and diff:
+        return f"Edited {', '.join(FIELD_NAMES.get(name, name) for name in diff)}"
 
     return kind.capitalize()
 
