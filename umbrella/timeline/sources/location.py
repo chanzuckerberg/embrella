@@ -9,8 +9,8 @@ while the grid was inside that container:
          stays       stays        stays        stays
 
     e.g. grid in BoxA Jan 1 2024 → Feb 3 2026, BoxA moved to Puck2 on Jun 20 2025
-         → "Box BoxA moved from Puck1 #1 to Puck2 #3"   (Jun 20 2025, kept)
-         BoxA moved again on Mar 1 2026                 (dropped: grid had left)
+         → "Box moved: Puck1 slot 1 to Puck2 slot 3"   (Jun 20 2025, kept)
+         BoxA moved again on Mar 1 2026                (dropped: grid had left)
 """
 
 from dataclasses import dataclass, replace
@@ -19,7 +19,21 @@ from datetime import UTC, datetime
 from cryo_grids.history import LOCATION_FIELDS, ChangeReason
 from cryo_grids.models import Cane, CryoGrid, CryoGridBox, Dewar, Puck
 
-from timeline.sources.base import CHANGED, DELETED, attname, changes, history, is_baseline, names, username
+from timeline.sources.base import (
+    CHANGED,
+    DELETED,
+    POSITION,
+    SLOT,
+    Spot,
+    attname,
+    changes,
+    history,
+    is_baseline,
+    move_summary,
+    names,
+    spot_text,
+    username,
+)
 from timeline.types import Entry, EntryKind, Subject
 
 # Baseline snapshots predate history: the state held since "forever"
@@ -29,7 +43,9 @@ BEGINNING = datetime.min.replace(tzinfo=UTC)
 @dataclass(frozen=True)
 class Level:
     model: type
-    via: str  # Shown to users: "Box BoxA moved …"
+    via: str  # Shown to users: "Box moved: …"
+    parent: str  # Container kind it sits in: "… same puck, slot 1 to 5"
+    unit: str = POSITION  # What the parent's places are called: boxes sit in puck slots
 
     @property
     def parent_field(self) -> str:
@@ -46,10 +62,10 @@ class Level:
 
 # Bottom-up storage chain. A new container level is one more row.
 CHAIN = [
-    Level(CryoGridBox, "box"),
-    Level(Puck, "puck"),
-    Level(Cane, "cane"),
-    Level(Dewar, "dewar"),
+    Level(CryoGridBox, "box", "puck", SLOT),
+    Level(Puck, "puck", "cane"),
+    Level(Cane, "cane", "dewar", SLOT),
+    Level(Dewar, "dewar", "site"),
 ]
 
 
@@ -155,16 +171,15 @@ def _move_entries(grid_id: int, level: Level, found: list) -> list[Entry]:
     entries = []
 
     for prev, row in found:
-        origin = _slot(prev, level, parents)
-        target = _slot(row, level, parents)
+        origin = _spot(prev, level, parents) if prev else None
+        target = _spot(row, level, parents)
         detail = {
             "via": level.via,
             "container": row.name,
-            "from": origin,
-            "to": target,
+            "from": spot_text(origin, level.parent, level.unit) if origin else None,
+            "to": spot_text(target, level.parent, level.unit),
             "reason": row.history_change_reason,
         }
-        moved_from = f" from {origin}" if origin else ""
 
         entries.append(
             Entry(
@@ -172,7 +187,7 @@ def _move_entries(grid_id: int, level: Level, found: list) -> list[Entry]:
                 subject=Subject.GRID,
                 subject_id=grid_id,
                 kind=EntryKind.MOVED,
-                summary=f"{level.via.capitalize()} {row.name} moved{moved_from} to {target}",
+                summary=move_summary(level.via.capitalize(), level.parent, origin, target, level.unit),
                 user=username(row.history_user),
                 detail=detail,
             )
@@ -181,12 +196,6 @@ def _move_entries(grid_id: int, level: Level, found: list) -> list[Entry]:
     return entries
 
 
-def _slot(row, level: Level, parents: dict) -> str | None:
-    """e.g. ``Puck2 #3``; ``None`` when unknown (no earlier snapshot)."""
-    if row is None:
-        return None
-
+def _spot(row, level: Level, parents: dict) -> Spot:
     parent_id, *position = (getattr(row, name) for name in level.fields)
-    label = parents.get(parent_id, "none") if parent_id is not None else "none"
-
-    return f"{label} #{position[0]}" if position and position[0] is not None else label
+    return Spot(parent_id, parents.get(parent_id, f"{level.parent} {parent_id}"), position[0] if position else None)

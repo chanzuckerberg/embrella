@@ -13,7 +13,7 @@ MOVE_EXAMPLE = {
     "subject": "grid",
     "subject_id": 42,
     "kind": "moved",
-    "summary": "Moved from BoxA #1 to BoxB #2",
+    "summary": "Grid moved: BoxA position 1 to BoxB position 2",
     "user": "jdoe",
     "detail": {"reason": "moved", "changes": {"grid_box_id": [7, 9], "position_in_box": [1, 2]}},
 }

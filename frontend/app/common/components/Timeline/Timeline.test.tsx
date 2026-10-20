@@ -21,9 +21,13 @@ describe('Timeline', () => {
   });
 
   it('renders summary, user and relative time', () => {
-    render(<Timeline entries={[entry({ kind: TimelineKind.MOVED, summary: 'Moved from BoxA #1 to BoxB #2' })]} />);
+    render(
+      <Timeline
+        entries={[entry({ kind: TimelineKind.MOVED, summary: 'Grid moved: BoxA position 1 to BoxB position 2' })]}
+      />
+    );
 
-    expect(screen.getByText('Moved from BoxA #1 to BoxB #2')).toBeInTheDocument();
+    expect(screen.getByText('Grid moved: BoxA position 1 to BoxB position 2')).toBeInTheDocument();
     expect(screen.getByText('jdoe')).toBeInTheDocument();
     expect(screen.getByText(/ago$/)).toBeInTheDocument();
   });
@@ -59,8 +63,12 @@ describe('Timeline', () => {
     render(
       <Timeline
         entries={[
-          entry({ kind: TimelineKind.MOVED, summary: 'Box BoxA moved to PuckB #3', detail: { via: 'box' } }),
-          entry({ kind: TimelineKind.MOVED, summary: 'Moved from BoxA #1 to BoxB #2' }),
+          entry({
+            kind: TimelineKind.MOVED,
+            summary: 'Box moved: PuckA slot 1 to PuckB slot 3',
+            detail: { via: 'box' },
+          }),
+          entry({ kind: TimelineKind.MOVED, summary: 'Grid moved: BoxA position 1 to BoxB position 2' }),
         ]}
       />
     );

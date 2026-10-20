@@ -14,6 +14,8 @@ class TimelineEntrySerializer(serializers.Serializer):
     )
     subject_id = serializers.IntegerField(help_text="Id of the subject (grid, MSI session or proc run)")
     kind = serializers.ChoiceField(choices=KIND_CHOICES, help_text="Action type")
-    summary = serializers.CharField(help_text='Human-readable line, e.g. "Moved from BoxA #1 to BoxB #2"')
+    summary = serializers.CharField(
+        help_text='Human-readable line, e.g. "Grid moved: BoxA position 1 to BoxB position 2"'
+    )
     user = serializers.CharField(allow_null=True, help_text="Username of who did it; null when unknown")
     detail = serializers.JSONField(help_text="Kind-specific extras, e.g. changed fields, label color, move from / to")

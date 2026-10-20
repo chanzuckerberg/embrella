@@ -1,5 +1,7 @@
 """Helpers for reading simple-history tables."""
 
+from dataclasses import dataclass
+
 from cryo_grids.history import ChangeReason
 
 # simple-history ``history_type`` values
@@ -62,3 +64,42 @@ def names(model, ids) -> dict:
             found[row.id] = row.name
 
     return found
+
+
+@dataclass(frozen=True)
+class Spot:
+    """Where something sat: its container (e.g. a box) and position in it."""
+
+    container_id: int | None
+    container: str
+    position: int | None = None
+
+
+POSITION = "position"
+SLOT = "slot"
+
+
+def spot_text(spot: Spot, noun: str, unit: str = POSITION) -> str:
+    """e.g. ``BoxA position 2``, ``PuckA slot 3``; ``SiteA`` (no positions); ``no box`` (outside any)."""
+    if spot.container_id is None:
+        return f"no {noun}"
+
+    return spot.container if spot.position is None else f"{spot.container} {unit} {spot.position}"
+
+
+def move_summary(subject: str, noun: str, origin: Spot | None, target: Spot, unit: str = POSITION) -> str:
+    """
+    One wording for every move; ``noun`` is the container kind, ``unit`` what its places are called:
+
+        Grid moved: same box, position 1 to 4
+        Grid moved: BoxA position 1 to BoxB position 2
+        Box moved: unknown puck to PuckB slot 3   (no earlier snapshot)
+    """
+    if origin is None:
+        return f"{subject} moved: unknown {noun} to {spot_text(target, noun, unit)}"
+
+    same = origin.container_id is not None and origin.container_id == target.container_id
+    if same and origin.position is not None:
+        return f"{subject} moved: same {noun}, {unit} {origin.position} to {target.position}"
+
+    return f"{subject} moved: {spot_text(origin, noun, unit)} to {spot_text(target, noun, unit)}"

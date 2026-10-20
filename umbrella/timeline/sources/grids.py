@@ -9,10 +9,12 @@ from django.utils import timezone
 from timeline.sources.base import (
     CREATED,
     DELETED,
+    Spot,
     attname,
     changes,
     history,
     is_baseline,
+    move_summary,
     names,
     username,
     with_prev,
@@ -150,8 +152,8 @@ def _kind_from_diff(diff: dict) -> EntryKind:
 
 def _summary(kind, reason, prev, row, boxes, diff) -> str:
     if kind == EntryKind.MOVED:
-        origin = f" from {_slot(prev, boxes)}" if prev else ""
-        return f"Moved{origin} to {_slot(row, boxes)}"
+        origin = _spot(prev, boxes) if prev else None
+        return move_summary("Grid", "box", origin, _spot(row, boxes))
 
     if kind == EntryKind.TRASHED and reason in TRASH_CAUSES:
         return f"Trashed ({TRASH_CAUSES[reason]})"
@@ -163,13 +165,9 @@ def _summary(kind, reason, prev, row, boxes, diff) -> str:
     return kind.capitalize()
 
 
-def _slot(row, boxes) -> str:
-    """e.g. ``BoxA #2``; ``no box`` once trashed."""
+def _spot(row, boxes) -> Spot:
     box = getattr(row, BOX)
-    if box is None:
-        return "no box"
-
-    return f"{boxes.get(box, f'box {box}')} #{getattr(row, POSITION)}"
+    return Spot(box, boxes.get(box, f"box {box}"), getattr(row, POSITION))
 
 
 def _entry(grid_id, at, kind, summary, user, detail=None) -> Entry:

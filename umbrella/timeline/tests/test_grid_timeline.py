@@ -104,8 +104,17 @@ class TestGridEntries:
 
         entry = timeline(client_in, grid.id)[0]
         assert entry["kind"] == EntryKind.MOVED
-        assert entry["summary"] == "Moved from BoxA #1 to BoxB #2"
+        assert entry["summary"] == "Grid moved: BoxA position 1 to BoxB position 2"
         assert entry["user"] == user.username
+
+    def test_move_within_box(self, client_in, grid, box_a):
+        client_in.patch(
+            f"/cryo_grids/v1/grids/{grid.id}/move/",
+            data={"destination_grid_box_id": box_a.id, "destination_position": 4},
+            content_type="application/json",
+        )
+
+        assert timeline(client_in, grid.id)[0]["summary"] == "Grid moved: same box, position 1 to 4"
 
     def test_trashed_grid_still_served(self, client_in, grid):
         client_in.post(
@@ -200,7 +209,7 @@ class TestContainerMoves:
         )
 
         (entry,) = moved_via(timeline(client_in, grid.id), "box")
-        assert entry["summary"] == "Box BoxA moved from PuckA #1 to PuckB #3"
+        assert entry["summary"] == "Box moved: PuckA slot 1 to PuckB slot 3"
         assert entry["user"] == user.username
 
     def test_box_move_after_grid_left(self, client_in, grid, box_a, box_b, puck):
@@ -215,7 +224,7 @@ class TestContainerMoves:
         client_in.patch(f"/api/list/pucks/{puck.id}/", data={"position_in_cane": 4}, content_type="application/json")
 
         (entry,) = moved_via(timeline(client_in, grid.id), "puck")
-        assert entry["summary"] == "Puck PuckA moved from CaneA #1 to CaneA #4"
+        assert entry["summary"] == "Puck moved: same cane, position 1 to 4"
 
     def test_puck_move_after_grid_left(self, client_in, grid, puck, box_b):
         other_puck = Puck.objects.create(name="PuckB", cane=puck.cane, position_in_cane=2)
@@ -235,7 +244,7 @@ class TestContainerMoves:
         cane.save()
 
         (entry,) = moved_via(timeline(client_in, grid.id), "cane")
-        assert entry["summary"] == "Cane CaneA moved from DewarA #1 to DewarA #3"
+        assert entry["summary"] == "Cane moved: same dewar, slot 1 to 3"
 
     def test_dewar_move(self, client_in, grid, puck):
         dewar = puck.cane.dewar
@@ -243,7 +252,7 @@ class TestContainerMoves:
         dewar.save()
 
         (entry,) = moved_via(timeline(client_in, grid.id), "dewar")
-        assert entry["summary"] == "Dewar DewarA moved from SiteA to SiteB"
+        assert entry["summary"] == "Dewar moved: SiteA to SiteB"
 
 
 @pytest.mark.django_db
