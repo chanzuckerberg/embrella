@@ -1,9 +1,9 @@
 """
-Container moves → grid MOVED entries.
+Grid and container moves → grid MOVED entries.
 
-A box / puck / cane / dewar moving changes where its grids are without
-writing any grid row. Walk up the storage chain, keeping only moves made
-while the grid was inside that container:
+The grid moving writes a grid row; its box / puck / cane / dewar moving
+doesn't. Walk up the storage chain, keeping only moves made while the grid
+was inside that container:
 
     grid ──in──▶ box ──in──▶ puck ──in──▶ cane ──in──▶ dewar ──at──▶ site
          stays       stays        stays        stays
@@ -16,19 +16,18 @@ while the grid was inside that container:
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
-from cryo_grids.history import LOCATION_FIELDS, ChangeReason
+from cryo_grids.history import LOCATION_FIELDS
 from cryo_grids.models import Cane, CryoGrid, CryoGridBox, Dewar, Puck
 
 from timeline.sources.base import (
-    CHANGED,
     DELETED,
     POSITION,
     SLOT,
     Spot,
     attname,
-    changes,
     history,
     is_baseline,
+    is_move,
     move_summary,
     names,
     spot_text,
@@ -60,8 +59,11 @@ class Level:
         return self.model._meta.get_field(LOCATION_FIELDS[self.model][0]).related_model
 
 
+GRID = Level(CryoGrid, "grid", "box")
+
 # Bottom-up storage chain. A new container level is one more row.
 CHAIN = [
+    GRID,
     Level(CryoGridBox, "box", "puck", SLOT),
     Level(Puck, "puck", "cane"),
     Level(Cane, "cane", "dewar", SLOT),
@@ -123,17 +125,12 @@ def clip(inner: list[Stay], outer: Stay) -> list[Stay]:
 
 
 def moves_in(rows: list, window: Stay, level: Level) -> list:
-    """``(prev, row)`` pairs where the container's location changed inside ``window``."""
+    """``(prev, row)`` pairs where the object's location changed inside ``window``."""
     out = []
     prev = None
 
     for row in rows:
-        moved = row.history_type == CHANGED and (
-            any(name in changes(prev, row) for name in level.fields)
-            or (prev is None and row.history_change_reason == ChangeReason.MOVED)
-        )
-
-        if moved and window.holds(row.history_date):
+        if is_move(prev, row, level.fields) and window.holds(row.history_date):
             out.append((prev, row))
 
         prev = row
@@ -141,11 +138,11 @@ def moves_in(rows: list, window: Stay, level: Level) -> list:
     return out
 
 
-def container_moves(grid_id: int, grid_rows: list) -> list[Entry]:
-    """MOVED entries for every container move while the grid was inside it."""
-    windows = stays(grid_rows, attname(CryoGrid, LOCATION_FIELDS[CryoGrid][0]))
+def grid_moves(grid_id: int, grid_rows: list) -> list[Entry]:
+    """MOVED entries for the grid's own moves, and every container move while the grid was inside it."""
+    windows = [Stay(grid_id, BEGINNING)]
     entries = []
-    cache = {}
+    cache = {(CryoGrid, grid_id): grid_rows}
 
     for level in CHAIN:
         next_windows = []

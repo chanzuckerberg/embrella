@@ -36,6 +36,25 @@ def changes(prev, row) -> dict:
     return {name: (old, new) for name, old, new in pairs if old != new}
 
 
+TRASHED = "trashed"
+
+
+def is_move(prev, row, fields) -> bool:
+    """
+    Did this row move the object? The reason decides when stamped, else the diff of location ``fields``.
+
+    Trashing also clears the box, but it's a trash, not a move.
+    """
+    if row.history_type != CHANGED:
+        return False
+
+    if row.history_change_reason:
+        return row.history_change_reason == ChangeReason.MOVED
+
+    diff = changes(prev, row)
+    return TRASHED not in diff and any(name in diff for name in fields)
+
+
 def is_baseline(row) -> bool:
     return row.history_change_reason == ChangeReason.BASELINE
 

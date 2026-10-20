@@ -155,7 +155,7 @@ const DayHeader: React.FC<{ label: string }> = ({ label }) => (
 );
 
 const TimelineRow: React.FC<{ entry: TimelineEntry; last: boolean }> = ({ entry, last }) => {
-  const containerMove = entry.kind === TimelineKind.MOVED && !!entry.detail.via;
+  const containerMove = entry.kind === TimelineKind.MOVED && entry.detail.via !== TimelineSubject.GRID;
   const Icon = SUBJECT_ICON[entry.subject] ?? (containerMove ? CONTAINER_MOVE_ICON : KIND_ICON[entry.kind]);
   const labelColor = LABEL_KINDS.has(entry.kind) ? (entry.detail.color as string | null) : null;
 

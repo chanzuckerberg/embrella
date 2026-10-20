@@ -2,27 +2,24 @@
 
 from datetime import datetime, time
 
-from cryo_grids.history import LOCATION_FIELDS, ChangeReason
-from cryo_grids.models import LABEL_TYPO_WINDOW, CryoGrid, CryoGridBox, GridLabel, Label
+from cryo_grids.history import ChangeReason
+from cryo_grids.models import LABEL_TYPO_WINDOW, CryoGrid, GridLabel, Label
 from django.utils import timezone
 
 from timeline.sources.base import (
     CREATED,
     DELETED,
-    Spot,
-    attname,
+    TRASHED,
     changes,
     history,
     is_baseline,
-    move_summary,
-    names,
+    is_move,
     username,
     with_prev,
 )
+from timeline.sources.location import GRID
 from timeline.types import Entry, EntryKind, Subject
 
-BOX, POSITION = (attname(CryoGrid, name) for name in LOCATION_FIELDS[CryoGrid])
-TRASHED = "trashed"
 CLIPPED = "clipped"
 
 # attname → readable name, e.g. "grid_cassette_id" → "grid cassette"
@@ -30,7 +27,6 @@ FIELD_NAMES = {f.attname: str(f.verbose_name) for f in CryoGrid._meta.concrete_f
 
 # Reasons that name the action outright; the diff only fills in details
 REASON_KINDS = {
-    ChangeReason.MOVED: EntryKind.MOVED,
     ChangeReason.EDITED: EntryKind.EDITED,
     ChangeReason.TRASHED: EntryKind.TRASHED,
     ChangeReason.RESTORED: EntryKind.RESTORED,
@@ -48,12 +44,11 @@ TRASH_CAUSES = {
 
 
 def grid_entries(grid_id: int, rows: list) -> list[Entry]:
-    """Entries for one grid's own history ``rows`` (oldest first)."""
-    boxes = names(CryoGridBox, {getattr(r, BOX) for r in rows})
+    """Entries for one grid's own history ``rows`` (oldest first). Moves come from ``grid_moves``."""
     entries = []
 
     for prev, row in with_prev(rows):
-        entry = _grid_entry(grid_id, prev, row, boxes)
+        entry = _grid_entry(grid_id, prev, row)
         if entry:
             entries.append(entry)
 
@@ -106,7 +101,7 @@ def _is_typo(label) -> bool:
     return deleted and label.history_date - label.created_at <= LABEL_TYPO_WINDOW
 
 
-def _grid_entry(grid_id, prev, row, boxes) -> Entry | None:
+def _grid_entry(grid_id, prev, row) -> Entry | None:
     user = username(row.history_user)
 
     if row.history_type == CREATED:
@@ -115,6 +110,9 @@ def _grid_entry(grid_id, prev, row, boxes) -> Entry | None:
     if row.history_type == DELETED:
         return _entry(grid_id, row.history_date, EntryKind.DELETED, "Grid deleted", user)
 
+    if is_move(prev, row, GRID.fields):
+        return None
+
     diff = changes(prev, row)
     reason = row.history_change_reason
     if not diff and not reason:
@@ -122,7 +120,7 @@ def _grid_entry(grid_id, prev, row, boxes) -> Entry | None:
 
     kind = REASON_KINDS.get(reason) or _kind_from_diff(diff)
     detail = {"reason": reason, "changes": {name: list(values) for name, values in diff.items()}}
-    summary = _summary(kind, reason, prev, row, boxes, diff)
+    summary = _summary(kind, reason, diff)
 
     return _entry(grid_id, row.history_date, kind, summary, user, detail)
 
@@ -137,12 +135,9 @@ def _created(grid_id, row) -> Entry:
 
 
 def _kind_from_diff(diff: dict) -> EntryKind:
-    """Classify rows without a reason (e.g. admin edits). Trash wins: it also clears the box."""
+    """Classify rows without a reason (e.g. admin edits); moves are already filtered out by is_move."""
     if TRASHED in diff:
         return EntryKind.TRASHED if diff[TRASHED][1] else EntryKind.RESTORED
-
-    if BOX in diff or POSITION in diff:
-        return EntryKind.MOVED
 
     if CLIPPED in diff:
         return EntryKind.CLIPPED if diff[CLIPPED][1] else EntryKind.UNCLIPPED
@@ -150,11 +145,7 @@ def _kind_from_diff(diff: dict) -> EntryKind:
     return EntryKind.EDITED
 
 
-def _summary(kind, reason, prev, row, boxes, diff) -> str:
-    if kind == EntryKind.MOVED:
-        origin = _spot(prev, boxes) if prev else None
-        return move_summary("Grid", "box", origin, _spot(row, boxes))
-
+def _summary(kind, reason, diff) -> str:
     if kind == EntryKind.TRASHED and reason in TRASH_CAUSES:
         return f"Trashed ({TRASH_CAUSES[reason]})"
 
@@ -163,11 +154,6 @@ def _summary(kind, reason, prev, row, boxes, diff) -> str:
         return f"Edited {', '.join(FIELD_NAMES.get(name, name) for name in diff)}"
 
     return kind.capitalize()
-
-
-def _spot(row, boxes) -> Spot:
-    box = getattr(row, BOX)
-    return Spot(box, boxes.get(box, f"box {box}"), getattr(row, POSITION))
 
 
 def _entry(grid_id, at, kind, summary, user, detail=None) -> Entry:

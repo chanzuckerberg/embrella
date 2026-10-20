@@ -68,7 +68,11 @@ describe('Timeline', () => {
             summary: 'Box moved: PuckA slot 1 to PuckB slot 3',
             detail: { via: 'box' },
           }),
-          entry({ kind: TimelineKind.MOVED, summary: 'Grid moved: BoxA position 1 to BoxB position 2' }),
+          entry({
+            kind: TimelineKind.MOVED,
+            summary: 'Grid moved: BoxA position 1 to BoxB position 2',
+            detail: { via: 'grid' },
+          }),
         ]}
       />
     );
