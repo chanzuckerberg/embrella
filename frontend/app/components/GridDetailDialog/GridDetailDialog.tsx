@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { parseAsStringLiteral, useQueryState } from 'nuqs';
 import { Box, CircularProgress, IconButton, Snackbar, Alert, Tab, Tabs, Typography } from '@mui/material';
 import LinkIcon from '@mui/icons-material/Link';
 import { Dialog, DialogContent, DialogTitle } from '@czi-sds/components';
@@ -22,6 +23,12 @@ const MoveGrid = React.lazy(() =>
   }))
 );
 
+// Tab is in the URL (?gridTab=history) so links open straight to it; Details is the default
+const GRID_TABS = ['details', 'history'] as const;
+const DETAILS_TAB = 0;
+const HISTORY_TAB = 1;
+const TAB_QUERY_OPTIONS = { history: 'replace' as const, shallow: true, clearOnDefault: true };
+
 interface GridDetailDialogProps {
   open: boolean;
   onClose: () => void;
@@ -30,7 +37,11 @@ interface GridDetailDialogProps {
 }
 
 export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClose, gridId, onGridUpdated }) => {
-  const [activeTab, setActiveTab] = useState(0);
+  const [tab, setTab] = useQueryState(
+    'gridTab',
+    parseAsStringLiteral(GRID_TABS).withDefault('details').withOptions(TAB_QUERY_OPTIONS)
+  );
+  const activeTab = GRID_TABS.indexOf(tab);
   const [copySnackbarOpen, setCopySnackbarOpen] = useState(false);
 
   const { gridDetails, isSuccess, refetch } = useGridDetails(open ? gridId : null);
@@ -50,16 +61,20 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
     location?.position_in_puck ?? undefined
   );
 
-  // Reset to the first tab when the dialog opens or the grid changes.
-  const [prevOpen, setPrevOpen] = useState(open);
-  const [prevGridId, setPrevGridId] = useState(gridId);
-  if (open !== prevOpen || gridId !== prevGridId) {
-    setPrevOpen(open);
-    setPrevGridId(gridId);
-    if (open) {
-      setActiveTab(0);
+  // Back to Details when switching grids; a shared link's tab survives the first render
+  const prevGridId = useRef(gridId);
+  useEffect(() => {
+    if (prevGridId.current !== gridId) {
+      setTab(null);
     }
-  }
+    prevGridId.current = gridId;
+  }, [gridId, setTab]);
+
+  // Closing drops the tab from the URL
+  const handleClose = () => {
+    setTab(null);
+    onClose();
+  };
 
   if (!open || !gridId) return null;
 
@@ -127,10 +142,10 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} sdsSize="s" disableScrollLock>
+      <Dialog open={open} onClose={handleClose} sdsSize="s" disableScrollLock>
         <DialogTitle
           title={titleText}
-          onClose={onClose}
+          onClose={handleClose}
           sx={{ paddingBottom: '0 !important', marginBottom: '0 !important' }}
         />
         <Typography
@@ -152,14 +167,14 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Tabs
                 value={activeTab}
-                onChange={(_, v) => setActiveTab(v)}
+                onChange={(_, v: number) => setTab(GRID_TABS[v])}
                 sx={{ borderBottom: 1, borderColor: 'divider' }}
               >
                 <Tab label="Details" />
                 <Tab label="History" />
               </Tabs>
 
-              <TabPanel value={activeTab} index={0}>
+              <TabPanel value={activeTab} index={DETAILS_TAB}>
                 <DetailsTab
                   formData={form.formData}
                   isEditMode={form.isEditMode}
@@ -184,7 +199,7 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
                 />
               </TabPanel>
 
-              <TabPanel value={activeTab} index={1}>
+              <TabPanel value={activeTab} index={HISTORY_TAB}>
                 <HistoryTab gridId={gridId} />
               </TabPanel>
 
