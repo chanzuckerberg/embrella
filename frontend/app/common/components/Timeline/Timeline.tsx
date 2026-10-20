@@ -135,7 +135,7 @@ export const Timeline: React.FC<TimelineProps> = ({ entries: raw, emptyText = 'N
 
       {capped && (
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: '4px' }}>
-          {entries.length} entries · scroll for more
+          {entries.length} entries
         </Typography>
       )}
     </>

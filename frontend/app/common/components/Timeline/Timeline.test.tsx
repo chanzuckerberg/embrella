@@ -32,14 +32,14 @@ describe('Timeline', () => {
     expect(screen.getByText(/ago$/)).toBeInTheDocument();
   });
 
-  it('shows a scroll hint only when capped', () => {
+  it('shows the entry count only when capped', () => {
     const entries = Array.from({ length: 3 }, (_, i) => entry({ subject_id: i }));
     const { rerender } = render(<Timeline entries={entries} maxVisible={2} />);
 
-    expect(screen.getByText('3 entries · scroll for more')).toBeInTheDocument();
+    expect(screen.getByText('3 entries')).toBeInTheDocument();
 
     rerender(<Timeline entries={entries} maxVisible={8} />);
-    expect(screen.queryByText(/scroll for more/)).not.toBeInTheDocument();
+    expect(screen.queryByText('3 entries')).not.toBeInTheDocument();
   });
 
   it('groups rows under day headers, newest first', () => {

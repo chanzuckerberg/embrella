@@ -12,7 +12,7 @@ from timeline.types import Entry
 
 def grid_timeline(grid_id: int) -> list[Entry] | None:
     """
-    Everything that happened to a grid, newest first. ``None`` if the grid never existed.
+    Grid history, newest first. ``None`` if the grid never existed.
 
     Trashed and deleted grids keep their timeline: history rows outlive the grid.
     """

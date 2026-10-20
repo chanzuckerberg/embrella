@@ -33,10 +33,11 @@ class GridTimelineView(APIView):
     @extend_schema(
         operation_id="timeline_grid",
         summary="Grid timeline",
+        tags=["Timeline"],
         description=(
-            "Everything that happened to a grid, newest first: creation, edits, moves (including its box, "
+            "Grid history, newest first: creation, edits, moves (including its box, "
             "puck, cane or dewar moving while it was inside), clipping, trashing, labels, MSI sessions and "
-            "proc runs. Trashed and deleted grids keep their timeline."
+            "proc runs."
         ),
         responses={
             status.HTTP_200_OK: TimelineEntrySerializer(many=True),
