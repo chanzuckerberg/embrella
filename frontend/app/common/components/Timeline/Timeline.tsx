@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { format, isToday, isYesterday } from 'date-fns';
 import { Box, Chip, Tooltip, Typography } from '@mui/material';
 import type { SvgIconComponent } from '@mui/icons-material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
@@ -26,7 +27,6 @@ import {
 } from '@mui/lab';
 import { TimelineEntry, TimelineKind, TimelineSubject } from '@app/common/types/timeline';
 import { FORMAT_PATTERN, formatDate, formatTimeAgo } from '@app/common/utils/format';
-import { dayLabel } from './dayLabel';
 import { LABEL_GROUP_TITLE, TimelineLabel, groupLabels } from './groupLabels';
 
 const KIND_ICON: Record<TimelineKind, SvgIconComponent> = {
@@ -77,6 +77,16 @@ const scrollShadows = (paper: string) => ({
     radial-gradient(farthest-side at 50% 100%, rgba(0,0,0,0.15), transparent) bottom / 100% 14px scroll`,
   backgroundRepeat: 'no-repeat',
 });
+
+// Day header, in local time: "Today", "Yesterday", else e.g. "Oct 16 2026"
+const dayLabel = (at: string): string => {
+  const date = new Date(at);
+
+  if (isToday(date)) return 'Today';
+  if (isYesterday(date)) return 'Yesterday';
+
+  return format(date, FORMAT_PATTERN.MMM_D_YYYY);
+};
 
 interface TimelineProps {
   entries: TimelineEntry[];
