@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -78,7 +79,8 @@ mysql_db = {
 sqlite_db = {
     "ENGINE": "django.db.backends.sqlite3",
     "NAME": BASE_DIR / "db.sqlite3",
-    "TEST": {"NAME": BASE_DIR / "tests" / "test_db.sqlite3"},  # File, not memory, so pytest --reuse-db can keep it
+    # File, so pytest --reuse-db can keep it
+    "TEST": {"NAME": Path(tempfile.gettempdir()) / "embrella_test_db.sqlite3"},
 }
 
 DATABASES = {
