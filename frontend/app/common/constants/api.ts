@@ -92,6 +92,7 @@ export enum API {
 
   // Grid Detail (by ID)
   GRID_DETAIL = '/cryo_grids/v1/grids/grid_id/',
+  GRID_TIMELINE = '/timeline/v1/grids/grid_id/',
 
   // Grid Logging
   GRID_LOGGING_USERS = '/api/list/all/users/',

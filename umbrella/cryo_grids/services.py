@@ -5,12 +5,29 @@ HTTP-handling code.
 """
 
 from django.db import transaction
+from simple_history.utils import bulk_update_with_history
 
+from cryo_grids.history import ChangeReason
 from cryo_grids.models import CryoGrid, CryoGridBox, GridLabel
 
 
 class DuplicateGridError(Exception):
     """Raised when a grid duplication request cannot be satisfied."""
+
+
+def update_grids(grids, *, reason: ChangeReason, **fields) -> int:
+    """
+    Bulk-update grids and write one history row each, tagged with ``reason``.
+
+    Drop-in for ``queryset.update()``, which bypasses simple-history.
+    e.g. ``update_grids(grids, reason=ChangeReason.CLIPPED, clipped=True)``
+    """
+    objs = list(grids)
+    for grid in objs:
+        for name, value in fields.items():
+            setattr(grid, name, value)
+
+    return bulk_update_with_history(objs, CryoGrid, fields=list(fields), default_change_reason=reason)
 
 
 def get_available_positions(box: CryoGridBox) -> list[int]:
