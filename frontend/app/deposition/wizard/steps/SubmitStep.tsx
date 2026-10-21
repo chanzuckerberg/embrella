@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Icon } from '@czi-sds/components';
 import { Alert, Box, ButtonBase, CircularProgress, LinearProgress, Stack, Typography } from '@mui/material';
 
+import { formatBinaryBytes } from '@app/common/utils/format';
+
 import type {
   DatasetJob,
   JobState,
@@ -138,16 +140,6 @@ function uploadNote(state: JobState | undefined): string {
   if (state === 'push_submitted') return 'Upload job submitted.';
   if (state === 'push_running') return 'Waiting for upload progress.';
   return 'Files have been uploaded to S3. Portal indexing and publication are separate steps.';
-}
-
-function byteLabel(value: number): string {
-  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
-  let index = 0;
-  while (value >= 1024 && index < units.length - 1) {
-    value /= 1024;
-    index += 1;
-  }
-  return `${index ? value.toFixed(1) : value} ${units[index]}`;
 }
 
 function summaryLine(s: SyncSummary): string {
@@ -545,8 +537,8 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
               )}
               {uploadProgress && uploadProgress.total > 0 && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                  {byteLabel(uploadProgress.done)} / {uploadTotalEstimated ? '~' : ''}
-                  {byteLabel(uploadProgress.total)}
+                  {formatBinaryBytes(uploadProgress.done)} / {uploadTotalEstimated ? '~' : ''}
+                  {formatBinaryBytes(uploadProgress.total)}
                   {uploadTotalEstimated
                     ? ' · Calculating total…'
                     : ` · ${toPct(uploadProgress.done, uploadProgress.total)}%`}
