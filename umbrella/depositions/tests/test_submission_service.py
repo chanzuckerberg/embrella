@@ -14,7 +14,11 @@ def _job(state):
     dep = Deposition.objects.create(title="Dep")
     ds = Dataset.objects.create(deposition=dep, title="DS")
     return DatasetJob.objects.create(
-        dataset=ds, state=state, push_slurm_job_id="slurm-push" if state in submission.PUSH_ACTIVE else ""
+        dataset=ds,
+        state=state,
+        prep_slurm_job_id="prep-1",
+        validation={"status": "passed", "attempt": "prep-1", "warnings": [], "blocking_issues": []},
+        push_slurm_job_id="slurm-push" if state in submission.PUSH_ACTIVE else "",
     )
 
 
@@ -60,19 +64,27 @@ class TestOnPrepComplete:
         assert job.state == "push_running"  # untouched
         assert not job.error_message
 
-    def test_callback_from_superseded_attempt_is_ignored(self):
+    @pytest.mark.parametrize("success", [True, False])
+    def test_callback_from_superseded_attempt_is_ignored(self, success):
         job = _job("prep_running")
+        old_validation = job.validation
         job.prep_slurm_job_id = "slurm-new"
+        job.validation = None
         job.save()
-        submission.on_prep_complete(job, False, job_id="slurm-old")
+        submission.on_prep_complete(job, success, job_id="slurm-old", validation=old_validation)
         job.refresh_from_db()
-        assert job.state == "prep_running"
+        assert job.state == "prep_running" and job.validation is None
 
     def test_stale_prep_instance_does_not_roll_back_a_claimed_push(self):
         # Syncer holds a prep_running copy; meanwhile prep finished and push was claimed.
         job = _job("prep_running")
         stale = DatasetJob.objects.get(pk=job.pk)  # caller's stale in-memory copy
-        submission.on_prep_complete(DatasetJob.objects.get(pk=job.pk), True)
+        submission.on_prep_complete(
+            DatasetJob.objects.get(pk=job.pk),
+            True,
+            job_id="prep-1",
+            validation={"status": "passed", "attempt": "prep-1", "warnings": [], "blocking_issues": []},
+        )
         submission.start_push(DatasetJob.objects.get(pk=job.pk), launch=lambda j: "slurm-push")
         returned = submission.on_prep_complete(stale, True)  # late callback on the stale copy
         assert returned is stale
@@ -363,3 +375,86 @@ def test_dataset_save_failure_rolls_back_completion_and_allows_retry(state, succ
     assert job.state == (expected_state if success else "failed")
     job.dataset.refresh_from_db()
     assert job.dataset.status == job.dataset_status
+
+
+@pytest.mark.django_db
+class TestResetPreparation:
+    # Field-clearing and active/completed refusal are covered by the parametrized tests below;
+    # this keeps only the no-job (never-prepared) service case.
+    def test_refuses_when_never_prepared(self):
+        dep = Deposition.objects.create(title="Dep")
+        ds = Dataset.objects.create(deposition=dep, title="DS")
+        with pytest.raises(SubmissionValidationError, match="hasn't been prepared"):
+            submission.reset_preparation(ds)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("state", ["prep_completed", "failed"])
+def test_reset_preparation_clears_attempt_and_preserves_staged_tree(state):
+    job = _job(state)
+    job.staged_at = timezone.now()
+    job.sync_progress = {"done": 1}
+    job.sync_summary = {"objects": 1}
+    job.push_progress = {"done": 1}
+    job.save()
+    staged_at = job.staged_at
+    result = submission.reset_preparation(job.dataset)
+    assert result.state == "pending" and result.dataset.status == "draft"
+    assert result.staged_at == staged_at
+    assert result.validation is None
+    assert result.sync_progress is None and result.sync_summary is None and result.push_progress is None
+    assert result.prep_slurm_job_id == result.push_slurm_job_id == ""
+    with pytest.raises(SubmissionValidationError):
+        submission.reset_preparation(job.dataset)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "state", ["pending", "prep_submitted", "prep_running", "push_submitted", "push_running", "completed"]
+)
+def test_reset_refuses_active_or_completed_jobs(state):
+    job = _job(state)
+    with pytest.raises(SubmissionValidationError):
+        submission.reset_preparation(job.dataset)
+    job.refresh_from_db()
+    assert job.state == state
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "validation",
+    [
+        None,
+        {"status": "failed", "attempt": "prep-1", "blocking_issues": []},
+        {"status": "unavailable", "attempt": "prep-1", "blocking_issues": []},
+        {"status": "passed", "attempt": "old", "blocking_issues": []},
+        {"status": "passed", "attempt": "prep-1", "blocking_issues": [{"message": "bad"}]},
+    ],
+)
+def test_direct_start_push_requires_current_validation(validation):
+    job = _job("prep_completed")
+    DatasetJob.objects.filter(pk=job.pk).update(validation=validation)
+    launched = []
+    with pytest.raises(SubmissionValidationError, match="validation"):
+        submission.start_push(job, launch=lambda j: launched.append(j))
+    assert not launched
+    job.refresh_from_db()
+    assert job.state == "prep_completed"
+
+
+@pytest.mark.django_db
+def test_push_claim_rechecks_validation_at_update_time(monkeypatch):
+    job = _job("prep_completed")
+    original_update = QuerySet.update
+
+    def invalidate_before_claim(qs, **fields):
+        if fields.get("state") == "push_submitted":
+            original_update(DatasetJob.objects.filter(pk=job.pk), validation=None)
+        return original_update(qs, **fields)
+
+    monkeypatch.setattr(QuerySet, "update", invalidate_before_claim)
+    launched = []
+    with pytest.raises(SubmissionValidationError, match="validation"):
+        submission.start_push(job, launch=lambda j: launched.append(j))
+    assert not launched
+    assert job.state == "prep_completed" and job.validation is None

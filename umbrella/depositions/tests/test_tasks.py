@@ -49,6 +49,8 @@ def patched(monkeypatch):
     monkeypatch.setattr(launch_mod, "cancel_deposition_job", lambda **kw: None)
     # Don't open SSH in unit tests; a failure captures this stub tail onto the row.
     monkeypatch.setattr(tasks.logs, "capture_failure_tail", lambda *a: "captured tail")
+    monkeypatch.setattr(tasks.progress, "collect", lambda *a: None)
+    monkeypatch.setattr(tasks.logs, "read_slurm_tail", lambda *a: "")
     reschedules = []
     monkeypatch.setattr(tasks, "_reschedule", lambda *a: reschedules.append(a))
     return reschedules
@@ -58,23 +60,36 @@ def patched(monkeypatch):
 class TestRunDepositionJobSyncer:
     def test_terminal_success_completes_prep(self, patched):
         job = _job("prep_running", prep_slurm_job_id="123")
-        result = tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123")
+        result = tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123")
         job.refresh_from_db()
         assert result["status"] == "terminal" and result["success"]
         assert job.state == "prep_completed"
         assert job.prep_completed_at is not None
         assert patched == []  # terminal: no reschedule
 
+    def test_terminal_success_captures_validation(self, patched, monkeypatch):
+        import json
+
+        marker = tasks.validation.MARKER + json.dumps(
+            {"status": "passed", "attempt": "123", "dataset_id": 2, "warnings": [], "blocking_issues": []}
+        )
+        monkeypatch.setattr(tasks.logs, "read_slurm_tail", lambda *a: f"sync done\n{marker}\n")
+        job = _job("prep_running", prep_slurm_job_id="123")
+        tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123")
+        job.refresh_from_db()
+        assert job.state == "prep_completed"
+        assert job.validation["status"] == "passed"
+
     def test_poll_uses_service_account_auth(self, patched):
         # sacct is queried as the service account.
         job = _job("prep_running", prep_slurm_job_id="123")
-        tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123")
+        tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123")
         assert FakeSyncer.last_auth == {"username": "service-user"}
 
     def test_terminal_failure_fails_push(self, patched):
         FakeSyncer.info = {"state": "FAILED", "exit_code": "1:0"}
         job = _job("push_running", push_slurm_job_id="99")
-        tasks.run_deposition_job_syncer(job.id, "push", "bruno", "99")
+        tasks.run_deposition_job_syncer(job.id, "push", "cluster-a", "99")
         job.refresh_from_db()
         assert job.state == "failed"
         assert "FAILED" in job.error_message
@@ -89,20 +104,20 @@ class TestRunDepositionJobSyncer:
         )
         FakeSyncer.info = {"state": "FAILED", "exit_code": "1:0"}
         job = _job("prep_running", prep_slurm_job_id="123")
-        tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123")
-        assert captured["args"] == ("bruno", {"username": "service-user"}, "prep", "123")
+        tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123")
+        assert captured["args"] == ("cluster-a", {"username": "service-user"}, "prep", "123")
 
     def test_terminal_success_does_not_capture_a_tail(self, patched, monkeypatch):
         monkeypatch.setattr(tasks.logs, "capture_failure_tail", lambda *a: pytest.fail("no tail read on success"))
         job = _job("prep_running", prep_slurm_job_id="123")
-        tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123")
+        tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123")
         job.refresh_from_db()
         assert job.state == "prep_completed"
 
     def test_completed_with_nonzero_exit_is_a_failure(self, patched):
         FakeSyncer.info = {"state": "COMPLETED", "exit_code": "1:0"}
         job = _job("prep_running", prep_slurm_job_id="123")
-        tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123")
+        tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123")
         job.refresh_from_db()
         assert job.state == "failed"
         assert "exit 1:0" in job.error_message
@@ -111,7 +126,7 @@ class TestRunDepositionJobSyncer:
         FakeSyncer.info = {"state": "RUNNING"}
         FakeSyncer.terminal = False
         job = _job("prep_running", prep_slurm_job_id="123")
-        tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123")
+        tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123")
         job.refresh_from_db()
         assert job.state == "prep_running"
         assert len(patched) == 1
@@ -120,7 +135,7 @@ class TestRunDepositionJobSyncer:
         FakeSyncer.info = {"state": "RUNNING"}
         FakeSyncer.terminal = False
         job = _job("prep_submitted", prep_slurm_job_id="123")
-        tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123")
+        tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123")
         job.refresh_from_db()
         assert job.state == "prep_running"
         assert len(patched) == 1
@@ -128,33 +143,34 @@ class TestRunDepositionJobSyncer:
     def test_not_in_sacct_yet_reschedules(self, patched):
         FakeSyncer.info = None
         job = _job("prep_running", prep_slurm_job_id="123")
-        result = tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123")
+        result = tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123")
         assert result["status"] == "waiting"
         assert len(patched) == 1
 
     def test_waits_for_id_before_querying_sacct(self, patched):
         job = _job("prep_running", prep_slurm_job_id="")
-        result = tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123")
+        result = tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123")
         assert result["status"] == "waiting_id"
         assert len(patched) == 1
 
     def test_superseded_attempt_stops_without_touching_state(self, patched):
         job = _job("prep_running", prep_slurm_job_id="new")
-        result = tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "old")
+        result = tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "old")
         job.refresh_from_db()
         assert result["status"] == "superseded"
+        assert job.validation is None
         assert job.state == "prep_running"
         assert patched == []
 
     def test_missing_job_stops(self, patched):
-        result = tasks.run_deposition_job_syncer(999999, "prep", "bruno", "x")
+        result = tasks.run_deposition_job_syncer(999999, "prep", "cluster-a", "x")
         assert result["status"] == "gone"
         assert patched == []
 
     def test_gives_up_after_max_waiting_in_sacct(self, patched):
         FakeSyncer.info = None  # never appears in sacct
         job = _job("prep_submitted", prep_slurm_job_id="123")
-        result = tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123", attempts=tasks.MAX_WAIT_ATTEMPTS)
+        result = tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123", attempts=tasks.MAX_WAIT_ATTEMPTS)
         job.refresh_from_db()
         assert result["status"] == "gave_up"
         assert job.state == "failed"
@@ -165,14 +181,14 @@ class TestRunDepositionJobSyncer:
         FakeSyncer.info = {"state": "RUNNING"}
         FakeSyncer.terminal = False
         job = _job("prep_running", prep_slurm_job_id="123")
-        tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123", attempts=5)
+        tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123", attempts=5)
         assert patched[0][4] == 0  # attempts arg reset to 0 while the job is live
 
     def test_blank_id_at_limit_stops_without_failing(self, patched):
         # An old poller must never fail a row whose id was reset by a newer claim.
         job = _job("prep_submitted", prep_slurm_job_id="")
         result = tasks.run_deposition_job_syncer(
-            job.id, "prep", "bruno", "old-attempt", attempts=tasks.MAX_WAIT_ATTEMPTS
+            job.id, "prep", "cluster-a", "old-attempt", attempts=tasks.MAX_WAIT_ATTEMPTS
         )
         job.refresh_from_db()
         assert result == {"status": "gave_up", "reason": "no_id"}
@@ -190,12 +206,12 @@ class TestRunDepositionJobSyncer:
         )
         FakeSyncer.raises = True
         job = _job("prep_running", prep_slurm_job_id="123")
-        result = tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123", attempts=tasks.MAX_WAIT_ATTEMPTS)
+        result = tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123", attempts=tasks.MAX_WAIT_ATTEMPTS)
         job.refresh_from_db()
         assert result == {"status": "gave_up", "reason": "error"}
         assert cancelled == {
             "id": "123",
-            "cluster": "bruno",
+            "cluster": "cluster-a",
             "auth": {"username": "service-user"},
         }  # cancelled before failing, as the service account
         assert job.state == "failed"
@@ -204,7 +220,7 @@ class TestRunDepositionJobSyncer:
         # A push give-up has a stored id, so on_push_complete (require_attempt=True) still matches it.
         FakeSyncer.info = None
         job = _job("push_running", push_slurm_job_id="99")
-        result = tasks.run_deposition_job_syncer(job.id, "push", "bruno", "99", attempts=tasks.MAX_WAIT_ATTEMPTS)
+        result = tasks.run_deposition_job_syncer(job.id, "push", "cluster-a", "99", attempts=tasks.MAX_WAIT_ATTEMPTS)
         job.refresh_from_db()
         assert result["status"] == "gave_up"
         assert job.state == "failed"
@@ -214,7 +230,7 @@ class TestRunDepositionJobSyncer:
         monkeypatch.setattr(tasks.logs, "capture_failure_tail", lambda *a: calls.append(a))
         FakeSyncer.info = None  # never appears in sacct
         job = _job("prep_submitted", prep_slurm_job_id="123")
-        tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123", attempts=tasks.MAX_WAIT_ATTEMPTS)
+        tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123", attempts=tasks.MAX_WAIT_ATTEMPTS)
         job.refresh_from_db()
         assert job.state == "failed"
         assert calls == []  # no SSH read for a job that never started
@@ -228,7 +244,7 @@ class TestRunDepositionJobSyncer:
         monkeypatch.setattr(launch_mod, "cancel_deposition_job", cancel_boom)
         FakeSyncer.raises = True
         job = _job("prep_running", prep_slurm_job_id="123")
-        tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123", attempts=tasks.MAX_WAIT_ATTEMPTS)
+        tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123", attempts=tasks.MAX_WAIT_ATTEMPTS)
         job.refresh_from_db()
         # Can't confirm the job stopped, so don't make it retryable into a double-run.
         assert job.state == "prep_running"
@@ -241,8 +257,8 @@ def test_give_up_cancels_with_service_account(patched, monkeypatch):
     job = _job("prep_running", prep_slurm_job_id="123")
     cancelled = []
     monkeypatch.setattr(launch_mod, "cancel_deposition_job", lambda **kwargs: cancelled.append(kwargs))
-    assert tasks._give_up(job, "prep", "bruno", "123", "test")
-    assert cancelled == [{"cluster_id": "bruno", "job_id": "123", "auth": {"username": "service-user"}}]
+    assert tasks._give_up(job, "prep", "cluster-a", "123", "test")
+    assert cancelled == [{"cluster_id": "cluster-a", "job_id": "123", "auth": {"username": "service-user"}}]
 
 
 def _raise_no_creds():
@@ -252,7 +268,7 @@ def _raise_no_creds():
 @pytest.mark.django_db
 def test_give_up_snapshots_log_tail_and_reason(patched):
     job = _job("prep_running", prep_slurm_job_id="123")
-    assert tasks._give_up(job, "prep", "bruno", "123", "boom reason")
+    assert tasks._give_up(job, "prep", "cluster-a", "123", "boom reason")
     job.refresh_from_db()
     assert job.state == "failed"
     assert job.error_message == "boom reason"
@@ -267,7 +283,7 @@ def test_give_up_without_credentials_leaves_job_for_operator(patched, monkeypatc
     cancelled = []
     monkeypatch.setattr(tasks.clusterio, "get_auth_service_user", _raise_no_creds)
     monkeypatch.setattr(launch_mod, "cancel_deposition_job", lambda **kwargs: cancelled.append(kwargs))
-    assert not tasks._give_up(job, "prep", "bruno", "123", "test")
+    assert not tasks._give_up(job, "prep", "cluster-a", "123", "test")
     job.refresh_from_db()
     assert job.state == "prep_running"
     assert cancelled == []
@@ -277,3 +293,13 @@ def test_job_auth_returns_none_when_service_creds_unavailable(monkeypatch):
     # The poller/cancel path treats unresolved creds as "no auth" (then reschedules/leaves the row).
     monkeypatch.setattr(tasks.clusterio, "get_auth_service_user", _raise_no_creds)
     assert tasks._job_auth() is None
+
+
+@pytest.mark.django_db
+def test_failed_prep_does_not_read_validation(patched, monkeypatch):
+    FakeSyncer.info = {"state": "FAILED", "exit_code": "1:0"}
+    monkeypatch.setattr(tasks.logs, "read_slurm_tail", lambda *a: pytest.fail("validation read on failure"))
+    job = _job("prep_running", prep_slurm_job_id="123", validation={"status": "passed"})
+    tasks.run_deposition_job_syncer(job.pk, "prep", "cluster-a", "123")
+    job.refresh_from_db()
+    assert job.state == "failed" and job.validation is None

@@ -25,6 +25,9 @@ DEBUG = ENVIRONMENT == "development"
 # no cluster access
 SSH_DISABLED = os.getenv("SSH_DISABLED") == "True"
 
+# Optional AWS profile for deposition upload jobs.
+DEPOSITION_AWS_PROFILE = os.getenv("DEPOSITION_AWS_PROFILE", "").strip()
+
 
 def _env_list(name):
     """Comma-separated env var as a list, e.g. "a, b," -> ["a", "b"]."""

@@ -7,6 +7,7 @@ import type { Dataset } from '../../types';
 const draft: Dataset = {
   id: 1,
   deposition: 1,
+  metadata_issues: [],
   dataset_id: 100,
   title: 'Draft dataset',
   status: 'draft',
@@ -16,11 +17,11 @@ const draft: Dataset = {
   updated_at: '2026-07-01T00:00:00Z',
 };
 
-const renderRow = (isOwner: boolean) =>
+const renderRow = (isOwner: boolean, dataset: Dataset = draft) =>
   render(
     <table>
       <tbody>
-        <DatasetRow dataset={draft} isOwner={isOwner} />
+        <DatasetRow dataset={dataset} isOwner={isOwner} />
       </tbody>
     </table>
   );
@@ -37,4 +38,10 @@ describe('DatasetRow ownership gating', () => {
     expect(screen.getByText('View')).toBeInTheDocument();
     expect(screen.queryByText('Resume')).not.toBeInTheDocument();
   });
+});
+
+it('shows View for a failed dataset that requires confirmation before editing', () => {
+  renderRow(true, { ...draft, status: 'failed' });
+  expect(screen.getByText('View')).toBeInTheDocument();
+  expect(screen.queryByText('Resume')).not.toBeInTheDocument();
 });

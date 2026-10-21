@@ -3,21 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Icon } from '@czi-sds/components';
-import { Box, IconButton, Stack, MenuItem, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, IconButton, Stack, MenuItem, TextField, Tooltip, Typography } from '@mui/material';
 
 import { updateDataset } from '../../services/depositionApi';
 import { depositionKeys } from '../../queryKeys';
-import {
-  isEditableStatus,
-  type AuthorRef,
-  type CrossRef,
-  type Dataset,
-  type DatasetFunding,
-  type DatasetSample,
-} from '../../types';
+import { type AuthorRef, type CrossRef, type Dataset, type DatasetFunding, type DatasetSample } from '../../types';
 import { type AutoSaveState, useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useDeposition } from '../../hooks/useDeposition';
 import { CrossReferencesEditor } from '../../depositions/CrossReferencesEditor';
+import { READ_ONLY_FIELDS_SX } from '../../components/readOnlyStyles';
 import { Authors } from './sections/Authors';
 import { BasicDetails } from './sections/BasicDetails';
 import { BiologicalClassification } from './sections/BiologicalClassification';
@@ -109,17 +103,24 @@ const NAV: NavItem[] = [
 export function DatasetForm({
   dataset,
   reportSave,
-  readOnly: readOnlyProp = false,
+  reportBlocking,
+  readOnly,
 }: {
   dataset: Dataset;
   reportSave?: (state: AutoSaveState) => void;
-  readOnly?: boolean;
+  reportBlocking?: (count: number) => void;
+  readOnly: boolean;
 }) {
   const queryClient = useQueryClient();
-  const { data: deposition } = useDeposition(dataset.deposition);
-  const depositionAuthorCount = deposition?.authors_json?.length;
+  const {
+    data: deposition,
+    isError: authorsError,
+    isFetching: authorsFetching,
+    refetch: retryAuthors,
+  } = useDeposition(dataset.deposition);
+  const depositionAuthors = deposition ? (deposition.authors_json ?? []) : undefined;
+  const depositionAuthorCount = depositionAuthors?.length;
   const [form, setForm] = useState<FormState>(() => toForm(dataset));
-  const readOnly = readOnlyProp || !isEditableStatus(dataset.status);
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
   const [active, setActive] = useState('basic');
   const [reusedFrom, setReusedFrom] = useState('');
@@ -162,10 +163,12 @@ export function DatasetForm({
     [dataset.id, queryClient]
   );
 
-  const { status, lastSavedAt, saveNow } = useDraftAutoSave(form, save, { enabled: !readOnly });
+  const { status, isDirty, lastSavedAt, error, saveNow, discardChanges } = useDraftAutoSave(form, save, {
+    enabled: !readOnly,
+  });
   useEffect(() => {
-    reportSave?.({ status, lastSavedAt, saveNow });
-  }, [status, lastSavedAt, saveNow, reportSave]);
+    reportSave?.({ status, isDirty, lastSavedAt, error, saveNow, discardChanges });
+  }, [status, isDirty, lastSavedAt, error, saveNow, discardChanges, reportSave]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -187,6 +190,14 @@ export function DatasetForm({
   const addCrossRef = () => set('crossRefs', [...form.crossRefs, { type: 'publication', value: '' }]);
 
   const req = bioRequirements(form.sample.sample_type);
+  const authors = form.is_authors_same_as_deposition ? depositionAuthors : form.authors;
+  const authorCount = authors?.length;
+  const awaitingAuthors = form.is_authors_same_as_deposition && depositionAuthorCount === undefined;
+  const issues = dataset.metadata_issues;
+  const validationPending = isDirty || status === 'saving';
+  useEffect(() => {
+    reportBlocking?.(readOnly ? 0 : issues.length + Number(awaitingAuthors || validationPending));
+  }, [issues.length, awaitingAuthors, validationPending, readOnly, reportBlocking]);
   const bioMet = isRequiredBioFieldMet(form.sample, req);
   const organismMet = !!form.sample.organism_name?.trim() && form.sample.organism_taxid != null;
 
@@ -213,7 +224,7 @@ export function DatasetForm({
     sample: !!form.sample.sample_type,
     organism: organismMet,
     bioclass: req.requiredBioField ? bioMet : bioHasContent,
-    authors: true,
+    authors: (authorCount ?? 0) > 0,
     funding:
       form.funding.some((f) => !!f.funding_agency_name?.trim() || !!f.grant_id?.trim()) ||
       form.crossRefs.some((c) => !!c.value?.trim()),
@@ -232,7 +243,7 @@ export function DatasetForm({
   const jump = (key: string) => refs.current[key]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+    <Box sx={{ ...READ_ONLY_FIELDS_SX, display: 'flex', alignItems: 'flex-start' }}>
       <SideNav nav={nav} active={active} done={done} subLabel={subLabel} onJump={jump} />
 
       <Box
@@ -247,6 +258,35 @@ export function DatasetForm({
         }}
       >
         <Stack spacing={3}>
+          {!readOnly && awaitingAuthors && (
+            <Alert
+              severity={authorsError && !authorsFetching ? 'error' : 'info'}
+              action={
+                authorsError && !authorsFetching ? (
+                  <Button sdsType="primary" sdsStyle="minimal" size="small" onClick={() => void retryAuthors()}>
+                    Retry
+                  </Button>
+                ) : undefined
+              }
+            >
+              {authorsError && !authorsFetching
+                ? 'Could not load deposition authors. Try again or choose Customize authors.'
+                : 'Loading deposition authors…'}
+            </Alert>
+          )}
+          {!readOnly && reportBlocking && validationPending && (
+            <Alert severity="info">Checking required fields after saving...</Alert>
+          )}
+          {!readOnly && reportBlocking && !validationPending && issues.length > 0 && (
+            <Alert severity="info">
+              Complete the metadata before preparation:
+              <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+                {issues.map((message, index) => (
+                  <li key={index}>{message}</li>
+                ))}
+              </Box>
+            </Alert>
+          )}
           <BasicDetails
             title={form.title}
             description={form.description}

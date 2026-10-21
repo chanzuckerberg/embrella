@@ -123,7 +123,8 @@ export function SubsetCsvField({
             placeholder="/hpc/projects/group.czii/subsets/session.csv"
             value={row.subset_csv_path}
             onChange={(e) => onChange({ subset_csv_path: e.target.value })}
-            disabled={readOnly || hasFile}
+            disabled={!readOnly && hasFile}
+            InputProps={{ readOnly }}
           />
           {hasFile && disabledHint('A file is uploaded - remove it to enter a cluster path instead.')}
         </Box>

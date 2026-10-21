@@ -26,7 +26,7 @@ output_dir={{ output_dir }}
 config_path={{ config_path }}
 mkdir -p -- "$output_dir"
 tmp=$(mktemp "$output_dir/dataprep_config.yaml.tmp.XXXXXX")
-trap 'rm -f -- "$tmp"' EXIT
+trap 'rm -f -- "$tmp"; if [ -n "${progress_pid:-}" ]; then kill "$progress_pid" 2>/dev/null || true; fi' EXIT
 cat > "$tmp" <<'{{ config_delimiter }}'
 {{ config_yaml }}
 {{ config_delimiter }}
@@ -36,14 +36,30 @@ mv -f -- "$tmp" "$config_path"
 
 cd {{ output_dir }}
 
+progress_file="${SLURM_SUBMIT_DIR:-$output_dir}/deposition-prep-${SLURM_JOB_ID:-local}.progress.json"
+python - prep "$progress_file" "$config_path" {{ dataset_id }} <<'END_DEPOSITION_PROGRESS' &
+{{ progress_code }}
+END_DEPOSITION_PROGRESS
+progress_pid=$!
+
 cryoetportalprep sync {{ config_path }}{{ session_flags }}
 
 {% if copick_flags -%}
 copick deposit --config {{ copick_config }} --target-dir {{ target_dir }} {{ copick_flags }}
 {% endif -%}
 
-{% if run_validate -%}
-cryoetportalprep push {{ config_path }} --dry-run
-{% endif -%}
+# Allow the reporter to publish its final snapshot without holding the job open.
+touch "$progress_file.done" 2>/dev/null || true
+for ((i=0; i<50; i++)); do
+    if ! kill -0 "$progress_pid" 2>/dev/null; then break; fi
+    sleep 0.2
+done
+kill "$progress_pid" 2>/dev/null || true
+wait "$progress_pid" 2>/dev/null || true
+
+# Validation failures are stored without failing prep; upload is gated on the result.
+python - {{ config_path }} {{ dataset_id }} <<'END_DEPOSITION_VALIDATION'
+{{ validation_code }}
+END_DEPOSITION_VALIDATION
 
 echo "Deposition prep completed."

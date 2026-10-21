@@ -28,15 +28,31 @@ def test_no_credential_handling_in_script():
     assert "AWS_SESSION_TOKEN" not in script
 
 
+def test_exports_quoted_aws_profile_before_upload(settings):
+    settings.DEPOSITION_AWS_PROFILE = "institution upload; $(touch unexpected)"
+    script = _render(prologue="ml load awscli")
+    assert (
+        script.index("ml load awscli")
+        < script.index("export AWS_PROFILE='institution upload; $(touch unexpected)'")
+        < script.index("aws s3 sync")
+    )
+
+
+def test_no_aws_profile_export_when_unset(settings):
+    settings.DEPOSITION_AWS_PROFILE = ""
+    assert "export AWS_PROFILE=" not in _render()
+
+
 def test_prologue_sets_up_cluster_env():
     script = _render()
-    assert "conda activate dataportalenv" in script
+    assert "ml load anaconda" in script
     assert "ml load awscli" in script
+    assert "conda activate" not in script
 
 
-def test_fail_fast_around_conda_prologue():
+def test_fail_fast_around_module_prologue():
     script = _render()
-    assert script.index("set -e") < script.index("conda activate") < script.index("set -euo pipefail")
+    assert script.index("set -e") < script.index("ml load anaconda") < script.index("set -euo pipefail")
 
 
 def test_setup_commands_are_separate_not_chained():

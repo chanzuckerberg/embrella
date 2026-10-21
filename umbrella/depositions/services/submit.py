@@ -12,9 +12,12 @@ from common import clusterio
 from depositions import tasks
 from depositions.models import DatasetJob, Deposition, DepositionAnnotation
 from depositions.services.dataprep_config import dataprep_config_yaml, dataset_is_ready, resolve_sync_destination
+from depositions.services.dataset_metadata import build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
+from depositions.services.metadata_requirements import metadata_issues
 from depositions.services.submission import PREP_ACTIVE, apply_status, on_push_complete, start_push
+from depositions.services.validation import require_validation
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +47,7 @@ def _required_dataset_ids(deposition, dataset, *, db):
     staged = (
         DatasetJob.objects.using(db)
         .filter(dataset__deposition=deposition)
-        .filter(Q(staged_at__isnull=False) | Q(state__in=DatasetJob.LOCKED_STATES))
+        .filter(Q(staged_at__isnull=False) | Q(state__in=DatasetJob.CLUSTER_FROZEN_STATES))
         .values_list("dataset__dataset_id", flat=True)
     )
     return set(staged) | {dataset.dataset_id}
@@ -55,22 +58,26 @@ def submit_dataset_prep(dataset):
     deposition = dataset.deposition
     if deposition.deposition_id is None or dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before submitting.")
-    if not dataset_is_ready(dataset):
-        raise SubmissionValidationError("This dataset isn't ready to submit — add sessions and run auto-fill first.")
-    if DepositionAnnotation.objects.filter(session__dataset=dataset, is_selected=True).exists():
-        # Annotation export isn't wired yet; refuse rather than mark the dataset done without it.
-        # TODO(#1291): annotation export.
-        raise SubmissionValidationError(
-            "Depositing annotations isn't supported yet; deselect them to submit this dataset."
-        )
-
-    cluster_id = _cluster_for_dataset(dataset)
-    auth = _service_auth()
     db = dataset._state.db
     # Claim one queued/running prep per deposition before freezing the shared config.
     # Otherwise an older queued job could overwrite a newer sibling's config.
     with transaction.atomic(using=db):
         Deposition.objects.using(db).select_for_update().get(pk=deposition.pk)
+        deposition.refresh_from_db()
+        dataset.refresh_from_db()
+        if not dataset_is_ready(dataset):
+            raise SubmissionValidationError(
+                "This dataset isn't ready to submit - add sessions and run auto-fill first."
+            )
+        if DepositionAnnotation.objects.filter(session__dataset=dataset, is_selected=True).exists():
+            # Annotation export isn't wired yet; refuse rather than mark the dataset done without it.
+            # TODO(#1291): annotation export.
+            raise SubmissionValidationError(
+                "Depositing annotations isn't supported yet; deselect them to submit this dataset."
+            )
+
+        auth = _service_auth()
+        cluster_id = _cluster_for_dataset(dataset)
         if (
             DatasetJob.objects.using(db)
             .filter(dataset__deposition=deposition, state__in=PREP_ACTIVE)
@@ -80,10 +87,14 @@ def submit_dataset_prep(dataset):
             raise SubmissionValidationError(
                 "Another dataset in this deposition is queued or running prep; wait for it to finish before submitting."
             )
+        portal_metadata = build_dataset_metadata(dataset)
+        issues = metadata_issues(portal_metadata, deposition.title)
+        if issues:
+            raise SubmissionValidationError("Complete the metadata before preparation:\n" + "\n".join(issues))
         job, _ = DatasetJob.objects.using(db).get_or_create(dataset=dataset)
         claimed = (
             DatasetJob.objects.using(db)
-            .filter(pk=job.pk, state__in=("pending", "failed"))
+            .filter(pk=job.pk, state__in=("pending", "failed", "prep_completed"))
             # Clear the prior attempt's ids + log so a re-failed prep doesn't surface the old output.
             .update(
                 state="prep_submitted",
@@ -91,6 +102,10 @@ def submit_dataset_prep(dataset):
                 push_slurm_job_id="",
                 error_message="",
                 log_excerpt="",
+                sync_progress=None,
+                sync_summary=None,
+                push_progress=None,
+                validation=None,
                 started_at=timezone.now(),
                 prep_completed_at=None,
                 completed_at=None,
@@ -115,11 +130,11 @@ def submit_dataset_prep(dataset):
             required_dataset_ids=required_ids,
         )
         params = {
+            "dataset_id": dataset.dataset_id,
             "output_dir": output_dir,
             "config_path": config_path,
             "config_yaml": config_yaml,
             "session_names": list(dataset.sessions.values_list("msi_session__name", flat=True)),
-            "run_validate": False,
         }
         job_name = f"deposition_prep_{deposition.deposition_id}_{dataset.dataset_id}"
         slurm_job_id = launch_deposition_job(
@@ -167,7 +182,9 @@ def submit_dataset_push(dataset):
     except DatasetJob.DoesNotExist:
         raise SubmissionValidationError("This dataset hasn't been prepared yet; submit it first.")
 
-    # Use the cluster prep staged on, not one re-derived from (mutable) metadata.
+    require_validation(job)
+
+    # Upload from the cluster used for preparation.
     cluster_id = job.cluster_id or _cluster_for_dataset(dataset)
     auth = _service_auth()
     output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
@@ -217,7 +234,7 @@ def preview_config_yaml(dataset):
     db = dataset._state.db
     job = getattr(dataset, "job", None)
     # Show the staged cluster only while the job is locked; otherwise derive it the way a resubmit will.
-    cluster_id = (job.cluster_id if job and job.is_locked else "") or _cluster_for_dataset(dataset)
+    cluster_id = (job.cluster_id if job and job.cluster_is_frozen else "") or _cluster_for_dataset(dataset)
     output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
     return dataprep_config_yaml(
         deposition,

@@ -39,16 +39,21 @@ export function WizardStepper({
   current,
   onSelect,
   skipped = [],
+  disabled = false,
+  blockForward = false,
 }: {
   steps: StepDef[];
   current: number;
   onSelect: (num: number) => void;
   skipped?: number[];
+  disabled?: boolean;
+  blockForward?: boolean;
 }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
       {steps.map((s, i) => {
         const isSkipped = skipped.includes(s.num);
+        const isDisabled = disabled || isSkipped || (blockForward && s.num > current);
         const state = stepState(s.num, current, isSkipped);
         return (
           <Fragment key={s.num}>
@@ -58,29 +63,36 @@ export function WizardStepper({
                 sx={{
                   flex: 1,
                   height: 2,
-                  mt: '19px',
-                  mx: 1.5,
+                  mt: { xs: '15px', sm: '19px' },
+                  mx: { xs: '4px', sm: 1.5 },
                   borderRadius: 1,
                   bgcolor: s.num <= current ? 'primary.main' : 'divider',
                 }}
               />
             )}
             <Box
-              sx={{ flexShrink: 0, width: 112, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}
+              sx={{
+                flexShrink: 0,
+                width: { xs: 36, sm: 72, md: 112 },
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 1,
+              }}
             >
               <Box
                 component="button"
                 type="button"
                 onClick={() => !isSkipped && onSelect(s.num)}
-                disabled={isSkipped}
+                disabled={isDisabled}
                 aria-label={`Step ${s.num}: ${s.title}${isSkipped ? ' (skipped)' : ''}`}
                 aria-current={state === 'current' ? 'step' : undefined}
                 sx={{
-                  width: 40,
-                  height: 40,
+                  width: { xs: 32, sm: 40 },
+                  height: { xs: 32, sm: 40 },
                   borderRadius: '50%',
                   border: '1px solid',
-                  cursor: isSkipped ? 'not-allowed' : 'pointer',
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -96,6 +108,7 @@ export function WizardStepper({
               <Typography
                 variant="caption"
                 sx={{
+                  display: { xs: 'none', sm: 'block' },
                   textAlign: 'center',
                   lineHeight: 1.25,
                   color: LABEL_COLOR[state],

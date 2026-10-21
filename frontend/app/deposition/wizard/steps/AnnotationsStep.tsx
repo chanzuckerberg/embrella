@@ -32,7 +32,7 @@ import {
   staleAnnotationIds,
   stripIncompleteLinks,
 } from '../../components/annotations/scan';
-import { isEditableStatus, type Dataset, type DepositionAnnotation } from '../../types';
+import { type Dataset, type DepositionAnnotation } from '../../types';
 import type { StepProps } from '../wizardTypes';
 
 interface SessionRef {
@@ -55,9 +55,8 @@ function toSessionRefs(dataset: Dataset): SessionRef[] {
   }));
 }
 
-export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }: StepProps) {
+export function AnnotationsStep({ dataset, reportSave, readOnly }: StepProps) {
   const queryClient = useQueryClient();
-  const readOnly = readOnlyProp || !isEditableStatus(dataset.status);
   const sessions = useMemo(() => toSessionRefs(dataset), [dataset]);
   const [activeKey, setActiveKey] = useState(sessions[0]?.key ?? '');
   const active = useMemo(() => sessions.find((s) => s.key === activeKey) ?? sessions[0], [sessions, activeKey]);
@@ -142,10 +141,12 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
     [dataset.id, queryClient, sessions]
   );
 
-  const { status, lastSavedAt, saveNow } = useDraftAutoSave(bySession, save, { enabled: !readOnly });
+  const { status, isDirty, lastSavedAt, error, saveNow, discardChanges } = useDraftAutoSave(bySession, save, {
+    enabled: !readOnly,
+  });
   useEffect(() => {
-    reportSave?.({ status, lastSavedAt, saveNow });
-  }, [status, lastSavedAt, saveNow, reportSave]);
+    reportSave?.({ status, isDirty, lastSavedAt, error, saveNow, discardChanges });
+  }, [status, isDirty, lastSavedAt, error, saveNow, discardChanges, reportSave]);
 
   const list = useMemo(() => bySession[active?.key ?? ''] ?? [], [bySession, active]);
   const activeAnn = list.find((a) => annId(a) === activeAnnId) ?? null;

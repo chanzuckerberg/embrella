@@ -16,12 +16,37 @@
 # Group-writable staged tree.
 umask 0002
 
-# -u deferred: prologue activates conda and reads unset vars.
+# Module setup may read unset variables.
 set -e
 {{ prologue }}
 set -euo pipefail
+{% if aws_profile %}
+export AWS_PROFILE={{ aws_profile }}
+{% endif %}
 
+progress_file="${SLURM_SUBMIT_DIR:-$PWD}/deposition-push-${SLURM_JOB_ID:-local}.progress.json"
+upload_log="$progress_file.source.log"
+python - push "$progress_file" "$upload_log" <<'END_DEPOSITION_PROGRESS' &
+{{ progress_code }}
+END_DEPOSITION_PROGRESS
+progress_pid=$!
+trap 'kill "$progress_pid" 2>/dev/null || true' EXIT
+
+# Keep the AWS exit status; progress logging must not change the upload result.
+set +e
 # AWS CLI uses the job account's credentials.
-aws s3 sync {{ staged_dir }} {{ s3_dest }} --follow-symlinks{% for pattern in exclude_patterns %} --exclude '{{ pattern }}'{% endfor %}
+aws s3 sync {{ staged_dir }} {{ s3_dest }} --follow-symlinks{% for pattern in exclude_patterns %} --exclude '{{ pattern }}'{% endfor %} 2>&1 | { tee "$upload_log" || cat; }
+upload_status=${PIPESTATUS[0]}
+set -e
+if [ "$upload_status" -ne 0 ]; then exit "$upload_status"; fi
+
+# Allow the reporter to publish its final snapshot without holding the job open.
+touch "$progress_file.done" 2>/dev/null || true
+for ((i=0; i<50; i++)); do
+    if ! kill -0 "$progress_pid" 2>/dev/null; then break; fi
+    sleep 0.2
+done
+kill "$progress_pid" 2>/dev/null || true
+wait "$progress_pid" 2>/dev/null || true
 
 echo "Deposition push completed."

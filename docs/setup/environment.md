@@ -34,10 +34,11 @@ comma-separated.
 
 ## Cluster
 
-| Variable       | Required    | Default | Notes                                 |
-| -------------- | ----------- | ------- | ------------------------------------- |
-| `SSH_DISABLED` |             | `True`  | Set `False` to enable cluster access. |
-| `SLURM_USER`   | for cluster |         | Service account on the cluster.       |
+| Variable                 | Required    | Default | Notes                                                                                                                                                               |
+| ------------------------ | ----------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SSH_DISABLED`           |             | `True`  | Set `False` to enable cluster access.                                                                                                                               |
+| `SLURM_USER`             | for cluster |         | Service account on the cluster.                                                                                                                                     |
+| `DEPOSITION_AWS_PROFILE` |             | unset   | Optional profile from the cluster service account's `~/.aws` files for deposition upload jobs. If unset, jobs use the account's existing AWS configuration or role. |
 
 !!! note
 

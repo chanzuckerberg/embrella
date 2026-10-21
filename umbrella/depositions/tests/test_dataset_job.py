@@ -11,24 +11,24 @@ ACTIVE_STATES = [s for s in ALL_STATES if s not in {"pending", "completed", "fai
 def test_every_state_maps_to_a_dataset_status():
     # The syncer reads dataset_status for any state, so all must be mapped.
     assert set(DatasetJob.DATASET_STATUS) == set(ALL_STATES)
-    assert set(DatasetJob.DATASET_STATUS.values()) <= {"syncing", "pushed", "failed"}
-    # Per the signed-off design: draft = no job; any live job state is syncing+.
-    assert DatasetJob.DATASET_STATUS["pending"] == "syncing"
+    assert set(DatasetJob.DATASET_STATUS.values()) <= {"draft", "syncing", "pushed", "failed"}
+    # Reset jobs return to draft so metadata can be corrected before a new prep.
+    assert DatasetJob.DATASET_STATUS["pending"] == "draft"
 
 
-def test_only_pending_and_failed_are_editable():
-    assert set(ALL_STATES) - {"pending", "failed"} == DatasetJob.LOCKED_STATES
-    assert not DatasetJob(state="pending").is_locked
-    assert not DatasetJob(state="failed").is_locked
-    assert DatasetJob(state="prep_completed").is_locked
-    assert DatasetJob(state="push_running").is_locked
+def test_only_pending_and_failed_allow_cluster_selection():
+    assert set(ALL_STATES) - {"pending", "failed"} == DatasetJob.CLUSTER_FROZEN_STATES
+    assert not DatasetJob(state="pending").cluster_is_frozen
+    assert not DatasetJob(state="failed").cluster_is_frozen
+    assert DatasetJob(state="prep_completed").cluster_is_frozen
+    assert DatasetJob(state="push_running").cluster_is_frozen
 
 
-def test_prep_completed_advances_only_to_push_submitted():
-    # prep_completed's sole forward move is push_submitted, never
-    # push_running/completed; the user's Submit click triggers it (#860 endpoint).
+def test_prep_completed_can_push_or_retry_preparation():
+    # Upload still needs an explicit claim; retry starts a fresh prep attempt.
     job = DatasetJob(state="prep_completed")
     assert job.can_transition_to("push_submitted")
+    assert job.can_transition_to("prep_submitted")
     assert not job.can_transition_to("push_running")
     assert not job.can_transition_to("completed")
 

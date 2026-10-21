@@ -215,9 +215,15 @@ the submitting user.
     /srv/portal/staging/{deposition_id}/
     ```
 
-3.  Make approved AWS credentials available on the compute node. Directory
-    permissions do not grant AWS access; the upload job needs them to reach S3.
-    The S3 target is configured separately through `deposition_sync_destination`.
+3.  Make AWS credentials available to the service account on the compute nodes,
+    with access to the S3 destination set by `deposition_sync_destination`.
+    Directory permissions do not grant AWS access.
+
+    To use a named profile from the service account's `~/.aws` files, set
+    `DEPOSITION_AWS_PROFILE` in the backend and worker environment. If unset,
+    upload jobs use the account's existing AWS configuration or role.
+    Restart the backend and worker with the updated environment. Jobs already
+    submitted keep their previous profile.
 
 Prep writes its config and dataset subdirectories beneath the staging path, and
 push reads those same subdirectories.
@@ -235,6 +241,20 @@ push reads those same subdirectories.
     jobs and uploads, or arrange migration of their staged data and permissions.
     Updating a PathType does not move existing data. Verify a small prep and
     upload from the deployed backend and worker before enabling the flow.
+
+### Pre-flight validation {#deposition-validation}
+
+Embrella includes saved wizard metadata in each dataset's `metadata` block of
+`dataprep_config.yaml`. `cryoetportalprep sync` uses it to write
+`portal_dataset_config.yaml`. Prep then runs
+`cryoetportalprep push <config> --dry-run --format json` for the current dataset.
+Upload requires a successful exit code and a JSON report with no errors for the
+current attempt. Warnings do not block upload. Failed, missing or unavailable
+results block upload. Retry preparation, or choose **Edit metadata** and prepare
+again. Diagnostics are visible only to the submission owner.
+
+Install `deposition_prep` in the cluster environment used for preparation, with
+support for per-dataset metadata and JSON validation reports.
 
 ## Bare Metal Install {#bare-metal-legacy}
 

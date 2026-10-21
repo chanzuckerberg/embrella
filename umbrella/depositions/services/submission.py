@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from depositions.models import DatasetJob
 from depositions.services.exceptions import SubmissionValidationError
+from depositions.services.validation import require_validation
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +62,10 @@ def _record_completion(job, *, active_states, attempt_field, job_id, fields, req
     return job
 
 
-def on_prep_complete(job, success, *, job_id=None, error_message=None, log_excerpt=None):
-    """Mark a finished prep job prep_completed, or failed. Ignored unless the row is still an active prep attempt."""
+def on_prep_complete(
+    job, success, *, job_id=None, error_message=None, log_excerpt=None, sync_summary=None, validation=None
+):
+    """Complete the active prep attempt; validation gates upload separately."""
     if success:
         # Drop any failure left from an earlier attempt.
         fields = {
@@ -80,22 +83,74 @@ def on_prep_complete(job, success, *, job_id=None, error_message=None, log_excer
         }
         if log_excerpt is not None:
             fields["log_excerpt"] = log_excerpt
+    if sync_summary is not None:
+        fields["sync_summary"] = sync_summary
+    fields["validation"] = validation if success else None
     return _record_completion(
         job, active_states=PREP_ACTIVE, attempt_field="prep_slurm_job_id", job_id=job_id, fields=fields
     )
 
 
+def reset_preparation(dataset):
+    """Reset a prepared or failed dataset to an editable draft, clearing its attempt."""
+    db = dataset._state.db
+    try:
+        job = DatasetJob.objects.using(db).get(dataset=dataset)
+    except DatasetJob.DoesNotExist:
+        raise SubmissionValidationError("This dataset hasn't been prepared yet.")
+    with transaction.atomic(using=db):
+        claimed = (
+            DatasetJob.objects.using(db)
+            .filter(pk=job.pk, state__in=("prep_completed", "failed"))
+            .update(
+                state="pending",
+                validation=None,
+                error_message="",
+                log_excerpt="",
+                prep_slurm_job_id="",
+                push_slurm_job_id="",
+                sync_progress=None,
+                sync_summary=None,
+                push_progress=None,
+                started_at=None,
+                prep_completed_at=None,
+                completed_at=None,
+            )
+        )
+        if not claimed:
+            job.refresh_from_db()
+            raise SubmissionValidationError(f"Preparation can't be reset while the dataset is {job.state!r}.")
+        job.refresh_from_db()
+        apply_status(job)
+    return job
+
+
 def start_push(job, *, launch, cancel=None):
     """Claim prep_completed -> push_submitted, launch the job, and store its id."""
     with transaction.atomic():
-        claimed = DatasetJob.objects.filter(pk=job.pk, state="prep_completed").update(
-            state="push_submitted", error_message="", completed_at=None, push_slurm_job_id=""
+        claimed = (
+            DatasetJob.objects.filter(
+                pk=job.pk,
+                state="prep_completed",
+                # Claim the same prep attempt used to build the upload paths.
+                prep_slurm_job_id=job.prep_slurm_job_id,
+                cluster_id=job.cluster_id,
+                validation__status="passed",
+                # literal, not F("prep_slurm_job_id"): JSON-key-to-column compare is fragile on MySQL.
+                validation__attempt=job.prep_slurm_job_id,
+                validation__blocking_issues=[],
+            )
+            .exclude(prep_slurm_job_id="")
+            .update(
+                state="push_submitted", error_message="", completed_at=None, push_slurm_job_id="", push_progress=None
+            )
         )
         job.refresh_from_db()
         if claimed:
             apply_status(job)
     if not claimed:
-        raise SubmissionValidationError(f"Push can only start from prep_completed, not {job.state!r}.")
+        require_validation(job)
+        raise SubmissionValidationError("Preparation changed before upload could start; refresh and try again.")
     job_id = None
     try:
         from depositions.services.launch import LaunchError

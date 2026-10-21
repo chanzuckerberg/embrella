@@ -40,14 +40,20 @@ function toForm(d: Deposition): FormState {
 export function DepositionForm({
   deposition,
   reportSave,
+  reportBlocking,
   readOnly = false,
 }: {
   deposition: Deposition;
   reportSave?: (state: AutoSaveState) => void;
+  reportBlocking?: (count: number) => void;
   readOnly?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<FormState>(() => toForm(deposition));
+  const titleMissing = !form.title.trim();
+  useEffect(() => {
+    reportBlocking?.(!readOnly && titleMissing ? 1 : 0);
+  }, [readOnly, titleMissing, reportBlocking]);
 
   const save = useCallback(
     async (payload: FormState) => {
@@ -61,16 +67,20 @@ export function DepositionForm({
         authors_json: payload.authors,
       });
       queryClient.setQueryData(depositionKeys.deposition(deposition.id), updated);
+      // Dataset requirements can change when inherited deposition authors change.
+      queryClient.invalidateQueries({ queryKey: [...depositionKeys.all, 'dataset'] });
       queryClient.invalidateQueries({ queryKey: [...depositionKeys.all, 'submissions'] });
     },
     [deposition.id, queryClient]
   );
 
-  const { status, lastSavedAt, saveNow } = useDraftAutoSave(form, save, { enabled: !readOnly });
+  const { status, isDirty, lastSavedAt, error, saveNow, discardChanges } = useDraftAutoSave(form, save, {
+    enabled: !readOnly,
+  });
 
   useEffect(() => {
-    reportSave?.({ status, lastSavedAt, saveNow });
-  }, [status, lastSavedAt, saveNow, reportSave]);
+    reportSave?.({ status, isDirty, lastSavedAt, error, saveNow, discardChanges });
+  }, [status, isDirty, lastSavedAt, error, saveNow, discardChanges, reportSave]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -88,9 +98,11 @@ export function DepositionForm({
               value={form.title}
               onChange={(e) => set('title', e.target.value)}
               required
+              error={!readOnly && titleMissing}
+              helperText={!readOnly && titleMissing ? 'Deposition title is required.' : undefined}
               fullWidth
               size="small"
-              disabled={readOnly}
+              InputProps={{ readOnly }}
             />
             <TextField
               label="Description"
@@ -100,7 +112,7 @@ export function DepositionForm({
               minRows={5}
               fullWidth
               size="small"
-              disabled={readOnly}
+              InputProps={{ readOnly }}
               helperText="3–5 sentences."
               sx={{ '& textarea': { resize: 'vertical' } }}
             />

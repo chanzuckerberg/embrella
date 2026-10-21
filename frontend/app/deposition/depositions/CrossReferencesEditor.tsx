@@ -1,7 +1,7 @@
 'use client';
 
 import { Icon } from '@czi-sds/components';
-import { Box, FormControl, IconButton, MenuItem, Select, Stack, Typography } from '@mui/material';
+import { Box, FormControl, IconButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 
 import { IdentifierField } from '../components/IdentifierField';
 import type { CrossRef, CrossRefType } from '../types';
@@ -42,14 +42,19 @@ export function CrossReferencesEditor({
       {entries.map((entry, i) => (
         <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
           <FormControl size="small" sx={{ minWidth: 170, height: 40 }}>
-            <Select
-              value={entry.type}
-              disabled={disabled}
-              onChange={(e) => patch(i, { type: e.target.value as CrossRefType })}
-            >
-              <MenuItem value="publication">{TYPE_LABEL.publication}</MenuItem>
-              <MenuItem value="related_db">{TYPE_LABEL.related_db}</MenuItem>
-            </Select>
+            {disabled ? (
+              <TextField
+                size="small"
+                inputProps={{ 'aria-label': 'Reference type' }}
+                value={TYPE_LABEL[entry.type]}
+                InputProps={{ readOnly: true }}
+              />
+            ) : (
+              <Select value={entry.type} onChange={(e) => patch(i, { type: e.target.value as CrossRefType })}>
+                <MenuItem value="publication">{TYPE_LABEL.publication}</MenuItem>
+                <MenuItem value="related_db">{TYPE_LABEL.related_db}</MenuItem>
+              </Select>
+            )}
           </FormControl>
           <IdentifierField
             kind={entry.type === 'publication' ? 'doi' : 'related_db'}
@@ -57,7 +62,7 @@ export function CrossReferencesEditor({
             fullWidth
             placeholder={PLACEHOLDER[entry.type]}
             value={entry.value}
-            disabled={disabled}
+            readOnly={disabled}
             onChange={(v) => patch(i, { value: v })}
           />
           <Box sx={{ display: 'flex', alignItems: 'center', height: 40 }}>

@@ -119,17 +119,18 @@ class DatasetJob(models.Model):
         "pending": {"prep_submitted"},
         "prep_submitted": {"prep_running", "prep_completed", "failed"},
         "prep_running": {"prep_completed", "failed"},
-        "prep_completed": {"push_submitted", "pending", "failed"},
+        "prep_completed": {"prep_submitted", "push_submitted", "pending", "failed"},
         "push_submitted": {"push_running", "completed", "failed"},
         "push_running": {"completed", "failed"},
         "failed": {"prep_submitted", "pending"},
         "completed": set(),
     }
-    # Metadata is frozen while a submission is in flight or staged; edits are
-    # allowed only in pending or failed.
-    LOCKED_STATES = frozenset(TRANSITIONS) - {"pending", "failed"}
+    # Cluster/config locks cover active, staged, and uploaded attempts. Failed
+    # attempts can be retried, but metadata edits still require reset (services.metadata).
+    CLUSTER_FROZEN_STATES = frozenset(TRANSITIONS) - {"pending", "failed"}
     DATASET_STATUS = {
-        "pending": "syncing",
+        # After a reset, pending means an editable draft.
+        "pending": "draft",
         "prep_submitted": "syncing",
         "prep_running": "syncing",
         "prep_completed": "syncing",
@@ -150,6 +151,11 @@ class DatasetJob(models.Model):
     prep_completed_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     log_excerpt = models.TextField(null=True, blank=True)
+    sync_progress = models.JSONField(null=True, blank=True)
+    sync_summary = models.JSONField(null=True, blank=True)
+    push_progress = models.JSONField(null=True, blank=True)
+    # Pre-flight validation result for the current prep attempt (see services/validation.py).
+    validation = models.JSONField(null=True, blank=True)
     error_message = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -161,9 +167,9 @@ class DatasetJob(models.Model):
         return f"DatasetJob {self.pk} ({self.state}) for Dataset {self.dataset_id}"
 
     @property
-    def is_locked(self):
-        """Metadata is frozen because a submission is in flight or staged."""
-        return self.state in self.LOCKED_STATES
+    def cluster_is_frozen(self):
+        """The submission is active, staged, or uploaded; cluster selection is frozen."""
+        return self.state in self.CLUSTER_FROZEN_STATES
 
     @property
     def dataset_status(self):

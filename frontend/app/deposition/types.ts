@@ -1,8 +1,5 @@
 export type DatasetStatus = 'draft' | 'syncing' | 'pushed' | 'failed';
 
-// Draft and failed datasets can be edited/resumed; syncing and pushed are locked.
-export const isEditableStatus = (status: DatasetStatus): boolean => status === 'draft' || status === 'failed';
-
 export interface AuthorRef {
   author_id: number; // soft-ref to People.Person
   is_primary: boolean;
@@ -36,6 +33,9 @@ export interface SyncProgress {
   done: number;
   total: number;
   eta?: string | null;
+  elapsed?: string;
+  estimated?: boolean;
+  objects?: { done: number; total: number | null; estimated: boolean };
   items?: SyncChecklistItem[];
 }
 
@@ -51,7 +51,9 @@ export interface ValidationWarning {
 }
 
 export interface JobValidation {
-  passed: boolean;
+  status: 'passed' | 'failed' | 'unavailable';
+  attempt: string | null;
+  blocking_issues: ValidationWarning[];
   warnings: ValidationWarning[];
 }
 
@@ -76,6 +78,7 @@ export interface DatasetJob {
   sync_command?: string | null;
   push_command?: string | null;
   sync_progress?: SyncProgress | null;
+  push_progress?: SyncProgress | null;
   sync_summary?: SyncSummary | null;
   validation?: JobValidation | null;
 }
@@ -234,6 +237,7 @@ export interface PreparationSource {
 }
 
 export interface Dataset {
+  metadata_issues: string[];
   preparation_sources?: PreparationSource[];
   id: number;
   deposition: number;

@@ -57,3 +57,14 @@ export function formatBytes(size: number | null | undefined): string {
 
   return `${value.toFixed(2)} ${BYTE_UNITS[BYTE_UNITS.length - 1]}`;
 }
+
+/** Binary byte count with IEC units and one decimal for scaled values. */
+export function formatBinaryBytes(value: number): string {
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
+  let index = 0;
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024;
+    index += 1;
+  }
+  return `${index ? value.toFixed(1) : value} ${units[index]}`;
+}

@@ -4,10 +4,9 @@ import { Alert, Box, CircularProgress } from '@mui/material';
 
 import type { StepProps } from '../wizardTypes';
 import { useDeposition } from '../../hooks/useDeposition';
-import { isEditableStatus } from '../../types';
 import { DepositionForm } from '../../depositions/DepositionForm';
 
-export function DepositionStep({ dataset, reportSave, readOnly }: StepProps) {
+export function DepositionStep({ dataset, reportSave, reportBlocking, readOnly }: StepProps) {
   const { data, isPending, isError } = useDeposition(dataset.deposition ?? null);
 
   if (isPending) {
@@ -21,11 +20,23 @@ export function DepositionStep({ dataset, reportSave, readOnly }: StepProps) {
     return <Alert severity="error">Could not load the deposition for this dataset.</Alert>;
   }
 
+  const siblingLocked = !!data.datasets?.some(
+    (sibling) => sibling.id !== dataset.id && sibling.job && sibling.job.state !== 'pending'
+  );
+
   return (
-    <DepositionForm
-      deposition={data}
-      reportSave={reportSave}
-      readOnly={readOnly || !isEditableStatus(dataset.status)}
-    />
+    <>
+      {!readOnly && siblingLocked && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Editing is paused because another dataset in this submission has started preparation.
+        </Alert>
+      )}
+      <DepositionForm
+        deposition={data}
+        reportSave={reportSave}
+        reportBlocking={reportBlocking}
+        readOnly={readOnly || siblingLocked}
+      />
+    </>
   );
 }

@@ -81,7 +81,7 @@ export function Organism({
         <Autocomplete
           sx={{ flex: 1 }}
           freeSolo
-          disabled={readOnly}
+          readOnly={readOnly}
           loading={isFetching}
           options={options}
           noOptionsText={noOptionsText}
@@ -123,7 +123,7 @@ export function Organism({
           }}
           size="small"
           sx={{ flex: 1 }}
-          disabled={readOnly}
+          InputProps={{ readOnly }}
           error={taxidError}
           helperText={
             taxidValid ? (
