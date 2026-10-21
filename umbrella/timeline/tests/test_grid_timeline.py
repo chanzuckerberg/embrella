@@ -93,6 +93,15 @@ class TestGridEntries:
 
         assert timeline(logged_in_client, test_grid.id)[0]["summary"] == "Edited blot time"
 
+    def test_unchanged_edit_skipped(self, logged_in_client, test_grid):
+        logged_in_client.patch(
+            f"/cryo_grids/v1/grids/{test_grid.id}/update/",
+            data={"name": test_grid.name, "blot_time": test_grid.blot_time},
+            content_type="application/json",
+        )
+
+        assert kinds(timeline(logged_in_client, test_grid.id)) == [EntryKind.CREATED]
+
     def test_no_reason_classified_from_diff(self, logged_in_client, test_grid):
         test_grid.clipped = True
         test_grid.save()  # e.g. admin edit: no reason

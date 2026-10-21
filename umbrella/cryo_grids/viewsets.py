@@ -47,7 +47,7 @@ from umbrella.choices import (
 )
 
 from common.sorting import msi_session_sort_key
-from cryo_grids.history import ChangeReason, edit_reason, with_reason
+from cryo_grids.history import ChangeReason, edit_reason, is_noop, with_reason
 from cryo_grids.models import (
     LABEL_TYPO_WINDOW,
     Cane,
@@ -1258,8 +1258,11 @@ class CryoGridViewSet(viewsets.ModelViewSet):
 
             serializer = CryoGridSerializer(grid, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
-            with_reason(grid, edit_reason(grid, serializer.validated_data))
-            serializer.save()
+
+            # Skip no-op saves: they'd add an empty "Edited" timeline entry
+            if not is_noop(grid, serializer.validated_data):
+                with_reason(grid, edit_reason(grid, serializer.validated_data))
+                serializer.save()
 
             return Response(
                 {

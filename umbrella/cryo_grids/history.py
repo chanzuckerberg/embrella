@@ -45,3 +45,8 @@ def edit_reason(obj, changes: dict) -> ChangeReason:
     moved = any(name in changes and changes[name] != getattr(obj, name) for name in fields)
 
     return ChangeReason.MOVED if moved else ChangeReason.EDITED
+
+
+def is_noop(obj, changes: dict) -> bool:
+    """``changes`` match ``obj`` already, e.g. Save clicked after editing only labels."""
+    return all(getattr(obj, name) == value for name, value in changes.items())
