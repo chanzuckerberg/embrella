@@ -9,6 +9,10 @@ import tempfile
 from pathlib import Path
 
 MARKER = "DEPOSITION_VALIDATION="
+MAX_STDERR_BYTES = 32_000
+MAX_REPORT_BYTES = 2_000_000
+MAX_ISSUES = 20
+MAX_ISSUE_TEXT_LENGTH = 500
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
@@ -47,11 +51,11 @@ def validate(config_path, dataset_id):
                     check=False,
                 )
                 errors.seek(0, 2)
-                errors.seek(max(0, errors.tell() - 32000))
+                errors.seek(max(0, errors.tell() - MAX_STDERR_BYTES))
                 text = ANSI.sub("", errors.read().decode("utf-8", errors="replace"))
                 print("\n".join(f" {line}" if line.startswith(MARKER) else line for line in text.splitlines()))
                 output.seek(0)
-                report = json.loads(output.read(2_000_000))
+                report = json.loads(output.read(MAX_REPORT_BYTES))
             if not isinstance(report, dict) or not isinstance(report.get("valid"), bool):
                 raise ValueError("Invalid CLI validation report")
             issues = report.get("issues")
@@ -67,9 +71,12 @@ def validate(config_path, dataset_id):
                 severity = issue["severity"]
                 message = issue["message"]
                 print(f"{severity}: " + message.replace("\n", "\n "))
-                item = {"message": message[:500], "path": str(issue.get("path") or "")[:500]}
+                item = {
+                    "message": message[:MAX_ISSUE_TEXT_LENGTH],
+                    "path": str(issue.get("path") or "")[:MAX_ISSUE_TEXT_LENGTH],
+                }
                 target = result["warnings"] if severity == "warning" else result["blocking_issues"]
-                if len(target) < 20:
+                if len(target) < MAX_ISSUES:
                     target.append(item)
             passed = completed.returncode == 0 and report["valid"] and not result["blocking_issues"]
             result["status"] = "passed" if passed else "failed"

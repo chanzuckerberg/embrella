@@ -1,11 +1,11 @@
-"""Tests for the dataset-config YAML serializer."""
+"""Tests for building portal dataset metadata."""
 
 import pytest
 from cryo_grids.models import Sample
 from people.models import Institution, Person
 
 from depositions.models import Dataset, DatasetFunding, Deposition
-from depositions.services.config_yaml import build_dataset_metadata
+from depositions.services.dataset_metadata import build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
 
 

@@ -28,11 +28,10 @@ def _filled(value):
     return isinstance(value, str) and bool(value.strip())
 
 
-def metadata_issues(metadata, deposition_title):
+def dataset_metadata_issues(metadata):
     """Return user-facing issues; optional empty fields never create placeholders."""
     issues = []
     for label, value in (
-        ("Deposition title", deposition_title),
         ("Dataset title", metadata.get("dataset_title")),
         ("Dataset description", metadata.get("dataset_description")),
     ):
@@ -71,4 +70,12 @@ def metadata_issues(metadata, deposition_title):
     for row in metadata.get("funding") or []:
         if not _filled(row.get("funding_agency_name")):
             issues.append("Add a funding agency name or remove the incomplete funding entry. Grant ID is optional.")
+    return issues
+
+
+def metadata_issues(metadata, deposition_title):
+    """Check the full preparation request, including its parent deposition."""
+    issues = dataset_metadata_issues(metadata)
+    if not _filled(deposition_title):
+        issues.insert(0, "Deposition title is required.")
     return issues

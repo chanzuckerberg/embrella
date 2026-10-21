@@ -1,6 +1,6 @@
 """Build the prep deployment config from saved autofill data and reviewed DB values.
 
-This is dataprep_config.yaml, separate from the portal metadata YAML in config_yaml.
+This is dataprep_config.yaml, separate from the portal metadata built by dataset_metadata.
 Path resolution, remote writes, and launching jobs belong to the submit service.
 """
 
@@ -13,7 +13,7 @@ import yaml
 from stores.paths import resolve_dir
 
 from depositions.models import TiltseriesMetadata
-from depositions.services.config_yaml import build_dataset_metadata
+from depositions.services.dataset_metadata import build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
 
 logger = logging.getLogger(__name__)

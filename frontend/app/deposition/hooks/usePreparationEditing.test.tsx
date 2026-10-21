@@ -12,6 +12,7 @@ const resetApi = resetDatasetPreparation as jest.Mock;
 const prepared = {
   id: 7,
   deposition: 1,
+  metadata_issues: [],
   title: 'My dataset',
   status: 'syncing',
   is_owner: true,

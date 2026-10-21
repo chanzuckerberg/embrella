@@ -25,6 +25,9 @@ from .models import (
 )
 from .permissions import deposition_owner_id
 from .services.autofill import TILTSERIES_PIPELINE_VALUES
+from .services.dataset_metadata import build_dataset_metadata
+from .services.exceptions import SubmissionValidationError
+from .services.metadata_requirements import dataset_metadata_issues
 from .services.progress import serialize_progress, serialize_summary
 
 
@@ -305,6 +308,7 @@ class DatasetSampleSerializer(serializers.ModelSerializer):
 
 
 class DatasetSerializer(serializers.ModelSerializer):
+    metadata_issues = serializers.SerializerMethodField()
     funding = DatasetFundingSerializer(many=True, required=False)
     sessions = DepositionSessionLinkSerializer(many=True, required=False)
     sample = DatasetSampleSerializer(required=False)
@@ -317,6 +321,12 @@ class DatasetSerializer(serializers.ModelSerializer):
         fields = "__all__"
         # dataset_id reserved; status/dates set by syncer/system.
         read_only_fields = ["dataset_id", "status", "created_at", "updated_at"]
+
+    def get_metadata_issues(self, obj):
+        try:
+            return dataset_metadata_issues(build_dataset_metadata(obj))
+        except SubmissionValidationError as error:
+            return [error.public_message]
 
     def validate_sessions(self, sessions):
         seen = set()

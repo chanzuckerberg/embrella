@@ -1529,3 +1529,26 @@ class TestMetadataLock:
         assert response.status_code == 409
         session.refresh_from_db()
         assert session.last_autofill_at is None
+
+
+@pytest.mark.django_db
+def test_dataset_response_reports_preparation_issues_without_preventing_draft_saves(auth_client):
+    deposition = _make_deposition(auth_client)
+    dataset = _make_dataset(auth_client, deposition["id"])
+    assert "Dataset description is required." in dataset["metadata_issues"]
+    response = auth_client.patch(
+        f"{DATASETS}{dataset['id']}/",
+        {
+            "description": "Reviewed description",
+            "sample": {"sample_type": "in_vitro"},
+            "is_authors_same_as_deposition": False,
+            "authors_json": [{"full_name": "Test Author", "is_primary": True, "is_corresponding": True}],
+        },
+        format="json",
+    )
+    assert response.status_code == 200, response.content
+    assert response.json()["metadata_issues"] == []
+    # A partial optional term remains saveable, with the same requirement used by submit.
+    response = auth_client.patch(f"{DATASETS}{dataset['id']}/", {"assay_label": "Microscopy"}, format="json")
+    assert response.status_code == 200
+    assert response.json()["metadata_issues"] == ["Assay needs both a name and an ontology ID."]

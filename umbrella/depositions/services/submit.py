@@ -11,8 +11,8 @@ from stores.paths import resolve_dir
 from common import clusterio
 from depositions import tasks
 from depositions.models import DatasetJob, Deposition, DepositionAnnotation
-from depositions.services.config_yaml import build_dataset_metadata
 from depositions.services.dataprep_config import dataprep_config_yaml, dataset_is_ready, resolve_sync_destination
+from depositions.services.dataset_metadata import build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
 from depositions.services.metadata_requirements import metadata_issues

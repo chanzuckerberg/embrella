@@ -19,7 +19,6 @@ import { bioRequirements, isRequiredBioFieldMet } from './sections/bioRequiremen
 import { Funding } from './sections/Funding';
 import { Organism } from './sections/Organism';
 import { mergePreparation } from './preparation';
-import { datasetMetadataIssues } from './metadataRequirements';
 import { Sample } from './sections/Sample';
 import { SectionCard } from './sections/SectionCard';
 import { type NavItem, SideNav } from './sections/SideNav';
@@ -194,10 +193,11 @@ export function DatasetForm({
   const authors = form.is_authors_same_as_deposition ? depositionAuthors : form.authors;
   const authorCount = authors?.length;
   const awaitingAuthors = form.is_authors_same_as_deposition && depositionAuthorCount === undefined;
-  const issues = datasetMetadataIssues(form, authors);
+  const issues = dataset.metadata_issues;
+  const validationPending = isDirty || status === 'saving';
   useEffect(() => {
-    reportBlocking?.(readOnly ? 0 : issues.length + Number(awaitingAuthors));
-  }, [issues.length, awaitingAuthors, readOnly, reportBlocking]);
+    reportBlocking?.(readOnly ? 0 : issues.length + Number(awaitingAuthors || validationPending));
+  }, [issues.length, awaitingAuthors, validationPending, readOnly, reportBlocking]);
   const bioMet = isRequiredBioFieldMet(form.sample, req);
   const organismMet = !!form.sample.organism_name?.trim() && form.sample.organism_taxid != null;
 
@@ -274,7 +274,10 @@ export function DatasetForm({
                 : 'Loading deposition authors…'}
             </Alert>
           )}
-          {!readOnly && reportBlocking && issues.length > 0 && (
+          {!readOnly && reportBlocking && validationPending && (
+            <Alert severity="info">Checking required fields after saving...</Alert>
+          )}
+          {!readOnly && reportBlocking && !validationPending && issues.length > 0 && (
             <Alert severity="info">
               Complete the metadata before preparation:
               <Box component="ul" sx={{ m: 0, pl: 2.5 }}>

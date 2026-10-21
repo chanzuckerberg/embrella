@@ -67,6 +67,8 @@ export function DepositionForm({
         authors_json: payload.authors,
       });
       queryClient.setQueryData(depositionKeys.deposition(deposition.id), updated);
+      // Dataset requirements can change when inherited deposition authors change.
+      queryClient.invalidateQueries({ queryKey: [...depositionKeys.all, 'dataset'] });
       queryClient.invalidateQueries({ queryKey: [...depositionKeys.all, 'submissions'] });
     },
     [deposition.id, queryClient]

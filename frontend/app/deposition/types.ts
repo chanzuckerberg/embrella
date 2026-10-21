@@ -234,6 +234,7 @@ export interface PreparationSource {
 }
 
 export interface Dataset {
+  metadata_issues: string[];
   preparation_sources?: PreparationSource[];
   id: number;
   deposition: number;
