@@ -31,11 +31,6 @@ function PathRow({ label, path }: { label: string; path: RolePath }) {
   );
 }
 
-function usageLabel(used: boolean | null): string {
-  if (used == null) return 'Unknown';
-  return used ? 'Yes' : 'No';
-}
-
 interface SessionSummaryProps {
   session: CreatedSession;
   /** Rendered between the identity rows and the paths, e.g. a review notice. */
@@ -47,6 +42,13 @@ interface SessionSummaryProps {
  * Shared by the created-session dialog and the launch form's session accordion.
  */
 export function SessionSummary({ session, notice }: SessionSummaryProps) {
+  let phasePlateLabel = 'Unknown';
+  if (session.acquisition?.phase_plate_used === false) phasePlateLabel = 'None';
+  if (session.acquisition?.phase_plate_used === true)
+    phasePlateLabel = session.acquisition.phase_plate_type || 'Unknown type';
+  let energyFilterLabel = 'Unknown';
+  if (session.acquisition?.energy_filter_used === true) energyFilterLabel = 'Yes';
+  if (session.acquisition?.energy_filter_used === false) energyFilterLabel = 'No';
   const details = [
     { label: 'Name', value: session.name },
     { label: 'Project', value: session.project_name },
@@ -56,8 +58,8 @@ export function SessionSummary({ session, notice }: SessionSummaryProps) {
     ...(session.acquisition
       ? [
           { label: 'Super-resolution', value: session.acquisition.super_resolution ? 'Yes' : 'No' },
-          { label: 'Phase plate used', value: usageLabel(session.acquisition.phase_plate_used) },
-          { label: 'Energy filter used', value: usageLabel(session.acquisition.energy_filter_used) },
+          { label: 'Energy filter used', value: energyFilterLabel },
+          { label: 'Phase plate', value: phasePlateLabel },
         ]
       : []),
   ];

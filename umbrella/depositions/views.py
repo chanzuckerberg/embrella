@@ -464,15 +464,15 @@ class DepositionSessionViewSet(
         with metadata_edit(session):
             raw = result["session"]
             mapped = map_session_to_metadata(raw)
-            acq = msi_session.acquisition
             TiltseriesMetadata.objects.update_or_create(
                 session=session,
                 defaults={
                     **mapped["tiltseries"],
                     **map_session_plan_to_instrument_metadata(
                         msi_session.session_plan,
-                        phase_plate_used=acq.phase_plate_used if acq else None,
-                        energy_filter_used=acq.energy_filter_used if acq else None,
+                        phase_plate_used=msi_session.phase_plate_used,
+                        phase_plate_type=msi_session.acquisition.phase_plate_type if msi_session.acquisition else None,
+                        energy_filter_used=msi_session.energy_filter_used,
                     ),
                     "autofill_metadata": raw,
                 },

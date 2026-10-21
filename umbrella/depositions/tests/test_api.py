@@ -372,7 +372,7 @@ class TestAutoFill:
         plan.camera.save()
 
         owned_session.msi_session.acquisition = AcquisitionSettings.objects.create(
-            phase_plate_used=True, energy_filter_used=True
+            phase_plate_used=True, phase_plate_type="Laser", energy_filter_used=True
         )
         owned_session.msi_session.save(update_fields=["acquisition"])
 
@@ -396,7 +396,7 @@ class TestAutoFill:
         assert ts.microscope_manufacturer == "TFS"
         assert ts.microscope_model == "Krios G4"
         assert ts.microscope_energy_filter == "Selectris X"
-        assert ts.microscope_phase_plate == "Volta"
+        assert ts.microscope_phase_plate == "Laser"
         assert ts.microscope_image_corrector == "Cs corrector"
         assert ts.camera_manufacturer == "Gatan"
         assert ts.camera_model == "K3"
@@ -461,12 +461,26 @@ class TestAutoFill:
             auth_client.post(self._url(owned_session))
         assert TiltseriesMetadata.objects.get(session=owned_session).microscope_phase_plate == ""
 
-    def test_rerun_with_blank_tem_keeps_manual_instrument_edits(self, auth_client, owned_session):
-        """A second auto-fill must not wipe instrument fields the user typed while the tem row is blank."""
+    @pytest.mark.parametrize("installed", [True, False])
+    def test_rerun_preserves_manual_values_for_unknown_phase_plate_or_blank_instrument(
+        self, auth_client, owned_session, installed
+    ):
+        """Unknown phase plate usage stays unasserted; the installed energy filter is assumed used."""
+        from tem.models import AcquisitionSettings
+
         from depositions.models import TiltseriesMetadata
 
-        # tem scope/camera are blank (defaults); the user typed a phase_plate by hand.
-        TiltseriesMetadata.objects.create(session=owned_session, microscope_phase_plate="Volta (manual)")
+        msi = owned_session.msi_session
+        msi.acquisition = AcquisitionSettings.objects.create(phase_plate_used=None, energy_filter_used=None)
+        msi.save(update_fields=["acquisition"])
+        msi.session_plan.scope.phase_plate = "Volta" if installed else ""
+        msi.session_plan.scope.energy_filter = "Selectris X" if installed else ""
+        msi.session_plan.scope.save()
+        TiltseriesMetadata.objects.create(
+            session=owned_session,
+            microscope_phase_plate="Volta (manual)",
+            microscope_energy_filter="Selectris X (manual)",
+        )
         owned_session.aretomo_run_name = "run001"
         owned_session.save(update_fields=["aretomo_run_name"])
 
@@ -484,7 +498,8 @@ class TestAutoFill:
 
         assert r.status_code == 200, r.content
         ts = TiltseriesMetadata.objects.get(session=owned_session)
-        assert ts.microscope_phase_plate == "Volta (manual)"  # blank tem didn't overwrite the edit
+        assert ts.microscope_phase_plate == "Volta (manual)"
+        assert ts.microscope_energy_filter == ("Selectris X" if installed else "Selectris X (manual)")
 
     def test_populated_tem_overwrites_existing_value(self, auth_client, owned_session):
         """The other half of the contract: a populated tem value wins over an existing row value."""

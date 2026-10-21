@@ -127,9 +127,15 @@ def map_session_plan_to_instrument_metadata(
     session_plan: "SessionPlan",
     *,
     phase_plate_used: bool | None = None,
+    phase_plate_type: str | None = None,
     energy_filter_used: bool | None = None,
 ) -> dict:
-    """Instrument/facility fields from the session's Microscope/Camera + software (reads the ORM)."""
+    """Map instrument metadata using recorded accessory usage.
+
+    Explicit non-use clears stale values. Unknown phase-plate usage preserves existing values.
+    Unknown energy-filter usage is assumed used. Blank instrument names are omitted so reruns
+    preserve manual entries; a known phase-plate use without a recorded type falls back to the scope.
+    """
     scope = session_plan.scope
     camera = session_plan.camera
     # image_correctors is raw JSON in admin: ignore a non-list, drop blanks, keep whole names within
@@ -156,8 +162,18 @@ def map_session_plan_to_instrument_metadata(
         "data_acquisition_software": session_plan.software.name,  # from the plan; filtered like the rest
     }
     out = {k: v for k, v in fields.items() if v}
-    out.update(_accessory_field("microscope_phase_plate", scope.phase_plate, phase_plate_used))
-    out.update(_accessory_field("microscope_energy_filter", scope.energy_filter, energy_filter_used))
+    out.update(
+        _accessory_field(
+            "microscope_phase_plate",
+            scope.phase_plate if phase_plate_type is None else phase_plate_type,
+            phase_plate_used,
+        )
+    )
+    out.update(
+        _accessory_field(
+            "microscope_energy_filter", scope.energy_filter, True if energy_filter_used is None else energy_filter_used
+        )
+    )
     return out
 
 
