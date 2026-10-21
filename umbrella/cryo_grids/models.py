@@ -1,8 +1,11 @@
+from datetime import timedelta
+
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
 from external_links.models import ExternalResource
 from projects.models import Project
+from simple_history.models import HistoricalRecords
 from umbrella.choices import CANE_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING, PUCK_COLORS
 
 
@@ -19,6 +22,7 @@ class Dewar(models.Model):
     site = models.ForeignKey(Site, on_delete=models.CASCADE)
     shipper = models.BooleanField(default=False, help_text="Is this a dry-shipper ?")
     max_canes = models.PositiveSmallIntegerField(default=6, help_text="Maximum number of canes fit in the dewar")
+    history = HistoricalRecords()
 
     def __str__(self):
         return "Dewar %s" % self.name
@@ -30,6 +34,7 @@ class Cane(models.Model):
     dewar = models.ForeignKey(Dewar, on_delete=models.CASCADE, null=True, blank=True)
     position_in_dewar = models.PositiveSmallIntegerField(default=1, null=True, blank=True)
     max_pucks = models.PositiveSmallIntegerField(default=10, help_text="Maximum number of pucks fit in the cane")
+    history = HistoricalRecords()
 
     class Meta:
         unique_together = [["name", "color"], ["dewar", "position_in_dewar"]]
@@ -56,6 +61,7 @@ class Puck(models.Model):
         blank=True,
         help_text="User who created or is responsible for this puck",
     )
+    history = HistoricalRecords()
 
     class Meta:
         unique_together = [["name", "color"], ["cane", "position_in_cane"]]
@@ -77,6 +83,7 @@ class CryoGridBox(models.Model):
     puck = models.ForeignKey(Puck, on_delete=models.CASCADE, null=True, blank=True)
     position_in_puck = models.PositiveSmallIntegerField(default=1, null=True, blank=True)
     max_grids = models.PositiveSmallIntegerField(default=4, help_text="Maximum number of grids fit in the box")
+    history = HistoricalRecords()
 
     class Meta:
         unique_together = [["puck", "position_in_puck", "name"]]
@@ -229,6 +236,10 @@ LABEL_COLORS = [
 ]
 
 
+# Unused labels younger than this are typos: auto-deleted on removal, hidden from timelines
+LABEL_TYPO_WINDOW = timedelta(minutes=1)
+
+
 def random_label_color():
     import random
 
@@ -242,6 +253,7 @@ class Label(models.Model):
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_labels"
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
@@ -254,6 +266,7 @@ class GridLabel(models.Model):
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="added_grid_labels"
     )
     added_at = models.DateTimeField(auto_now_add=True)
+    history = HistoricalRecords()
 
     class Meta:
         unique_together = ["grid", "label"]
@@ -310,6 +323,7 @@ class CryoGrid(models.Model):
         max_length=200, blank=True, null=True, help_text="Link to additional resources related to this cryo-grid"
     )
     labels = models.ManyToManyField(Label, blank=True, through="GridLabel", related_name="grids")
+    history = HistoricalRecords(excluded_fields=["updated_on", "notes", "resource_link"])
 
     class Meta:
         unique_together = ["name", "freezing_session", "specimen", "copy_number"]
