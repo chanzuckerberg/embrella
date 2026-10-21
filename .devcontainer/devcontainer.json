@@ -33,7 +33,9 @@
     "CLAUDE_CONFIG_DIR": "/home/embrella/.claude",
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "DEVCONTAINER": "true",
-    "HISTFILE": "/commandhistory/.zsh_history"
+    "HISTFILE": "/commandhistory/.zsh_history",
+    // Image disables .pyc for prod, turning it back on
+    "PYTHONDONTWRITEBYTECODE": ""
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "waitFor": "postCreateCommand",
