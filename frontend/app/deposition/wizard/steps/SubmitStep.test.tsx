@@ -130,6 +130,36 @@ it('shows a clean validation pass as success, not a warning', () => {
   expect(screen.queryByText(/0 warnings/)).toBeNull();
 });
 
+it.each([true, false])(
+  'shows upload counts and elapsed time, with ETA only for a known total (estimated=%s)',
+  (estimated) => {
+    setup({
+      id: 1,
+      state: 'push_running',
+      push_slurm_job_id: '99',
+      push_progress: {
+        done: 1024,
+        total: 2048,
+        estimated,
+        objects: { done: 12, total: 30, estimated },
+        elapsed: '2m 10s',
+        eta: '2m 10s',
+      },
+    });
+    expect(screen.getByText(`12 / ${estimated ? '~' : ''}30 objects uploaded`)).toBeInTheDocument();
+    expect(screen.getByText('Elapsed: 2m 10s')).toBeInTheDocument();
+    const bar = screen.getByRole('progressbar', { name: 'Upload progress' });
+    if (estimated) {
+      expect(screen.getByText(/Calculating total…/)).toBeInTheDocument();
+      expect(screen.queryByText(/50%|ETA/)).not.toBeInTheDocument();
+      expect(bar).not.toHaveAttribute('aria-valuenow');
+    } else {
+      expect(screen.getByText(/50% · ETA 2m 10s/)).toBeInTheDocument();
+      expect(bar).toHaveAttribute('aria-valuenow', '50');
+    }
+  }
+);
+
 it('blocks submit on a failing validation', () => {
   setup({
     id: 1,

@@ -43,12 +43,23 @@ def collect(job, phase, cluster_id, slurm_job_id, auth):
         }
         if sample["done"] > sample["total"] or sample["updated_at"] < sample["started_at"]:
             raise ValueError("Inconsistent progress snapshot")
+        if phase == "push" and "estimated" in raw:
+            sample["estimated"] = raw["estimated"] is True
         if phase == "prep":
             sample["items"] = [
                 {"label": item["label"], "done": _count(item["done"]), "total": _count(item["total"])}
                 for item in raw.get("items", [])
                 if item.get("label") in LABELS
             ]
+        elif "objects" in raw:
+            objects = raw["objects"]
+            sample["objects"] = {
+                "done": _count(objects["done"]),
+                "total": _count(objects["total"]) if objects.get("total") is not None else None,
+                "estimated": objects.get("estimated") is True,
+            }
+            if sample["objects"]["total"] is not None and sample["objects"]["done"] > sample["objects"]["total"]:
+                raise ValueError("Inconsistent uploaded object counts")
         field = "sync_progress" if phase == "prep" else "push_progress"
         attempt = f"{phase}_slurm_job_id"
         qs = DatasetJob.objects.filter(
@@ -86,11 +97,16 @@ def serialize_progress(raw):
         return None
     done, total = raw["done"], raw["total"]
     result = {"done": done, "total": total, "eta": None}
+    if "estimated" in raw:
+        result["estimated"] = raw["estimated"]
     if "items" in raw:
         result["items"] = raw["items"]
     advanced = done - raw.get("initial_done", 0)
     elapsed = raw["updated_at"] - raw["started_at"]
-    if 0 < done < total and advanced > 0 and elapsed > 0:
+    if "objects" in raw:
+        result["objects"] = raw["objects"]
+        result["elapsed"] = format_duration(elapsed)
+    if not raw.get("estimated", False) and 0 < done < total and advanced > 0 and elapsed > 0:
         result["eta"] = format_duration((total - done) * elapsed / advanced)
     return result
 

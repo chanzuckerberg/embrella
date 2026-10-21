@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Icon } from '@czi-sds/components';
 import { Alert, Box, ButtonBase, CircularProgress, LinearProgress, Stack, Typography } from '@mui/material';
 
+import { formatBinaryBytes } from '@app/common/utils/format';
+
 import type {
   DatasetJob,
   JobState,
@@ -138,16 +140,6 @@ function uploadNote(state: JobState | undefined): string {
   if (state === 'push_submitted') return 'Upload job submitted.';
   if (state === 'push_running') return 'Waiting for upload progress.';
   return 'Files have been uploaded to S3. Portal indexing and publication are separate steps.';
-}
-
-function byteLabel(value: number): string {
-  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
-  let index = 0;
-  while (value >= 1024 && index < units.length - 1) {
-    value /= 1024;
-    index += 1;
-  }
-  return `${index ? value.toFixed(1) : value} ${units[index]}`;
 }
 
 function summaryLine(s: SyncSummary): string {
@@ -357,6 +349,7 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
 
   const progress = job?.sync_progress ?? null;
   const uploadProgress = job?.push_progress ?? null;
+  const uploadTotalEstimated = uploadProgress?.estimated ?? uploadProgress?.objects?.estimated ?? false;
   const summary = job?.sync_summary ?? null;
   const warnings = job?.validation?.warnings ?? [];
   const blockingIssues = job?.validation?.blocking_issues ?? [];
@@ -453,11 +446,6 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
                 </Typography>
               )}
               <CommandBox text={job?.sync_command ?? DEFAULT_SYNC_COMMAND} />
-              {!job?.sync_command && (
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: '8px' }}>
-                  Example command
-                </Typography>
-              )}
               {progress && progress.total > 0 ? (
                 <>
                   <LinearProgress
@@ -538,16 +526,43 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
               {pushed === 'active' && (
                 <LinearProgress
                   aria-label="Upload progress"
-                  variant={uploadProgress && uploadProgress.total > 0 ? 'determinate' : 'indeterminate'}
+                  variant={
+                    uploadProgress && uploadProgress.total > 0 && !uploadTotalEstimated
+                      ? 'determinate'
+                      : 'indeterminate'
+                  }
                   value={uploadProgress ? toPct(uploadProgress.done, uploadProgress.total) : undefined}
                   sx={{ my: 1 }}
                 />
               )}
               {uploadProgress && uploadProgress.total > 0 && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                  {byteLabel(uploadProgress.done)} / {byteLabel(uploadProgress.total)}
-                  {` · ${toPct(uploadProgress.done, uploadProgress.total)}%`}
-                  {uploadProgress.eta && pushed === 'active' ? ` · ETA ${uploadProgress.eta}` : ''}
+                  {formatBinaryBytes(uploadProgress.done)} / {uploadTotalEstimated ? '~' : ''}
+                  {formatBinaryBytes(uploadProgress.total)}
+                  {uploadTotalEstimated
+                    ? ' · Calculating total…'
+                    : ` · ${toPct(uploadProgress.done, uploadProgress.total)}%`}
+                  {uploadProgress.eta && pushed === 'active' && !uploadTotalEstimated
+                    ? ` · ETA ${uploadProgress.eta}`
+                    : ''}
+                </Typography>
+              )}
+              {uploadProgress?.objects && (
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  {uploadProgress.objects.done.toLocaleString()}
+                  {uploadProgress.objects.total !== null &&
+                    ` / ${uploadProgress.objects.estimated ? '~' : ''}${uploadProgress.objects.total.toLocaleString()}`}
+                  {' objects uploaded'}
+                </Typography>
+              )}
+              {uploadProgress?.elapsed && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Elapsed: {uploadProgress.elapsed}
+                </Typography>
+              )}
+              {uploadProgress?.objects && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  Counts exclude unchanged files skipped by sync.
                 </Typography>
               )}
               {job?.push_slurm_job_id && (
@@ -567,15 +582,15 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
 
           {!readOnly && state === 'prep_completed' && (
             <Box sx={DETAIL_CARD_SX}>
-              <Button sdsType="primary" sdsStyle="solid" disabled={actionPending || !canPush} onClick={runPush}>
-                {push.isPending ? 'Starting upload…' : 'Upload to S3'}
-              </Button>
               {!canPush && (
-                <Alert severity="warning" sx={{ mt: '16px' }}>
+                <Alert severity="warning" sx={{ mb: '16px' }}>
                   Validation must pass before upload. Prepare again, or edit metadata to fix the issues.
                 </Alert>
               )}
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '12px', mt: '16px' }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                <Button sdsType="primary" sdsStyle="solid" disabled={actionPending || !canPush} onClick={runPush}>
+                  {push.isPending ? 'Starting upload…' : 'Upload to S3'}
+                </Button>
                 <Button sdsType="secondary" sdsStyle="solid" disabled={actionPending} onClick={runSync}>
                   Prepare again
                 </Button>

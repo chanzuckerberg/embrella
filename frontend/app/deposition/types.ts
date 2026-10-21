@@ -33,6 +33,9 @@ export interface SyncProgress {
   done: number;
   total: number;
   eta?: string | null;
+  elapsed?: string;
+  estimated?: boolean;
+  objects?: { done: number; total: number | null; estimated: boolean };
   items?: SyncChecklistItem[];
 }
 
