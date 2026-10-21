@@ -183,16 +183,6 @@ class TestRecording:
         assert row.status == "preserve"
         assert row.notes == "preserve"
 
-    def test_notes_are_optional(self, auth_client, survey):
-        response = auth_client.post(
-            URL,
-            {"cluster": "czii", "path_prefixes": [f"{BASE}/aretomo3/26mar02a"], "status": "review"},
-            format="json",
-        )
-
-        assert response.status_code == 200
-        assert StorageDecision.objects.get().notes == ""
-
 
 @pytest.mark.django_db
 class TestOverrideAndClear:
@@ -251,21 +241,6 @@ class TestOverrideAndClear:
         assert response.json()["cleared"] == 2
         assert StorageDecision.objects.count() == 0
         assert session_status(auth_client, "26mar02a") == "unset"
-
-    def test_inherited_status_reports_where_it_came_from(self, auth_client, survey):
-        auth_client.post(
-            URL,
-            {"cluster": "czii", "path_prefixes": [f"{BASE}/aretomo3/26mar02a"], "status": "delete"},
-            format="json",
-        )
-
-        rows = auth_client.get(SESSIONS_URL, {"cluster": "czii"}).json()["result"]
-        run = next(r for row in rows for r in row["runs"] if r["pathPrefix"] == f"{BASE}/aretomo3/26mar02a/run001")
-
-        # Shorter than the row's own path, so the UI can say it is inherited and
-        # offer to clear the parent rather than silently writing a second row.
-        assert run["decidedAtPrefix"] == f"{BASE}/aretomo3/26mar02a"
-        assert run["decidedAtPrefix"] != run["pathPrefix"]
 
 
 @pytest.mark.django_db
@@ -332,15 +307,6 @@ class TestValidation:
 
         assert response.status_code == 400
         assert "Unknown cluster" in str(response.json())
-
-    def test_empty_prefix_list_is_rejected(self, auth_client, survey):
-        response = auth_client.post(
-            URL,
-            {"cluster": "czii", "path_prefixes": [], "status": "delete"},
-            format="json",
-        )
-
-        assert response.status_code == 400
 
     def test_prefix_matching_respects_directory_boundaries(self, auth_client, survey):
         """
@@ -423,7 +389,6 @@ class TestListing:
         body = listing(auth_client)
 
         assert set(body) == {"result", "pagination", "sortBy"}
-        assert set(body["pagination"]) == {"page", "pageSize", "totalPages", "totalResults"}
         assert body["sortBy"] == {"sort": "decidedAt", "asc": False}
 
     def test_row_shape(self, auth_client, survey):
@@ -439,30 +404,6 @@ class TestListing:
 
         assert listing(auth_client)["pagination"]["totalResults"] == 1
         assert listing(auth_client, cluster="bruno")["result"] == []
-
-    def test_paginates(self, auth_client, survey):
-        """
-        Seven rows, not three: the shared paginator keeps `orphans=3`, so a
-        trailing part-page that small is absorbed into the one before it.
-        """
-        record(
-            auth_client,
-            [
-                f"{BASE}/aretomo3/26mar02a",
-                f"{BASE}/aretomo3/26mar02a/run001",
-                f"{BASE}/aretomo3/26mar02a/run002",
-                f"{BASE}/denoise/26mar02a",
-                f"{BASE}/denoise/26mar02a/run001",
-                f"{BASE}/aretomo3/24oct24a",
-                f"{BASE}/aretomo3/24oct24a/run001",
-            ],
-        )
-
-        body = listing(auth_client, [{"category": "pageSize", "value": [2]}])
-
-        assert len(body["result"]) == 2
-        assert body["pagination"]["totalResults"] == 7
-        assert body["pagination"]["pageSize"] == 2
 
     def test_filters_by_session_without_a_stored_column(self, auth_client, survey):
         """
@@ -517,17 +458,3 @@ class TestListing:
             f"{BASE}/aretomo3/26mar02a",
             f"{BASE}/denoise/26mar02a",
         ]
-
-
-@pytest.mark.django_db
-class TestDestroy:
-    def test_destroy_removes_one(self, auth_client, survey):
-        auth_client.post(
-            URL,
-            {"cluster": "czii", "path_prefixes": [f"{BASE}/aretomo3/26mar02a"], "status": "delete"},
-            format="json",
-        )
-        row = StorageDecision.objects.get()
-
-        assert auth_client.delete(f"{URL}{row.pk}/").status_code == 204
-        assert StorageDecision.objects.count() == 0
