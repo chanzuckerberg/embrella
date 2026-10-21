@@ -58,6 +58,15 @@ def patched(monkeypatch):
 
 @pytest.mark.django_db
 class TestRunDepositionJobSyncer:
+    def test_scheduler_confirmation_records_cancelled_upload(self, patched):
+        job = _job("push_running", push_slurm_job_id="123")
+        FakeSyncer.info = {"state": "CANCELLED", "exit_code": "0:15"}
+        result = tasks.run_deposition_job_syncer(job.id, "push", "cluster-a", "123")
+        job.refresh_from_db()
+        assert result["status"] == "terminal" and not result["success"]
+        assert job.state == "failed" and job.error_message == "Upload cancelled."
+        assert patched == []
+
     def test_terminal_success_completes_prep(self, patched):
         job = _job("prep_running", prep_slurm_job_id="123")
         result = tasks.run_deposition_job_syncer(job.id, "prep", "cluster-a", "123")

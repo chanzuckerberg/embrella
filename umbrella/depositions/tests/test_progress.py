@@ -320,7 +320,7 @@ def test_generated_scripts_publish_progress_and_preserve_command_failure(tmp_pat
         script = DepositionPushProcessor().render_script(
             {
                 "staged_dir": str(output),
-                "s3_dest": "s3://example/dataset/",
+                "s3_dest": "s3://example/datasets/10001/20002/",
                 "prologue": ":",
             },
             SimpleNamespace(cluster_id="cluster-a"),

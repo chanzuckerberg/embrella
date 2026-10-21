@@ -259,6 +259,26 @@ class DatasetViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
             return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
         return Response(DatasetJobSerializer(job, context=self.get_serializer_context()).data)
 
+    @action(detail=True, methods=["post"], url_path="cancel-upload")
+    def cancel_upload(self, request, pk=None):
+        from .services.submit import cancel_dataset_upload
+
+        dataset = self.get_object()
+        try:
+            cancel_dataset_upload(dataset, request.data.get("job_id"))
+        except SubmissionValidationError as error:
+            return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("Dataset %s upload cancellation failed", pk)
+            return Response(
+                {"detail": "Couldn't cancel the upload. Please try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response(
+            {"detail": "Cancellation requested. Waiting for the cluster to confirm."},
+            status=status.HTTP_202_ACCEPTED,
+        )
+
     @action(detail=True, methods=["get"], url_path="job-status")
     def job_status(self, request, pk=None):
         dataset = self.get_object()

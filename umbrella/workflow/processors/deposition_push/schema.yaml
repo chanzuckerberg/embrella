@@ -1,6 +1,9 @@
 # DepositionPushProcessor parameters.
 type: object
 properties:
+  slurm_mail_user:
+    type: string
+    x-slurm-directive: "--mail-user"
   slurm_partition:
     type: string
     default: cpu

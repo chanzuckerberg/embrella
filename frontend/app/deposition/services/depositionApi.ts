@@ -114,6 +114,10 @@ export async function pushDataset(id: number): Promise<SubmitResponse> {
   return parse(await postResource(url(`${API.DEPOSITION_DATASETS}${id}/push/`), {}));
 }
 
+export async function cancelDatasetUpload(id: number, jobId: string): Promise<{ detail: string }> {
+  return parse(await postResource(url(`${API.DEPOSITION_DATASETS}${id}/cancel-upload/`), { job_id: jobId }));
+}
+
 export async function fetchDatasetLogs(id: number, phase?: 'prep' | 'push'): Promise<JobLogs> {
   const query = phase ? `?phase=${phase}` : '';
   return parse(await fetchResource(url(`${API.DEPOSITION_DATASETS}${id}/logs/${query}`)));

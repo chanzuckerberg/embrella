@@ -135,6 +135,8 @@ def run_deposition_job_syncer(dataset_job_id, phase, cluster_id, expected_job_id
         log_excerpt = None
         if not success:
             error_message = f"Deposition {phase} job ended {info['state']} (exit {info.get('exit_code')})."
+            if phase == "push" and info["state"].split()[0] == "CANCELLED":
+                error_message = "Upload cancelled."
             # Snapshot the SLURM tail so the failure's cause survives after live reads stop.
             log_excerpt = logs.capture_failure_tail(cluster_id, auth, phase, slurm_job_id)
         summary = progress.collect(job, phase, cluster_id, slurm_job_id, auth)
