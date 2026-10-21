@@ -7,7 +7,7 @@ Tests the processor registry, execution engine, and API endpoints.
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-from processes.models import PipeExecution, PipeInPlan
+from processes.models import PipeExecution
 from workflow.execution import PipelineExecutor, RunContext, ValidationError
 from workflow.processors import get_processor, list_processors, register_processor
 from workflow.processors.base import BaseProcessor
@@ -553,48 +553,6 @@ class TestExecutionAPI:
         assert data["execution"]["id"] == execution.id
         assert data["execution"]["status"] == "running"
         assert data["execution"]["job_id"] == "123456"
-
-    def test_list_run_executions(
-        self,
-        client,
-        test_user,
-        test_proc_run,
-        test_pipe_in_plan,
-        test_pipe,
-    ):
-        """Test listing executions for a run."""
-        # Create second pipe_in_plan for second execution
-        # (unique_together constraint requires unique proc_run + pipe_in_plan pairs)
-        pipe_in_plan_2 = PipeInPlan.objects.create(
-            plan=test_proc_run.proc_plan,
-            pipe=test_pipe,
-            step=2,
-            name="test_step_2",
-        )
-
-        # Create some executions
-        PipeExecution.objects.create(
-            proc_run=test_proc_run,
-            pipe_in_plan=test_pipe_in_plan,
-            status="completed",
-            job_id="111111",
-        )
-        PipeExecution.objects.create(
-            proc_run=test_proc_run,
-            pipe_in_plan=pipe_in_plan_2,
-            status="running",
-            job_id="222222",
-        )
-
-        client.force_login(test_user)
-
-        response = client.get(f"/workflow/v1/execution/run/{test_proc_run.id}/")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        assert len(data["executions"]) == 2
-        assert data["proc_run"]["name"] == "run001"
 
     def test_check_dependencies(
         self,

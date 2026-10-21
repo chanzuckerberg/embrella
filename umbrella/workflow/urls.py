@@ -65,7 +65,6 @@ urlpatterns = [
     path("v1/execution/execute/", views.execute_pipe, name="execute_pipe"),
     path("v1/execution/preview/", views.preview_script, name="preview_script"),
     path("v1/execution/<int:execution_id>/status/", views.get_execution_status, name="get_execution_status"),
-    path("v1/execution/run/<int:proc_run_id>/", views.list_run_executions, name="list_run_executions"),
     path("v1/execution/check_dependencies/", views.check_dependencies, name="check_dependencies"),
     path("v1/execution/lookup_ids/", views.lookup_execution_ids, name="lookup_execution_ids"),
     path("v1/execution/by_job_id/<str:job_id>/", views.get_execution_by_job_id, name="get_execution_by_job_id"),

@@ -198,23 +198,6 @@ class CopickProcessor(BaseProcessor):
 
         return script
 
-    def get_default_slurm_options(self) -> Dict[str, Any]:
-        """
-        Get default SLURM options for Copick jobs.
-
-        Returns:
-            Dictionary of SLURM options
-        """
-        return {
-            "partition": "gpu",
-            "gpus": 1,
-            "nodes": 1,
-            "cpus_per_task": 8,
-            "mem_per_cpu": "196G",  # Copick requires large memory for tomogram processing
-            "time": "140:00:00",  # ~6 days for large projects
-            "job_name": "copick",
-        }
-
     def on_job_submit(self, run_context: RunContext, job_id: str) -> None:
         """
         Hook called after successful job submission.

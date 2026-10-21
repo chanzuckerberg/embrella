@@ -204,7 +204,7 @@ class TestCopickScanWiring:
 
     def test_light_slurm_directives_from_schema(self):
         """The scan's light resources (cpu/4/8G/30min) must reach the #SBATCH lines — they come from
-        the schema's x-slurm-directive props, NOT get_default_slurm_options (which isn't wired to jobs)."""
+        the schema's x-slurm-directive props."""
         from workflow.processors import get_processor
 
         p = get_processor("copick-scan")

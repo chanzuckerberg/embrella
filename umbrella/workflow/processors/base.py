@@ -373,30 +373,6 @@ class BaseProcessor(ABC):
         """
         return {}
 
-    def get_default_slurm_options(self) -> Dict[str, Any]:
-        """
-        Get default SLURM options for this processor.
-
-        Override to provide processor-specific defaults.
-
-        Returns:
-            Dict of SLURM option names to values:
-            {
-                "partition": "cpu",
-                "nodes": 1,
-                "ntasks_per_node": 1,
-                "mem": "32G",
-                "time": "24:00:00"
-            }
-        """
-        return {
-            "partition": "cpu",
-            "nodes": 1,
-            "ntasks_per_node": 1,
-            "mem": "16G",
-            "time": "24:00:00",
-        }
-
     def get_hetjob_info(self) -> Optional[Dict[str, Any]]:
         """
         Get heterogeneous job metadata if this processor uses SLURM hetjobs.
@@ -1256,7 +1232,7 @@ class BaseProcessor(ABC):
         - context_vars: Framework-provided variables (run_number, user_id, etc.)
         - calculated_vars: Processor-specific calculations
         - cli_args: Structured CLI arguments (for Jinja loops)
-        - control_vars: Control-flow booleans (use_advanced_params, etc.)
+        - control_vars: Control-flow booleans from the schema
 
         Args:
             params: User-provided parameters

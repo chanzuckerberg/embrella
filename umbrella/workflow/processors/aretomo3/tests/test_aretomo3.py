@@ -191,18 +191,6 @@ class TestAreTomo3Processor:
         errors = aretomo3_processor.validate_parameters(params)
         assert errors == []
 
-    def test_validate_parameters_advanced_missing(self, aretomo3_processor):
-        """Test validation fails when use_advanced_params is true but advanced params are missing."""
-        params = {
-            "pixel_size": 2.0,
-            "frame_dose": 1.5,
-            "use_advanced_params": True,
-            # Missing tilt_axis, vol_z, align_z
-        }
-
-        errors = aretomo3_processor.validate_parameters(params)
-        assert len(errors) > 0
-
     def test_render_script_basic(self, aretomo3_processor, test_run_context, gain_path_type):
         """Test rendering basic AreTomo3 script."""
         params = {
@@ -333,14 +321,6 @@ class TestDynamicOptions:
         assert self.options(rf, "nope") == []
         assert self.options(rf, test_msi_session.name) == []  # no gain PathType anywhere
         mock_list.assert_not_called()
-
-    def test_get_slurm_options(self, aretomo3_processor):
-        """Test SLURM options."""
-        options = aretomo3_processor.get_default_slurm_options()
-
-        assert options["partition"] == "gpu"
-        assert options["gpus"] == 8
-        assert options["nodes"] == 1
 
     @patch("processes.tasks.start_syncer_monitoring")
     def test_on_job_submit_hook(self, mock_start_syncer, aretomo3_processor, test_run_context):
