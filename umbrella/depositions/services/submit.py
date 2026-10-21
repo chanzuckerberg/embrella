@@ -12,8 +12,10 @@ from common import clusterio
 from depositions import tasks
 from depositions.models import DatasetJob, Deposition, DepositionAnnotation
 from depositions.services.dataprep_config import dataprep_config_yaml, dataset_is_ready, resolve_sync_destination
+from depositions.services.dataset_metadata import build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
+from depositions.services.metadata_requirements import metadata_issues
 from depositions.services.submission import PREP_ACTIVE, apply_status, on_push_complete, start_push
 from depositions.services.validation import require_validation
 
@@ -65,7 +67,7 @@ def submit_dataset_prep(dataset):
         dataset.refresh_from_db()
         if not dataset_is_ready(dataset):
             raise SubmissionValidationError(
-                "This dataset isn't ready to submit — add sessions and run auto-fill first."
+                "This dataset isn't ready to submit - add sessions and run auto-fill first."
             )
         if DepositionAnnotation.objects.filter(session__dataset=dataset, is_selected=True).exists():
             # Annotation export isn't wired yet; refuse rather than mark the dataset done without it.
@@ -85,6 +87,10 @@ def submit_dataset_prep(dataset):
             raise SubmissionValidationError(
                 "Another dataset in this deposition is queued or running prep; wait for it to finish before submitting."
             )
+        portal_metadata = build_dataset_metadata(dataset)
+        issues = metadata_issues(portal_metadata, deposition.title)
+        if issues:
+            raise SubmissionValidationError("Complete the metadata before preparation:\n" + "\n".join(issues))
         job, _ = DatasetJob.objects.using(db).get_or_create(dataset=dataset)
         claimed = (
             DatasetJob.objects.using(db)

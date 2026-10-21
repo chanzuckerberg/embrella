@@ -13,6 +13,7 @@ jest.mock('../services/depositionApi');
 const dataset = {
   id: 7,
   deposition: 1,
+  metadata_issues: [],
   title: 'DS',
   status: 'syncing',
   job: {

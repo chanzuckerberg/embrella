@@ -186,7 +186,7 @@ class DatasetViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
     serializer_class = DatasetSerializer
     queryset = (
         Dataset.objects.all()
-        .select_related("deposition", "job")
+        .select_related("deposition", "job", "sample")
         .prefetch_related("funding", "sessions", "sessions__annotations__method_links")
     )
 

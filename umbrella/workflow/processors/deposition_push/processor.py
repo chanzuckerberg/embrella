@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 REQUIRED_PARAMS = ("staged_dir", "s3_dest")
 # Software setup before the sync; one command per line so set -e catches a failed load.
-DEFAULT_PROLOGUE = "ml load anaconda\nconda activate dataportalenv\nml load awscli"
+DEFAULT_PROLOGUE = "ml load anaconda\nml load awscli"
 # Local-only artifacts kept out of the upload (mirrors cryoetportalprep SYNC_EXCLUDE_PATTERNS).
 EXCLUDE_PATTERNS = [
     "dataprep_config.yaml",

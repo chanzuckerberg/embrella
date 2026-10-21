@@ -1,6 +1,6 @@
 """Build the prep deployment config from saved autofill data and reviewed DB values.
 
-This is dataprep_config.yaml, separate from the portal metadata YAML in config_yaml.
+This is dataprep_config.yaml, separate from the portal metadata built by dataset_metadata.
 Path resolution, remote writes, and launching jobs belong to the submit service.
 """
 
@@ -13,6 +13,7 @@ import yaml
 from stores.paths import resolve_dir
 
 from depositions.models import TiltseriesMetadata
+from depositions.services.dataset_metadata import build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
 
 logger = logging.getLogger(__name__)
@@ -96,7 +97,7 @@ def _dataset_block(dataset):
         sessions[session.msi_session.name] = _session_config(session)
     if not sessions:
         raise SubmissionValidationError("Select at least one session before preparing the dataset.")
-    return {"dataset_id": dataset.dataset_id, "sessions": sessions}
+    return {"dataset_id": dataset.dataset_id, "metadata": build_dataset_metadata(dataset), "sessions": sessions}
 
 
 def build_dataprep_config(deposition, *, output_dir, sync_destination=None, required_dataset_ids=None):

@@ -16,7 +16,7 @@
 # Group-writable staged tree.
 umask 0002
 
-# -u deferred: prologue activates conda and reads unset vars.
+# Module setup may read unset variables.
 set -e
 {{ prologue }}
 set -euo pipefail

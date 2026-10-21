@@ -2,6 +2,7 @@
 
 import pytest
 import yaml
+from cryo_grids.models import Sample
 from django.utils import timezone
 from stores.models import Cluster, DataKind, PathType
 from stores.paths import resolve_dir
@@ -26,8 +27,15 @@ def _raise_no_creds():
 
 @pytest.fixture
 def dataset(db, test_msi_session):
-    deposition = Deposition.objects.create(title="Dep", deposition_id=1)
-    ds = Dataset.objects.create(deposition=deposition, title="DS", dataset_id=2)
+    deposition = Deposition.objects.create(
+        title="Dep",
+        deposition_id=1,
+        authors_json=[{"full_name": "Ada Lovelace", "is_primary": True, "is_corresponding": True}],
+    )
+    sample = Sample.objects.create(name="submission-test-sample", sample_type="in_vitro")
+    ds = Dataset.objects.create(
+        deposition=deposition, title="DS", description="Reviewed description", dataset_id=2, sample=sample
+    )
     session = DepositionSession.objects.create(dataset=ds, msi_session=test_msi_session, aretomo_run_name="run001")
     TiltseriesMetadata.objects.create(
         session=session, autofill_metadata={"paths": {"aretomo3": "/a"}, "acquisition": {}}
@@ -78,6 +86,29 @@ def mocks(monkeypatch, db):
 
 @pytest.mark.django_db
 class TestSubmitDatasetPrep:
+    def test_incomplete_metadata_does_not_claim_or_launch_preparation(self, dataset, mocks):
+        dataset.description = " "
+        dataset.sample.sample_type = "cell_line"
+        dataset.sample.save(update_fields=["sample_type"])
+        dataset.save(update_fields=["description"])
+        with pytest.raises(SubmissionValidationError) as error:
+            submit.submit_dataset_prep(dataset)
+        assert "Dataset description is required" in str(error.value)
+        assert "Organism name" in str(error.value)
+        assert "Cell strain" in str(error.value)
+        assert mocks["launched"] is None
+        assert not DatasetJob.objects.filter(dataset=dataset).exists()
+        dataset.refresh_from_db()
+        assert dataset.status == "draft"
+
+    def test_missing_author_stops_before_cluster_launch(self, dataset, mocks):
+        dataset.deposition.authors_json = [{"author_id": 987654321}]
+        dataset.deposition.save(update_fields=["authors_json"])
+        with pytest.raises(SubmissionValidationError, match="Review the authors"):
+            submit.submit_dataset_prep(dataset)
+        assert mocks["launched"] is None
+        assert not DatasetJob.objects.filter(dataset=dataset).exists()
+
     def test_happy_path(self, dataset, mocks, test_msi_session):
         job = submit.submit_dataset_prep(dataset)
         assert job.state == "prep_submitted"
@@ -445,7 +476,9 @@ def test_second_dataset_waits_for_first_prep_then_config_includes_both(dataset, 
     first_job = submit.submit_dataset_prep(dataset)
     first_launch = mocks["launched"]
     assert set(yaml.safe_load(first_launch["params"]["config_yaml"])["datasets"]) == {"dataset_2"}
-    second = Dataset.objects.create(deposition=dataset.deposition, title="B", dataset_id=3)
+    second = Dataset.objects.create(
+        deposition=dataset.deposition, title="B", description="Reviewed sibling", sample=dataset.sample, dataset_id=3
+    )
     session = DepositionSession.objects.create(dataset=second, msi_session=dataset.sessions.get().msi_session)
     TiltseriesMetadata.objects.create(
         session=session, autofill_metadata={"paths": {"aretomo3": "/b"}, "acquisition": {}}

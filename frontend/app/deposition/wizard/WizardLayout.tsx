@@ -46,7 +46,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
     : 'Your changes have not been saved. Close without saving, or keep editing and choose Retry to try saving again.';
   // Save before leaving this step; abort on failure.
   const go = async (n: number) => {
-    if (savingStep !== null || closing || lockedEdits) return;
+    if (savingStep !== null || closing || lockedEdits || (n > current && blocking > 0)) return;
     setSavingStep(n);
     try {
       if (!readOnly && save && (await save.saveNow()) === false) return;
@@ -148,7 +148,8 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
             current={current}
             skipped={skippedNums}
             onSelect={go}
-            disabled={lockedEdits}
+            disabled={lockedEdits || savingStep !== null || closing}
+            blockForward={blocking > 0}
           />
         </Box>
 

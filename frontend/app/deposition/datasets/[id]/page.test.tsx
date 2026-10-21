@@ -10,7 +10,15 @@ jest.mock('next/navigation', () => ({ useParams: () => ({ id: '5' }) }));
 
 const mockUseDataset = useDataset as jest.Mock;
 
-const DRAFT = { id: 5, deposition: 1, dataset_id: 100, title: 'My dataset', status: 'draft', funding: [] };
+const DRAFT = {
+  id: 5,
+  deposition: 1,
+  dataset_id: 100,
+  title: 'My dataset',
+  status: 'draft',
+  metadata_issues: [],
+  funding: [],
+};
 const PUSHED = { ...DRAFT, status: 'pushed' };
 const FAILED = { ...DRAFT, status: 'failed', job: { id: 1, state: 'failed' } };
 

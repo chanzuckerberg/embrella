@@ -240,7 +240,12 @@ def test_generated_scripts_publish_progress_and_preserve_command_failure(tmp_pat
             },
             SimpleNamespace(cluster_id="cluster-a"),
         )
-        command = 'cryoetportalprep() { mkdir -p "$output_dir/2"; printf data > "$output_dir/2/test.mrc"; return "$command_status"; }'
+        command = """cryoetportalprep() {
+          mkdir -p "$output_dir/2"
+          printf data > "$output_dir/2/test.mrc"
+          echo 'datasets: [{metadata: {dataset_identifier: 2}}]' > "$output_dir/2/portal_dataset_config.yaml"
+          return "$command_status"
+        }"""
     else:
         script = DepositionPushProcessor().render_script(
             {
@@ -265,7 +270,10 @@ def test_generated_scripts_publish_progress_and_preserve_command_failure(tmp_pat
     sample = json.loads((tmp_path / f"deposition-{phase}-123.progress.json").read_text())
     assert sample["complete"] is True and sample["done"] == sample["total"]
     if phase == "prep":
-        assert sample["summary"] == {"objects": 1, "bytes": 4}
+        assert sample["summary"] == {
+            "objects": 2,
+            "bytes": 4 + (output / "2" / "portal_dataset_config.yaml").stat().st_size,
+        }
     else:
         assert sample["done"] == 4 * 1024**2
     result = subprocess.run(

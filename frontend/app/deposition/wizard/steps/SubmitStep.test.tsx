@@ -42,9 +42,17 @@ it('auto-starts preparation once on arrival', () => {
 it('keeps a rejected pending attempt from retrying on rerenders, but allows manual retry and re-entry', () => {
   const { submit, push, dataset, view } = setup({ id: 1, state: 'pending' });
   expect(submit.mutate).toHaveBeenCalledTimes(1);
-  mockFlow.mockReturnValue({ submit: { ...submit, isError: true, error: new Error('Cluster unavailable') }, push });
+  mockFlow.mockReturnValue({
+    submit: {
+      ...submit,
+      isError: true,
+      error: new Error('Complete the metadata before preparation:\nDataset title is required.'),
+    },
+    push,
+  });
   view.rerender(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
-  expect(screen.getByText('Cluster unavailable')).toBeInTheDocument();
+  expect(screen.getByRole('alert')).toHaveTextContent('Dataset title is required.');
+  expect(screen.getByRole('alert')).toHaveStyle({ whiteSpace: 'pre-line' });
   expect(submit.mutate).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByRole('button', { name: 'Retry sync' }));
   expect(submit.mutate).toHaveBeenCalledTimes(2);

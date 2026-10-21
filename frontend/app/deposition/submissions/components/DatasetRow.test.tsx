@@ -7,6 +7,7 @@ import type { Dataset } from '../../types';
 const draft: Dataset = {
   id: 1,
   deposition: 1,
+  metadata_issues: [],
   dataset_id: 100,
   title: 'Draft dataset',
   status: 'draft',

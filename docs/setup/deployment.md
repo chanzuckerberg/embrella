@@ -244,14 +244,17 @@ push reads those same subdirectories.
 
 ### Pre-flight validation {#deposition-validation}
 
-After sync, prep runs `cryoetportalprep push <config> --dry-run` for the current
-dataset only. Upload is enabled only when this passes for the current prep attempt.
-Failed, missing or unavailable results block upload, and users can retry preparation
-or choose **Fix and re-prepare** to edit metadata first. Diagnostics are visible only
-to the submission owner.
+Embrella includes saved wizard metadata in each dataset's `metadata` block of
+`dataprep_config.yaml`. `cryoetportalprep sync` uses it to write
+`portal_dataset_config.yaml`. Prep then runs
+`cryoetportalprep push <config> --dry-run --format json` for the current dataset.
+Upload requires a successful exit code and a JSON report with no errors for the
+current attempt. Warnings do not block upload. Failed, missing or unavailable
+results block upload. Retry preparation, or choose **Edit metadata** and prepare
+again. Diagnostics are visible only to the submission owner.
 
-The result comes from the dry run's **exit code** (messages are best-effort text
-matches), so the installed CLI must exit nonzero on an invalid config.
+Install `deposition_prep` in the cluster environment used for preparation, with
+support for per-dataset metadata and JSON validation reports.
 
 ## Bare Metal Install {#bare-metal-legacy}
 

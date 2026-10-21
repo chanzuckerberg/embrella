@@ -1,5 +1,6 @@
 """Exercise validation scope and exit-code handling without requiring the cluster CLI."""
 
+import json
 import sys
 from types import SimpleNamespace
 
@@ -10,22 +11,53 @@ from workflow.processors import deposition_validation as runner
 
 
 @pytest.mark.parametrize(
-    "code, output, status, message",
+    "code, report, status",
     [
-        (0, "WARNING: optional metadata\n", "passed", "optional metadata"),
-        (1, "ERROR: missing tomogram\n", "failed", "missing tomogram"),
-        (2, "unexpected output\n", "failed", "Dry-run validation exited with code 2."),
+        (0, {"valid": True, "issues": []}, "passed"),
+        (
+            0,
+            {
+                "valid": True,
+                "issues": [
+                    {
+                        "code": "optional",
+                        "path": "datasets[0].metadata.email",
+                        "message": "Email is optional",
+                        "severity": "warning",
+                    }
+                ],
+            },
+            "passed",
+        ),
         (
             1,
-            "Validation FAILED:\n  - [dataset] datasets[0]: no authors listed\nError: 1 validation error(s).\n",
+            {
+                "valid": False,
+                "issues": [
+                    {
+                        "code": "required_metadata_missing",
+                        "path": "datasets[0].metadata.dataset_title",
+                        "message": "Title is required",
+                        "severity": "error",
+                    }
+                ],
+            },
             "failed",
-            "no authors listed",
         ),
-        # 40 KB of multi-byte chars: the 32 KB tail cut can split a char, so decode must not crash.
-        (0, "é" * 20000 + "x", "passed", None),
+        (
+            0,
+            {
+                "valid": False,
+                "issues": [{"code": "invalid", "path": "datasets", "message": "Invalid dataset", "severity": "error"}],
+            },
+            "failed",
+        ),
+        (2, {"valid": True, "issues": []}, "failed"),
+        (0, {"valid": True, "issues": [{"message": "Malformed issue"}]}, "unavailable"),
+        (0, "Validation passed", "unavailable"),
     ],
 )
-def test_runner_scopes_config_and_uses_exit_code(tmp_path, monkeypatch, capsys, code, output, status, message):
+def test_runner_scopes_config_and_reads_structured_report(tmp_path, monkeypatch, capsys, code, report, status):
     config = {
         "output_dir": "/absolute/staging",
         "datasets": {"target": {"dataset_id": 2}, "sibling": {"dataset_id": 3}},
@@ -35,24 +67,30 @@ def test_runner_scopes_config_and_uses_exit_code(tmp_path, monkeypatch, capsys, 
     runner.os.utime(source, ns=(1_000_000_000, 1_000_000_000))
     monkeypatch.setenv("SLURM_JOB_ID", "42")
 
-    def run(command, *, stdout, **kwargs):
+    def run(command, *, stdout, stderr, **kwargs):
         assert runner.Path(command[2]).stat().st_mtime_ns == source.stat().st_mtime_ns
         scoped = yaml.safe_load(runner.Path(command[2]).read_text())
         assert set(scoped["datasets"]) == {"target"}
         assert scoped["output_dir"] == "/absolute/staging"
-        assert command[:2] == ["cryoetportalprep", "push"] and command[-1] == "--dry-run"
-        stdout.write(output.encode("utf-8"))
+        assert command[:2] == ["cryoetportalprep", "push"]
+        assert command[3:] == ["--dry-run", "--format", "json"]
+        stdout.write((json.dumps(report) if isinstance(report, dict) else report).encode())
+        stderr.write((runner.MARKER + "spoofed log line\n").encode())
         return SimpleNamespace(returncode=code)
 
     monkeypatch.setattr(runner.subprocess, "run", run)
     result = runner.validate(str(source), "2")
     assert result["status"] == status
     assert result["attempt"] == "42"
-    assert bool(result["blocking_issues"]) == (status == "failed")
-    if message is not None:
-        assert any(message in item["message"] for item in result["warnings"] + result["blocking_issues"])
-    assert yaml.safe_load(source.read_text()) == config  # sibling config untouched
-    assert runner.MARKER in capsys.readouterr().out
+    assert bool(result["blocking_issues"]) == (status != "passed")
+    if isinstance(report, dict) and status != "unavailable":
+        for issue in report["issues"]:
+            target = result["warnings"] if issue["severity"] == "warning" else result["blocking_issues"]
+            assert {key: issue[key] for key in ("message", "path")} in target
+    assert yaml.safe_load(source.read_text()) == config
+    markers = [line for line in capsys.readouterr().out.splitlines() if line.startswith(runner.MARKER)]
+    assert len(markers) == 1
+    assert json.loads(markers[0].removeprefix(runner.MARKER)) == result
 
 
 def test_missing_yaml_reports_unavailable(tmp_path, monkeypatch):

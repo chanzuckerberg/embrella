@@ -28,6 +28,7 @@ def test_runs_sync_deposit_and_validation():
     assert '--picks "VLP:relionrefine/2"' in script
     # Pre-flight validation runs via the embedded script; behavior is covered by test_validation_runner.py.
     assert "DEPOSITION_VALIDATION=" in script
+    assert script.index("cryoetportalprep sync") < script.index("END_DEPOSITION_VALIDATION")
 
 
 def test_session_filter_scopes_sync_to_this_datasets_sessions():
@@ -102,7 +103,9 @@ def test_script_writes_config_without_shell_expansion_and_preserves_group_access
         config_yaml=payload,
         copick_flags="",
     )
-    stubs = 'ml() { :; }; conda() { :; }; cryoetportalprep() { test -r "$2"; };\n'
+    stubs = """ml() { :; }; conda() { :; }; cryoetportalprep() {
+      test -r "$2"
+    };\n"""
     result = subprocess.run(["bash"], input=stubs + script, text=True, capture_output=True)
     assert result.returncode == 0, result.stderr
     assert config_path.read_text() == payload + "\n"
