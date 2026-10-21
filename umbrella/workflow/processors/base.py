@@ -4,6 +4,7 @@ Base Processor Class
 Defines the abstract interface that all processing software integrations must implement.
 """
 
+import functools
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -63,6 +64,7 @@ class BaseProcessor(ABC):
     hidden_from_list: bool = False
 
     @classmethod
+    @functools.cache
     def _get_schema_file_path(cls) -> Optional[Path]:
         """
         Get path to schema.yaml file for this processor.
