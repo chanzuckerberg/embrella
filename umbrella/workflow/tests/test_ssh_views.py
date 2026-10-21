@@ -117,20 +117,6 @@ class TestSetupSshKeyPersistsCredentials:
 
 @pytest.mark.django_db
 class TestCheckSshSetupReturnsResolvedUsername:
-    def test_no_credentials_returns_setup_required_with_null_username(self, factory, user):
-        request = factory.post(
-            "/workflow/v1/ssh/check_setup/",
-            data=json.dumps({"cluster_id": "bruno"}),
-            content_type="application/json",
-        )
-        force_authenticate(request, user=user)
-
-        response = check_ssh_setup(request)
-        body = json.loads(response.content)
-
-        assert body["setup_required"] is True
-        assert body["username"] is None
-
     @patch("common.clusterio.test_ssh_as_user")
     def test_with_credentials_resolves_username(self, mock_test, factory, user):
         cluster = Cluster.objects.get(cluster_id="bruno")
@@ -177,7 +163,9 @@ class TestCheckSshSetupValidatesClusterAgainstDb:
         response = self._check(factory, user, "site-x")
 
         assert response.status_code == 200
-        assert json.loads(response.content)["setup_required"] is True
+        body = json.loads(response.content)
+        assert body["setup_required"] is True
+        assert body["username"] is None  # no credentials yet
 
     def test_rejects_unknown_cluster(self, factory, user):
         response = self._check(factory, user, "nope")

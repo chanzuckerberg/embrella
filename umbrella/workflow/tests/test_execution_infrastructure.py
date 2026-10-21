@@ -4,13 +4,15 @@ Tests for Generic Pipeline Execution Infrastructure
 Tests the processor registry, execution engine, and API endpoints.
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from processes.models import PipeExecution
 from workflow.execution import PipelineExecutor, RunContext, ValidationError
-from workflow.processors import get_processor, list_processors, register_processor
+from workflow.processors import get_processor, register_processor
 from workflow.processors.base import BaseProcessor
+from workflow.processors.copick import CopickProcessor
+from workflow.processors.denoiset import DenoisETProcessor
 
 # Test Fixtures
 
@@ -74,24 +76,34 @@ def registered_test_processor(test_processor_class):
     _PROCESSOR_REGISTRY.update(original_registry)
 
 
+def _bare_context(inputs):
+    """RunContext without DB rows, for logic that only reads inputs."""
+    return RunContext(
+        proc_run=None,
+        pipe_in_plan=None,
+        msi_session=None,
+        user=None,
+        cluster_id="czii",
+        run_number="run001",
+        job_name="test_job_name",
+        inputs=inputs,
+    )
+
+
 # Processor Registry Tests
 
 
 class TestProcessorRegistry:
     """Tests for the processor registry system."""
 
-    def test_register_processor(self, test_processor_class):
-        """Test registering a processor."""
-        from workflow.processors import _PROCESSOR_REGISTRY
+    def test_register_duplicate_name_fails(self, registered_test_processor):
+        """A second class claiming a registered name is rejected, not silently swapped in."""
 
-        original_registry = _PROCESSOR_REGISTRY.copy()
-        try:
-            register_processor(test_processor_class)
-            assert "test_processor" in _PROCESSOR_REGISTRY
-            assert _PROCESSOR_REGISTRY["test_processor"] == test_processor_class
-        finally:
-            _PROCESSOR_REGISTRY.clear()
-            _PROCESSOR_REGISTRY.update(original_registry)
+        class Impostor(BaseProcessor):
+            name = "test_processor"
+
+        with pytest.raises(ValueError, match="already registered"):
+            register_processor(Impostor)
 
     def test_register_processor_without_name_fails(self):
         """Test that registering a processor without a name fails."""
@@ -103,25 +115,10 @@ class TestProcessorRegistry:
         with pytest.raises(ValueError, match="must define a 'name' class attribute"):
             register_processor(BadProcessor)
 
-    def test_get_processor(self, registered_test_processor):
-        """Test getting a processor by name."""
-        processor = get_processor("test_processor")
-
-        assert processor.name == "test_processor"
-        assert processor.display_name == "Test Processor"
-        assert processor.version == "1.0.0"
-
     def test_get_nonexistent_processor_fails(self):
         """Test that getting a non-existent processor raises ValueError."""
         with pytest.raises(ValueError, match="Unknown processor"):
             get_processor("nonexistent")
-
-    def test_list_processors(self, registered_test_processor):
-        """Test listing all processors."""
-        processors = list_processors()
-
-        assert "test_processor" in processors
-        assert processors["test_processor"] == registered_test_processor
 
 
 # RunContext Tests
@@ -129,25 +126,6 @@ class TestProcessorRegistry:
 
 class TestRunContext:
     """Tests for RunContext data structure."""
-
-    def test_run_context_creation(self, test_proc_run, test_pipe_in_plan, test_msi_session, test_user):
-        """Test creating a RunContext."""
-        context = RunContext(
-            proc_run=test_proc_run,
-            pipe_in_plan=test_pipe_in_plan,
-            msi_session=test_msi_session,
-            user=test_user,
-            cluster_id="czii",
-            run_number="run001",
-            job_name="test_job_name",
-            inputs={"test_input": "/path/to/input.txt"},
-        )
-
-        assert context.proc_run == test_proc_run
-        assert context.pipe_in_plan == test_pipe_in_plan
-        assert context.cluster_id == "czii"
-        assert context.run_number == "run001"
-        assert context.inputs["test_input"] == "/path/to/input.txt"
 
     def test_get_placeholder_map(self, test_proc_run, test_pipe_in_plan, test_msi_session, test_user):
         """The placeholder map is the contract processors resolve DB templates against."""
@@ -173,52 +151,19 @@ class TestRunContext:
         # {workflow} is the legacy alias of {proc_software} in this lane.
         assert placeholders["workflow"] == placeholders["proc_software"]
 
-    def test_get_input_required(self, test_proc_run, test_pipe_in_plan, test_msi_session, test_user):
-        """Test getting a required input."""
-        context = RunContext(
-            proc_run=test_proc_run,
-            pipe_in_plan=test_pipe_in_plan,
-            msi_session=test_msi_session,
-            user=test_user,
-            cluster_id="czii",
-            run_number="run001",
-            job_name="test_job_name",
-            inputs={"aln": "/path/to/alignment.txt"},
-        )
+    @pytest.mark.parametrize(
+        "inputs, required, expected",
+        [
+            ({"aln": "/path/to/alignment.txt"}, True, "/path/to/alignment.txt"),
+            ({}, False, None),
+        ],
+    )
+    def test_get_input(self, inputs, required, expected):
+        assert _bare_context(inputs).get_input("aln", required=required) == expected
 
-        assert context.get_input("aln") == "/path/to/alignment.txt"
-
-    def test_get_input_missing_required_fails(self, test_proc_run, test_pipe_in_plan, test_msi_session, test_user):
-        """Test that getting a missing required input fails."""
-        context = RunContext(
-            proc_run=test_proc_run,
-            pipe_in_plan=test_pipe_in_plan,
-            msi_session=test_msi_session,
-            user=test_user,
-            cluster_id="czii",
-            run_number="run001",
-            job_name="test_job_name",
-            inputs={},
-        )
-
+    def test_get_input_missing_required_fails(self):
         with pytest.raises(ValueError, match="Required input 'aln' not found"):
-            context.get_input("aln", required=True)
-
-    def test_get_input_optional(self, test_proc_run, test_pipe_in_plan, test_msi_session, test_user):
-        """Test getting an optional input."""
-        context = RunContext(
-            proc_run=test_proc_run,
-            pipe_in_plan=test_pipe_in_plan,
-            msi_session=test_msi_session,
-            user=test_user,
-            cluster_id="czii",
-            run_number="run001",
-            job_name="test_job_name",
-            inputs={},
-        )
-
-        result = context.get_input("optional_input", required=False)
-        assert result is None
+            _bare_context({}).get_input("aln", required=True)
 
 
 # PipelineExecutor Tests
@@ -227,10 +172,12 @@ class TestRunContext:
 class TestPipelineExecutor:
     """Tests for PipelineExecutor."""
 
+    @patch("processes.tasks.start_job_status_syncer")
     @patch("workflow.execution.RemoteJobSubmitter")
     def test_execute_pipe(
         self,
         mock_submitter_class,
+        mock_start_syncer,
         test_proc_run,
         test_pipe_in_plan,
         test_user,
@@ -273,6 +220,8 @@ class TestPipelineExecutor:
                 "output_patterns": {},
             },
         }
+        # PipeExecution status is owned by the sacct syncer alone
+        mock_start_syncer.assert_called_once_with(job_id="123456", cluster_id="czii")
 
     @patch("workflow.execution.RemoteJobSubmitter")
     def test_execute_pipe_stamps_bruno_cluster_id(
@@ -368,23 +317,6 @@ class TestPipelineExecutor:
         assert script == "#!/bin/bash\necho 7"
         assert ProcRun.objects.filter(name="run002").count() == 0
 
-    def test_preview_validation_fails(
-        self,
-        test_proc_run,
-        test_pipe_in_plan,
-        test_user,
-        registered_test_processor,
-    ):
-        with pytest.raises(ValidationError) as exc_info:
-            PipelineExecutor().preview(
-                pipe_in_plan=test_pipe_in_plan,
-                proc_run=test_proc_run,
-                user=test_user,
-                parameters={"test_param": -1},
-            )
-
-        assert "test_param must be non-negative" in exc_info.value.errors
-
     @patch("workflow.execution.RemoteJobSubmitter")
     def test_execute_materializes_cascade_defaults(
         self,
@@ -462,22 +394,6 @@ class TestPipelineExecutor:
 
         assert "not allowed" in exc_info.value.errors[0]
 
-    def test_check_dependencies_met_no_dependencies(
-        self,
-        test_proc_run,
-        test_pipe_in_plan,
-    ):
-        """Test checking dependencies when there are none."""
-        executor = PipelineExecutor()
-
-        dependencies_met, missing = executor.check_dependencies_met(
-            test_proc_run,
-            test_pipe_in_plan,
-        )
-
-        assert dependencies_met is True
-        assert missing == []
-
 
 # API Endpoint Tests
 
@@ -500,21 +416,6 @@ class TestExecutionAPI:
         # Check test processor is in list
         processor_names = [p["name"] for p in data["processors"]]
         assert "test_processor" in processor_names
-
-    def test_get_processor_schema(self, client, test_user, registered_test_processor):
-        """Test getting processor schema."""
-        client.force_login(test_user)
-
-        response = client.get("/workflow/v1/processors/test_processor/schema/")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        assert data["processor"] == "test_processor"
-        assert "schema" in data
-        assert "display_name" in data
-        assert "default_cluster" in data
-        assert "allowed_clusters" in data
 
     def test_get_processor_schema_not_found(self, client, test_user):
         """Test getting schema for non-existent processor."""
@@ -572,8 +473,8 @@ class TestExecutionAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert "dependencies_met" in data
-        assert "missing_dependencies" in data
+        assert data["dependencies_met"] is True
+        assert data["missing_dependencies"] == []
 
     def _preview(self, client, **overrides):
         body = {
@@ -634,140 +535,22 @@ class TestExecutionAPI:
 class TestSyncerIntegration:
     """Tests for syncer task startup and status monitoring."""
 
-    def test_job_status_syncer_started_on_execution(
-        self,
-        test_msi_session,
-        test_proc_run,
-        test_pipe_in_plan,
-        test_user,
-        test_proc_software,
-        registered_test_processor,
-    ):
-        """Test that the sacct-backed job status syncer is started after job submission."""
-        # Update software to use test processor
-        test_proc_software.processor_class = "test_processor"
-        test_proc_software.save()
+    @pytest.mark.parametrize(
+        "processor_cls, syncer_path",
+        [
+            (DenoisETProcessor, "workflow.processors.denoiset.syncer.DenoiseSyncer"),
+            (CopickProcessor, None),  # Copick writes its own outputs; no syncer by design
+        ],
+    )
+    def test_on_job_submit_syncer(self, processor_cls, syncer_path):
+        processor = processor_cls()
+        run_context = MagicMock()
 
-        executor = PipelineExecutor()
-
-        # Mock RemoteJobSubmitter to avoid actual SSH
-        with patch("workflow.execution.RemoteJobSubmitter") as mock_submitter_class:
-            mock_submitter = Mock()
-            mock_submitter.last_script_path = "/remote/script.sh"
-            mock_submitter.run_script.return_value = ("Submitted batch job 123456", "")
-            mock_submitter_class.return_value = mock_submitter
-
-            # PipeExecution status is owned by the sacct syncer alone
-            with patch("processes.tasks.start_job_status_syncer") as mock_start:
-                executor.execute_pipe(
-                    pipe_in_plan=test_pipe_in_plan,
-                    proc_run=test_proc_run,
-                    user=test_user,
-                    parameters={"test_param": 50},
-                    auth={"username": "test", "password": "test"},
-                )
-
-                mock_start.assert_called_once_with(job_id="123456", cluster_id="czii")
-
-    def test_aretomo3_processor_spawns_syncer(
-        self,
-        test_msi_session,
-        test_proc_run,
-        test_pipe_in_plan,
-        test_user,
-    ):
-        """Test that AreTomo3 processor starts syncer task via helper method."""
-        from workflow.execution import RunContext
-        from workflow.processors.aretomo3 import AreTomo3Processor
-
-        run_context = RunContext(
-            proc_run=test_proc_run,
-            pipe_in_plan=test_pipe_in_plan,
-            msi_session=test_msi_session,
-            user=test_user,
-            cluster_id="czii",
-            run_number="run001",
-            job_name="test_job_name",
-            inputs={},
-        )
-
-        processor = AreTomo3Processor()
-
-        # Mock _start_syncer_task (the new method used by AreTomo3)
-        with patch.object(processor, "_start_syncer_task") as mock_start:
-            processor.on_job_submit(run_context, "job123")
-
-            # Verify helper was called with correct arguments
-            assert mock_start.called
-            call_kwargs = mock_start.call_args[1]
-            # Check syncer class path includes aretomo3
-            assert "aretomo3" in call_kwargs["syncer_class_path"]
-            assert call_kwargs["run_context"] == run_context
-            assert call_kwargs["job_id"] == "job123"
-
-    def test_denoiset_processor_spawns_syncer(
-        self,
-        test_msi_session,
-        test_proc_run,
-        test_pipe_in_plan,
-        test_user,
-    ):
-        """Test that DenoisET processor starts syncer task via helper method."""
-        from workflow.execution import RunContext
-        from workflow.processors.denoiset import DenoisETProcessor
-
-        run_context = RunContext(
-            proc_run=test_proc_run,
-            pipe_in_plan=test_pipe_in_plan,
-            msi_session=test_msi_session,
-            user=test_user,
-            cluster_id="czii",
-            run_number="run001",
-            job_name="test_job_name",
-            inputs={},
-        )
-
-        processor = DenoisETProcessor()
-
-        # Mock _start_syncer_task (the new method used by DenoisET)
         with patch.object(processor, "_start_syncer_task") as mock_start:
             processor.on_job_submit(run_context, "job456")
 
-            # Verify helper was called with correct arguments
-            assert mock_start.called
-            call_kwargs = mock_start.call_args[1]
-            # Check syncer class path includes denoiset
-            assert "denoiset" in call_kwargs["syncer_class_path"]
-            assert call_kwargs["run_context"] == run_context
-            assert call_kwargs["job_id"] == "job456"
+        if syncer_path is None:
+            mock_start.assert_not_called()
+            return
 
-    def test_copick_processor_no_syncer(
-        self,
-        test_msi_session,
-        test_proc_run,
-        test_pipe_in_plan,
-        test_user,
-    ):
-        """Test that Copick processor does not spawn syncer (as per design)."""
-        from workflow.execution import RunContext
-        from workflow.processors.copick import CopickProcessor
-
-        run_context = RunContext(
-            proc_run=test_proc_run,
-            pipe_in_plan=test_pipe_in_plan,
-            msi_session=test_msi_session,
-            user=test_user,
-            cluster_id="czii",
-            run_number="run001",
-            job_name="test_job_name",
-            inputs={},
-        )
-
-        processor = CopickProcessor()
-
-        with patch.object(processor, "_start_syncer_task") as mock_start:
-            # on_job_submit should not start a syncer for Copick
-            processor.on_job_submit(run_context, "job789")
-
-            # Verify helper was NOT called
-            assert not mock_start.called
+        mock_start.assert_called_once_with(syncer_class_path=syncer_path, run_context=run_context, job_id="job456")

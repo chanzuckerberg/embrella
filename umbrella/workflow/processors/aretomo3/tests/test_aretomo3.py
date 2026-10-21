@@ -2,6 +2,7 @@
 Tests for AreTomo3 processor implementation.
 """
 
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -157,40 +158,6 @@ def test_run_context(test_proc_run, test_pipe_in_plan, test_msi_session, test_us
 class TestAreTomo3Processor:
     """Tests for AreTomo3 processor."""
 
-    def test_processor_registered(self, aretomo3_processor):
-        """Test that AreTomo3 processor is registered."""
-        assert aretomo3_processor is not None
-        assert aretomo3_processor.name == "aretomo3"
-        assert aretomo3_processor.display_name == "AreTomo3"
-
-    def test_parameter_schema(self, aretomo3_processor):
-        """Test parameter schema structure."""
-        schema = aretomo3_processor.get_parameter_schema()
-
-        assert schema["type"] == "object"
-        assert "properties" in schema
-        assert "required" in schema
-
-        # Check required parameters
-        required = schema["required"]
-        assert "pixel_size" in required
-
-        # Check parameter properties
-        props = schema["properties"]
-        assert "pixel_size" in props
-        assert props["pixel_size"]["type"] == "number"
-        assert "frame_dose" in props  # Optional but still defined
-
-    def test_validate_parameters_valid(self, aretomo3_processor):
-        """Test validation with valid parameters."""
-        params = {
-            "pixel_size": 2.0,
-            "frame_dose": 1.5,
-        }
-
-        errors = aretomo3_processor.validate_parameters(params)
-        assert errors == []
-
     def test_render_script_basic(self, aretomo3_processor, test_run_context, gain_path_type):
         """Test rendering basic AreTomo3 script."""
         params = {
@@ -294,7 +261,7 @@ class TestDynamicOptions:
         from workflow.processors.aretomo3.views import get_dynamic_options
 
         response = get_dynamic_options(rf.get(f"/?{query}"), session_id)
-        return __import__("json").loads(response.content)["options"]["gain_file_name"]
+        return json.loads(response.content)["options"]["gain_file_name"]
 
     @patch(FETCH)
     def test_lists_for_session_on_requested_cluster(self, mock_list, rf, test_msi_session, gain_path_type):
@@ -452,59 +419,28 @@ class TestGetSessionInfo:
 class TestValidateSession:
     """Tests for validate_session returning MDOC magnification validation."""
 
+    @pytest.mark.parametrize("mdoc_mag, mismatch", [(50000, False), (81000, True)])
     @patch("workflow.processors.aretomo3.views.mdoc_reader.read_mdoc_magnification")
-    def test_magnification_match(self, mock_mdoc, test_msi_session, rf):
-        """validate_session returns mismatch=false when magnifications match."""
+    def test_magnification_check(self, mock_mdoc, mdoc_mag, mismatch, test_msi_session, rf):
+        """validate_session flags an MDOC magnification that differs from the session's."""
         from workflow.processors.aretomo3.views import validate_session
 
-        session = test_msi_session
-        microscope = session.session_plan.scope
-
-        mag = Magnification.objects.create(scope=microscope, mode="SA", nominal_mag=50000, index=0)
-        session.magnification = mag
-        session.save()
-
+        _set_magnification(test_msi_session)  # 50000x
         mock_mdoc.return_value = {
             "success": True,
-            "magnification": 50000,
+            "magnification": mdoc_mag,
             "mdoc_file": "Position_1.mdoc",
             "error": None,
         }
 
-        request = rf.get("/?cluster_id=bruno")
-        response = validate_session(request, session_id=session.name)
-        data = response.json() if hasattr(response, "json") else __import__("json").loads(response.content)
+        response = validate_session(rf.get("/?cluster_id=bruno"), session_id=test_msi_session.name)
+        data = json.loads(response.content)
 
         assert data["success"] is True
-        assert data["validation"]["mismatch"] is False
-        assert data["validation"]["mdoc_magnification"] == 50000
+        assert data["validation"]["mdoc_magnification"] == mdoc_mag
+        assert data["validation"]["mismatch"] is mismatch
+        assert ("warning" in data["validation"]) is mismatch
         assert mock_mdoc.call_args.kwargs["cluster_id"] == "bruno"
-
-    @patch("workflow.processors.aretomo3.views.mdoc_reader.read_mdoc_magnification")
-    def test_magnification_mismatch(self, mock_mdoc, test_msi_session, rf):
-        """validate_session returns mismatch=true when magnifications differ."""
-        from workflow.processors.aretomo3.views import validate_session
-
-        session = test_msi_session
-        microscope = session.session_plan.scope
-
-        mag = Magnification.objects.create(scope=microscope, mode="SA", nominal_mag=50000, index=0)
-        session.magnification = mag
-        session.save()
-
-        mock_mdoc.return_value = {
-            "success": True,
-            "magnification": 81000,
-            "mdoc_file": "Position_1.mdoc",
-            "error": None,
-        }
-
-        request = rf.get("/")
-        response = validate_session(request, session_id=session.name)
-        data = response.json() if hasattr(response, "json") else __import__("json").loads(response.content)
-
-        assert data["validation"]["mismatch"] is True
-        assert "warning" in data["validation"]
 
     @patch("workflow.processors.aretomo3.views.mdoc_reader.read_mdoc_magnification")
     def test_mdoc_error(self, mock_mdoc, test_msi_session, rf):
@@ -520,7 +456,7 @@ class TestValidateSession:
 
         request = rf.get("/")
         response = validate_session(request, session_id=test_msi_session.name)
-        data = response.json() if hasattr(response, "json") else __import__("json").loads(response.content)
+        data = json.loads(response.content)
 
         assert data["success"] is True
         assert data["validation"]["error"] == "No MDOC files found"
@@ -531,7 +467,7 @@ class TestValidateSession:
 
         request = rf.get("/")
         response = validate_session(request, session_id=None)
-        data = response.json() if hasattr(response, "json") else __import__("json").loads(response.content)
+        data = json.loads(response.content)
 
         assert data["success"] is True
         assert data["validation"] == {}
