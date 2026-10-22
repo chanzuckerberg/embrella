@@ -144,7 +144,6 @@ class TestAcquisitionSettings:
         assert session_plan.acquisition_values() == {
             "super_resolution": False,
             "phase_plate_used": False,
-            "phase_plate_type": None,
             "energy_filter_used": True,
         }
 
@@ -155,14 +154,12 @@ class TestAcquisitionSettings:
         assert copy.values() == {
             "super_resolution": True,
             "phase_plate_used": False,
-            "phase_plate_type": None,
             "energy_filter_used": True,
         }
         assert str(copy) == "snapshot 26sep15a"
         assert profile.snapshot("x", super_resolution=False).values() == {
             "super_resolution": False,
             "phase_plate_used": False,
-            "phase_plate_type": None,
             "energy_filter_used": True,
         }
 
@@ -191,12 +188,6 @@ def test_session_accessory_usage_preserves_unknown(msi_session, usage):
     assert msi_session.energy_filter_used is usage
 
 
-@pytest.mark.parametrize("used, plate_type", [(True, ""), (False, "Laser")])
-def test_acquisition_rejects_conflicting_phase_plate_usage(used, plate_type):
-    with pytest.raises(ValidationError, match="Select a phase plate type"):
-        AcquisitionSettings(phase_plate_used=used, phase_plate_type=plate_type).full_clean()
-
-
 def test_microscope_admin_preserves_legacy_phase_plate(microscope):
     from tem.admin import MicroscopeForm
 
@@ -208,14 +199,3 @@ def test_microscope_admin_preserves_legacy_phase_plate(microscope):
     )
     assert form.is_valid(), form.errors
     assert form.save().phase_plate == "Zernike"
-
-
-@pytest.mark.parametrize("selected, expected", [("", ""), ("unknown", None)])
-def test_acquisition_admin_distinguishes_none_from_unknown(selected, expected):
-    from tem.admin import AcquisitionSettingsForm
-
-    form = AcquisitionSettingsForm(
-        {"phase_plate_used": "False", "phase_plate_type": selected, "energy_filter_used": "True"}
-    )
-    assert form.is_valid(), form.errors
-    assert form.save(commit=False).phase_plate_type == expected

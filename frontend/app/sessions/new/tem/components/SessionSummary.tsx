@@ -43,9 +43,8 @@ interface SessionSummaryProps {
  */
 export function SessionSummary({ session, notice }: SessionSummaryProps) {
   let phasePlateLabel = 'Unknown';
-  if (session.acquisition?.phase_plate_used === false) phasePlateLabel = 'None';
-  if (session.acquisition?.phase_plate_used === true)
-    phasePlateLabel = session.acquisition.phase_plate_type || 'Unknown type';
+  if (session.acquisition?.phase_plate_used === false) phasePlateLabel = 'No';
+  if (session.acquisition?.phase_plate_used === true) phasePlateLabel = 'Yes';
   let energyFilterLabel = 'Unknown';
   if (session.acquisition?.energy_filter_used === true) energyFilterLabel = 'Yes';
   if (session.acquisition?.energy_filter_used === false) energyFilterLabel = 'No';
@@ -59,7 +58,7 @@ export function SessionSummary({ session, notice }: SessionSummaryProps) {
       ? [
           { label: 'Super-resolution', value: session.acquisition.super_resolution ? 'Yes' : 'No' },
           { label: 'Energy filter used', value: energyFilterLabel },
-          { label: 'Phase plate', value: phasePlateLabel },
+          { label: 'Phase plate used', value: phasePlateLabel },
         ]
       : []),
   ];

@@ -52,7 +52,6 @@ class TestFormOptions:
         assert plan["acquisition_defaults"] == {
             "super_resolution": True,
             "phase_plate_used": False,
-            "phase_plate_type": None,
             "energy_filter_used": True,
         }
 
@@ -290,7 +289,6 @@ class TestCreateSession:
         assert response.json()["acquisition"] == {
             "super_resolution": False,
             "phase_plate_used": False,
-            "phase_plate_type": None,
             "energy_filter_used": False,
         }
         session = MsiSession.objects.get(name="26mar06f")
@@ -307,30 +305,6 @@ class TestCreateSession:
         assert response.status_code == 201
         assert response.json()["acquisition"]["phase_plate_used"] is True
         assert MsiSession.objects.get(name="26mar06f").phase_plate_used is True
-
-    @pytest.mark.parametrize("phase_plate_type", ["", "Volta", "Laser"])
-    def test_selected_phase_plate_is_saved_per_session(
-        self, client, test_user, session_plan, project, grid, phase_plate_type
-    ):
-        client.force_login(test_user)
-        response = self._create(client, session_plan, project, grid, phase_plate_type=phase_plate_type)
-        assert response.status_code == 201
-        acquisition = response.json()["acquisition"]
-        assert acquisition["phase_plate_type"] == phase_plate_type
-        assert acquisition["phase_plate_used"] is bool(phase_plate_type)
-
-    @pytest.mark.parametrize(
-        "overrides",
-        [
-            {"phase_plate_type": "invalid"},
-            {"phase_plate_type": "Volta", "phase_plate_used": False},
-        ],
-    )
-    def test_rejects_invalid_phase_plate_selection(self, client, test_user, session_plan, project, grid, overrides):
-        client.force_login(test_user)
-        response = self._create(client, session_plan, project, grid, **overrides)
-        assert response.status_code == 400
-        assert "phase_plate_type" in response.json()
 
     def test_omitted_acquisition_copies_the_plan_profile(self, client, test_user, session_plan, project, grid):
         session_plan.acquisition_defaults = AcquisitionSettings.objects.create(
@@ -354,7 +328,6 @@ class TestCreateSession:
         assert response.json()["acquisition"] == {
             "super_resolution": False,
             "phase_plate_used": False,
-            "phase_plate_type": None,
             "energy_filter_used": True,
         }
         assert str(MsiSession.objects.get(name="26mar06f").acquisition) == "snapshot 26mar06f"

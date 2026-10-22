@@ -17,7 +17,6 @@ import {
   FormOptions,
   GridOption,
   MagnificationOption,
-  PhasePlateType,
   PLAN_TIERS,
   PlanSelection,
   PlanTier,
@@ -85,7 +84,7 @@ export function useSessionForm(): UseSessionFormReturn {
     name: '',
     filterUserId: currentUserId,
     superResolution: false,
-    phasePlateType: '',
+    phasePlateUsed: false,
     energyFilterUsed: true,
   });
   const [planSelection, setPlanSelection] = useState<PlanSelection>({});
@@ -165,20 +164,16 @@ export function useSessionForm(): UseSessionFormReturn {
     (sessionPlanId: number | null) => {
       // The magnification list belongs to the old plan; Acquisition settings restart from the new plan's profile.
       const plan = plans.find((p) => p.id === sessionPlanId);
-      const superResolution = plan?.acquisition_defaults.super_resolution ?? false;
       const defaults = plan?.acquisition_defaults;
-      const installed = plan?.phase_plate;
-      const installedType = installed === 'Volta' || installed === 'Laser' ? installed : null;
-      const phasePlateType: PhasePlateType | null = defaults?.phase_plate_used
-        ? (defaults.phase_plate_type ?? installedType)
-        : '';
+      const superResolution = defaults?.super_resolution ?? false;
+      const phasePlateUsed = defaults?.phase_plate_used ?? false;
       const energyFilterUsed = defaults?.energy_filter_used ?? true;
       setState((prev) => ({
         ...prev,
         sessionPlanId,
         magnificationId: null,
         superResolution,
-        phasePlateType,
+        phasePlateUsed,
         energyFilterUsed,
       }));
       clearError('sessionPlanId');
@@ -253,7 +248,7 @@ export function useSessionForm(): UseSessionFormReturn {
         // might not have any magnification options, so this is optional
         ...(state.magnificationId ? { magnification_id: state.magnificationId } : {}),
         super_resolution: state.superResolution,
-        ...(state.phasePlateType === null ? { phase_plate_used: true } : { phase_plate_type: state.phasePlateType }),
+        phase_plate_used: state.phasePlateUsed,
         energy_filter_used: state.energyFilterUsed,
       });
 
