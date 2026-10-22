@@ -31,8 +31,6 @@ class DepositionPrepProcessor(BaseProcessor):
             for key in ("output_dir", "config_path", "config_yaml", "dataset_id")
             if not params.get(key)
         ]
-        if params.get("copick_flags") and not (params.get("copick_config") and params.get("target_dir")):
-            errors.append("copick_config and target_dir are required when annotations are selected")
         return errors
 
     def render_script(self, params: Dict[str, Any], run_context: RunContext) -> str:
@@ -54,9 +52,6 @@ class DepositionPrepProcessor(BaseProcessor):
             config_path=shlex.quote(params["config_path"]),
             config_yaml=config_yaml,
             config_delimiter=config_delimiter,
-            copick_config=shlex.quote(params.get("copick_config", "")),
-            target_dir=shlex.quote(params.get("target_dir", "")),
-            copick_flags=params.get("copick_flags", ""),  # Caller must shell-quote each value.
             session_flags=session_flags,
             prep_env=shlex.quote(prep_env),
             cluster=run_context.cluster_id,
