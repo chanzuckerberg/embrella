@@ -1,45 +1,15 @@
-import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement, PropsWithChildren } from 'react';
 
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 import { TEM_API } from '../constants';
 import { useSessionForm } from './useSessionForm';
-import { SessionForm } from './SessionForm';
 
 jest.mock('@app/common/queries/fetchResource', () => ({
   fetchResource: jest.fn(),
   postResource: jest.fn(),
 }));
-
-// Keep dropdown interactions simple while exercising the real form handlers and submission hook.
-jest.mock('@app/common/components/DropdownSelect', () => {
-  const { createElement } = jest.requireActual<typeof import('react')>('react');
-  return {
-    DropdownSelect: ({
-      topLabel,
-      options,
-      value,
-      onChange,
-    }: {
-      topLabel: string;
-      options: { name: string; value?: string | null; id?: number }[];
-      value?: { name: string };
-      onChange: (option?: object) => void;
-    }) =>
-      createElement(
-        'select',
-        {
-          'aria-label': topLabel,
-          value: options.indexOf(value as (typeof options)[number]),
-          onChange: (event: import('react').ChangeEvent<HTMLSelectElement>) =>
-            onChange(options[Number(event.target.value)]),
-        },
-        createElement('option', { value: -1 }, 'Select'),
-        ...options.map((option, index) => createElement('option', { key: index, value: index }, option.name))
-      ),
-  };
-});
 
 const TODAY = '26sep02a';
 const TOMO = 'TEM Tomography';
@@ -50,11 +20,9 @@ const TOMO5_PLAN = {
   scope: 'krios1',
   software: 'tomo5',
   camera: 'Falcon4i',
-  phase_plate: 'Volta',
   acquisition_defaults: {
     super_resolution: false,
     phase_plate_used: false,
-    phase_plate_type: null,
     energy_filter_used: true,
   },
 };
@@ -65,11 +33,9 @@ const SERIALEM_PLAN = {
   scope: 'krios1',
   software: 'serialEM',
   camera: 'Falcon4i',
-  phase_plate: 'Volta',
   acquisition_defaults: {
     super_resolution: true,
     phase_plate_used: true,
-    phase_plate_type: null,
     energy_filter_used: false,
   },
 };
@@ -256,12 +222,12 @@ describe('useSessionForm dependent lists', () => {
 
     act(() => result.current.selectSessionPlan(SERIALEM_PLAN.id));
     expect(result.current.state.superResolution).toBe(true);
-    expect(result.current.state.phasePlateType).toBe('Volta'); // SERIALEM has phase_plate_used: true
+    expect(result.current.state.phasePlateUsed).toBe(true); // SERIALEM has phase_plate_used: true
     expect(result.current.state.energyFilterUsed).toBe(false);
 
     act(() => result.current.selectSessionPlan(TOMO5_PLAN.id));
     expect(result.current.state.superResolution).toBe(false);
-    expect(result.current.state.phasePlateType).toBe(''); // TOMO5 has phase_plate_used: false
+    expect(result.current.state.phasePlateUsed).toBe(false); // TOMO5 has phase_plate_used: false
     expect(result.current.state.energyFilterUsed).toBe(true);
   });
 
@@ -276,7 +242,7 @@ describe('useSessionForm dependent lists', () => {
   });
 });
 
-it('posts session overrides for phase plate type and energy filter usage', async () => {
+it('posts session overrides for phase plate and energy filter usage', async () => {
   const { result } = await mountForm();
   act(() => result.current.selectSessionPlan(TOMO5_PLAN.id));
   await waitFor(() => expect(result.current.magnifications).toHaveLength(1));
@@ -285,7 +251,7 @@ it('posts session overrides for phase plate type and energy filter usage', async
     result.current.updateField('projectId', 1);
     result.current.updateField('gridId', DEFAULT_GRID.id);
     result.current.updateField('magnificationId', MAGNIFICATION.id);
-    result.current.updateField('phasePlateType', 'Laser');
+    result.current.updateField('phasePlateUsed', true);
     result.current.updateField('energyFilterUsed', false);
   });
   (postResource as jest.Mock).mockResolvedValue(jsonResponse({ id: 1 }));
@@ -294,34 +260,6 @@ it('posts session overrides for phase plate type and energy filter usage', async
   });
   expect(postResource).toHaveBeenCalledWith(
     expect.any(String),
-    expect.objectContaining({ phase_plate_type: 'Laser', energy_filter_used: false })
+    expect.objectContaining({ phase_plate_used: true, energy_filter_used: false })
   );
-});
-
-it('can reselect a legacy phase plate and submit it as used without changing its type', async () => {
-  mockedFetch.mockImplementation((url) => {
-    const path = new URL(url, 'http://test').pathname;
-    if (path === TEM_API.FORM_OPTIONS)
-      return Promise.resolve(
-        jsonResponse({
-          session_plans: [{ ...SERIALEM_PLAN, phase_plate: 'Zernike' }],
-          projects: [{ id: 1, name: 'Project' }],
-        })
-      );
-    if (path === TEM_API.GRIDS_BY_USER) return Promise.resolve(jsonResponse([DEFAULT_GRID]));
-    return fakeBackend(url);
-  });
-  (postResource as jest.Mock).mockResolvedValue(jsonResponse({ id: 1 }));
-  render(createElement(SessionForm), { wrapper: queryWrapper() });
-  const plate = await screen.findByRole('combobox', { name: 'Phase plate used' });
-  fireEvent.change(plate, { target: { value: '2' } }); // Laser
-  fireEvent.change(plate, { target: { value: '3' } }); // Legacy Zernike
-  expect(plate).toHaveValue('3');
-  fireEvent.change(screen.getByRole('combobox', { name: 'Project' }), { target: { value: '0' } });
-  fireEvent.change(screen.getByRole('combobox', { name: 'Magnification' }), { target: { value: '0' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Create Session' }));
-  await waitFor(() => expect(postResource).toHaveBeenCalled());
-  const payload = (postResource as jest.Mock).mock.calls.at(-1)[1];
-  expect(payload.phase_plate_used).toBe(true);
-  expect(payload).not.toHaveProperty('phase_plate_type');
 });

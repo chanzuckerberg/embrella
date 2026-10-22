@@ -15,14 +15,8 @@ import {
 import { Button, InputToggle, SegmentedControl } from '@czi-sds/components';
 import { DropdownSelect } from '@app/common/components/DropdownSelect';
 import { primary100, primary500 } from '@app/common/theme';
-import { CreatedSession, PhasePlateType, PLAN_TIERS, PlanTier } from '../types';
+import { CreatedSession, PLAN_TIERS, PlanTier } from '../types';
 import { useSessionForm } from './useSessionForm';
-
-const PHASE_PLATE_OPTIONS: { name: string; value: PhasePlateType }[] = [
-  { name: 'None', value: '' },
-  { name: 'Volta', value: 'Volta' },
-  { name: 'Laser', value: 'Laser' },
-];
 
 const LABEL_INDENT_CLASS = 'pl-4';
 // DropdownSelect adds font-semibold itself; plain labels need both.
@@ -84,18 +78,6 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
     selectFilterUser,
     submit,
   } = useSessionForm();
-
-  const selectedPlan = formOptions?.session_plans.find((plan) => plan.id === state.sessionPlanId);
-  const installedPhasePlate = selectedPlan?.phase_plate;
-  const phasePlateOptions: { name: string; value: PhasePlateType | null }[] = [...PHASE_PLATE_OPTIONS];
-  if (
-    selectedPlan?.acquisition_defaults.phase_plate_used &&
-    selectedPlan.acquisition_defaults.phase_plate_type == null &&
-    installedPhasePlate !== 'Volta' &&
-    installedPhasePlate !== 'Laser'
-  ) {
-    phasePlateOptions.push({ name: installedPhasePlate || 'Unknown type (used)', value: null });
-  }
 
   const projectOptions = useMemo(
     () => (formOptions?.projects ?? []).map((p) => ({ ...p, name: p.name })),
@@ -271,13 +253,15 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
             }
             label="Energy filter used"
           />
-        </Box>
-        <Box sx={{ mt: '12px', width: '100%', maxWidth: 360, '& > button': { width: '100%', mt: '8px' } }}>
-          <DropdownSelect
-            topLabel="Phase plate used"
-            options={phasePlateOptions}
-            value={phasePlateOptions.find((option) => option.value === state.phasePlateType)}
-            onChange={(option) => updateField('phasePlateType', option ? option.value : '')}
+          <FormControlLabel
+            sx={{ m: 0, gap: '10px' }}
+            control={
+              <InputToggle
+                checked={state.phasePlateUsed}
+                onChange={() => updateField('phasePlateUsed', !state.phasePlateUsed)}
+              />
+            }
+            label="Phase plate used"
           />
         </Box>
       </Box>

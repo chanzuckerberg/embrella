@@ -372,7 +372,7 @@ class TestAutoFill:
         plan.camera.save()
 
         owned_session.msi_session.acquisition = AcquisitionSettings.objects.create(
-            phase_plate_used=True, phase_plate_type="Laser", energy_filter_used=True
+            phase_plate_used=True, energy_filter_used=True
         )
         owned_session.msi_session.save(update_fields=["acquisition"])
 
@@ -396,7 +396,7 @@ class TestAutoFill:
         assert ts.microscope_manufacturer == "TFS"
         assert ts.microscope_model == "Krios G4"
         assert ts.microscope_energy_filter == "Selectris X"
-        assert ts.microscope_phase_plate == "Laser"
+        assert ts.microscope_phase_plate == "Volta"
         assert ts.microscope_image_corrector == "Cs corrector"
         assert ts.camera_manufacturer == "Gatan"
         assert ts.camera_model == "K3"

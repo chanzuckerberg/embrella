@@ -2,7 +2,7 @@ import re
 
 from rest_framework import serializers
 
-from tem.models import PHASE_PLATE_CHOICES, MsiSession
+from tem.models import MsiSession
 
 
 class MsiSessionCreateSerializer(serializers.Serializer):
@@ -13,18 +13,7 @@ class MsiSessionCreateSerializer(serializers.Serializer):
     magnification_id = serializers.IntegerField(required=False, allow_null=True)
     super_resolution = serializers.BooleanField(required=False)
     phase_plate_used = serializers.BooleanField(required=False)
-    phase_plate_type = serializers.ChoiceField(choices=PHASE_PLATE_CHOICES, required=False, allow_blank=True)
     energy_filter_used = serializers.BooleanField(required=False)
-
-    def validate(self, attrs):
-        if "phase_plate_type" in attrs:
-            used = bool(attrs["phase_plate_type"])
-            if "phase_plate_used" in attrs and attrs["phase_plate_used"] != used:
-                raise serializers.ValidationError(
-                    {"phase_plate_type": "Phase plate type must match whether it was used."}
-                )
-            attrs["phase_plate_used"] = used
-        return attrs
 
     def validate_name(self, value):
         if re.search(r"[@_!#$%^&*()<>?/\\|}{~:\s]", value):
@@ -39,7 +28,6 @@ class AcquisitionSerializer(serializers.Serializer):
 
     super_resolution = serializers.BooleanField()
     phase_plate_used = serializers.BooleanField(allow_null=True)
-    phase_plate_type = serializers.ChoiceField(choices=PHASE_PLATE_CHOICES, allow_null=True, allow_blank=True)
     energy_filter_used = serializers.BooleanField(allow_null=True)
 
 
@@ -53,7 +41,6 @@ class SessionPlanOptionSerializer(serializers.Serializer):
     software = serializers.CharField()
     camera = serializers.CharField()
     acquisition_defaults = AcquisitionSerializer()
-    phase_plate = serializers.CharField(allow_blank=True)
 
 
 class SessionListItemSerializer(serializers.Serializer):

@@ -471,7 +471,6 @@ class DepositionSessionViewSet(
                     **map_session_plan_to_instrument_metadata(
                         msi_session.session_plan,
                         phase_plate_used=msi_session.phase_plate_used,
-                        phase_plate_type=msi_session.acquisition.phase_plate_type if msi_session.acquisition else None,
                         energy_filter_used=msi_session.energy_filter_used,
                     ),
                     "autofill_metadata": raw,
