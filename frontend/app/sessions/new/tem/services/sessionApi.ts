@@ -2,7 +2,7 @@ import { DJANGO_URL } from '@app/common/constants/api';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 
 import { TEM_API } from '../constants';
-import type { FormOptions, GridOption, MagnificationOption, UserOption } from '../types';
+import type { FormOptions, GridOption, MagnificationOption, PhasePlateType, UserOption } from '../types';
 
 const url = (path: string): string => `${DJANGO_URL}${path}`;
 
@@ -49,6 +49,9 @@ export interface CreateSessionPayload {
   grid_id: number | null;
   magnification_id?: number;
   super_resolution?: boolean;
+  phase_plate_type?: PhasePlateType;
+  phase_plate_used?: boolean;
+  energy_filter_used?: boolean;
 }
 
 /** Field errors come back as `{ field: [messages] }`, so the raw response is returned for the caller to read. */

@@ -4,6 +4,7 @@ import time
 
 from cryo_grids.models import CryoGrid, CryoGridCassette
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator, validate_comma_separated_integer_list
 from django.db import models
 from django.db.models import Q
@@ -36,6 +37,9 @@ TEM_COLLECTION_SOFTWARE = [
     ("tom5", "TFS Tomo5"),
     ("legn", "Leginon"),
 ]
+
+
+PHASE_PLATE_CHOICES = [("", "None"), ("Volta", "Volta"), ("Laser", "Laser")]
 
 
 class Microscope(models.Model):
@@ -228,7 +232,7 @@ class ImagingWorkflow(models.Model):
 
 
 # Accessory acquisition parameters. Adding one: a column below, and its name here.
-ACQUISITION_FIELDS = ("super_resolution",)
+ACQUISITION_FIELDS = ("super_resolution", "phase_plate_used", "phase_plate_type", "energy_filter_used")
 
 
 class AcquisitionSettings(models.Model):
@@ -244,10 +248,37 @@ class AcquisitionSettings(models.Model):
         default=False,
         help_text="Camera wrote super-resolution frames: frame pixel size is half the calibrated one.",
     )
+    phase_plate_used = models.BooleanField(
+        null=True,
+        default=False,
+        help_text="Phase plate was operated (installed does not imply used); null = unknown.",
+    )
+    phase_plate_type = models.CharField(
+        max_length=256,
+        choices=PHASE_PLATE_CHOICES,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Phase plate selected for this acquisition; blank = none, null = type unknown.",
+    )
+    energy_filter_used = models.BooleanField(
+        null=True,
+        default=True,
+        help_text="Whether the energy filter was used; null = unknown. Autofill assumes used when unknown.",
+    )
 
     class Meta:
         app_label = "tem"
         verbose_name_plural = "acquisition settings"
+
+    def clean(self):
+        super().clean()
+        if (
+            self.phase_plate_type is not None
+            and self.phase_plate_used is not None
+            and bool(self.phase_plate_type) != self.phase_plate_used
+        ):
+            raise ValidationError({"phase_plate_type": "Select a phase plate type when used, or None when not used."})
 
     def values(self):
         return {field: getattr(self, field) for field in ACQUISITION_FIELDS}
@@ -573,6 +604,16 @@ class MsiSession(models.Model):
     def super_resolution(self):
         """Sessions predating acquisition settings read as not super-resolution."""
         return bool(self.acquisition and self.acquisition.super_resolution)
+
+    @property
+    def phase_plate_used(self) -> bool | None:
+        """Return recorded usage, or None when usage is unknown."""
+        return self.acquisition.phase_plate_used if self.acquisition else None
+
+    @property
+    def energy_filter_used(self) -> bool | None:
+        """Return recorded usage; autofill separately assumes used when this is unknown."""
+        return self.acquisition.energy_filter_used if self.acquisition else None
 
     def get_calibrated_pixel_size(self):
         """Return the most recent calibrated pixel spacing for this session's magnification and camera, or None."""
