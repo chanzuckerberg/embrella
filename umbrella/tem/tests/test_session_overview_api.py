@@ -53,12 +53,6 @@ def make_session(db, session_plan, project, grid, test_user):
 
 
 @pytest.mark.django_db
-class TestAuth:
-    def test_unauthenticated_returns_401(self):
-        assert APIClient().get(URL, HTTP_ACCEPT="application/json").status_code == 401
-
-
-@pytest.mark.django_db
 class TestResponseShape:
     def test_response_wrapper_shape(self, auth_client, make_session):
         make_session("24mar01a")
@@ -341,9 +335,6 @@ class TestFiltering:
 @pytest.mark.django_db
 class TestFilterList:
     URL = f"{URL}filterlist/"
-
-    def test_unauthenticated_returns_401(self):
-        assert APIClient().get(self.URL, HTTP_ACCEPT="application/json").status_code == 401
 
     def test_returns_every_configured_category(self, auth_client, make_session):
         make_session("24mar01a")

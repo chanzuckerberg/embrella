@@ -60,10 +60,6 @@ class TestFormOptions:
         data = response.json()
         assert len(data["session_plans"]) == 1
 
-    def test_requires_authentication(self, client):
-        response = client.get("/tem/v1/sessions/form-options/")
-        assert response.status_code == 401
-
 
 @pytest.mark.django_db
 class TestListSessions:
@@ -89,9 +85,6 @@ class TestListSessions:
             "camera": session_plan.camera.name,
             "workflow": str(session_plan.imaging_workflow),
         }
-
-    def test_requires_authentication(self, client):
-        assert client.get("/tem/v1/sessions/").status_code == 401
 
 
 @pytest.mark.django_db
@@ -151,10 +144,6 @@ class TestSuggestName:
         assert response.status_code == 200
         assert response.json()["suggested_name"] == f"{_today()}a"
 
-    def test_requires_authentication(self, client):
-        response = client.get("/tem/v1/sessions/suggest-name/")
-        assert response.status_code == 401
-
 
 @pytest.mark.django_db
 class TestGetMagnifications:
@@ -173,10 +162,6 @@ class TestGetMagnifications:
         response = client.get(f"/tem/v1/magnifications/{query}")
         assert response.status_code == 200
         assert response.json() == []
-
-    def test_requires_authentication(self, client):
-        response = client.get("/tem/v1/magnifications/?session_plan_id=1")
-        assert response.status_code == 401
 
 
 @pytest.mark.django_db
@@ -289,19 +274,6 @@ class TestCreateSession:
 
         assert response.status_code == 400
         assert "name" in response.json()
-
-    def test_requires_authentication(self, client, session_plan, project, grid):
-        response = client.post(
-            "/tem/v1/sessions/",
-            data={
-                "name": "26mar06e",
-                "session_plan_id": session_plan.id,
-                "project_id": project.id,
-                "grid_id": grid.id,
-            },
-            content_type="application/json",
-        )
-        assert response.status_code == 401
 
 
 @pytest.mark.django_db

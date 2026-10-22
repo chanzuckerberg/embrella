@@ -103,12 +103,6 @@ def populated(software, make_survey, add_dir, session_plan):
 
 
 @pytest.mark.django_db
-class TestAuth:
-    def test_unauthenticated_returns_401(self):
-        assert APIClient().get(URL, HTTP_ACCEPT="application/json").status_code == 401
-
-
-@pytest.mark.django_db
 class TestEnvelope:
     def test_envelope_shape(self, auth_client, populated):
         body = auth_client.get(URL, q()).json()

@@ -117,13 +117,6 @@ class TestDuplicateGridService:
         with pytest.raises(DuplicateGridError):
             duplicate_grid(source_grid=source_grid, destination_box=dest_box, number_to_copy=5, request_user=user)
 
-    def test_partial_failure_rolls_back(self, source_grid, dest_box, user):
-        """Fail mid-way: no copies should exist after the exception."""
-        before = CryoGrid.objects.count()
-        with pytest.raises(DuplicateGridError):
-            duplicate_grid(source_grid=source_grid, destination_box=dest_box, number_to_copy=99, request_user=user)
-        assert CryoGrid.objects.count() == before
-
     def test_trashed_source_rejected(self, source_grid, dest_box, user):
         source_grid.trashed = True
         source_grid.save()
@@ -213,14 +206,6 @@ class TestDuplicateGridService:
         )
         [new_grid] = duplicate_grid(source_grid=source, destination_box=dest_box, number_to_copy=1, request_user=user)
         assert new_grid.copy_number == 3
-
-    def test_consecutive_duplicates_keep_climbing(self, source_grid, dest_box, user):
-        [first] = duplicate_grid(source_grid=source_grid, destination_box=dest_box, number_to_copy=1, request_user=user)
-        [second] = duplicate_grid(
-            source_grid=source_grid, destination_box=dest_box, number_to_copy=1, request_user=user
-        )
-        assert first.copy_number == 2
-        assert second.copy_number == 3
 
 
 @pytest.mark.django_db

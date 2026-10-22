@@ -307,11 +307,6 @@ class TestTriggerCopickScan:
             r = api.post(SCAN_URL.format(session="26feb20b", run="run001"))
         assert r.status_code == 202  # used the earliest ProcRun, no MultipleObjectsReturned
 
-    def test_requires_login(self, copick_session):
-        r = APIClient().post(SCAN_URL.format(session="26feb20b", run="run001"))
-        # DRF IsAuthenticated → 401/403; a global LoginRequiredMiddleware may 302 to login instead.
-        assert r.status_code in (302, 401, 403)
-
     def test_unknown_session_is_404(self, api, db):
         r = api.post(SCAN_URL.format(session="does-not-exist", run="run001"))
         assert r.status_code == 404

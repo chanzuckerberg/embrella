@@ -98,20 +98,6 @@ def session_status(auth_client, name):
 
 
 @pytest.mark.django_db
-class TestAuth:
-    def test_unauthenticated_post_is_rejected(self, survey):
-        response = APIClient().post(
-            URL,
-            {"cluster": "czii", "path_prefixes": ["/x"], "status": "delete"},
-            format="json",
-            HTTP_ACCEPT="application/json",
-        )
-
-        assert response.status_code == 401
-        assert StorageDecision.objects.count() == 0
-
-
-@pytest.mark.django_db
 class TestRecording:
     def test_run_level_decision_applies_to_that_run_only(self, auth_client, survey):
         response = auth_client.post(

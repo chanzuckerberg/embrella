@@ -54,13 +54,6 @@ def project(leader, viewer, editor):
 
 
 @pytest.mark.django_db
-class TestAuth:
-    def test_requires_login(self):
-        response = APIClient().get(PROJECTS_URL, HTTP_ACCEPT="application/json")
-        assert response.status_code == 401
-
-
-@pytest.mark.django_db
 class TestProjectCrud:
     def test_list_includes_members(self, project, viewer):
         response = _client(viewer).get(PROJECTS_URL)

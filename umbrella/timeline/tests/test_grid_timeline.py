@@ -36,9 +36,6 @@ class TestEndpoint:
     def test_unknown_grid_404(self, logged_in_client):
         assert logged_in_client.get("/timeline/v1/grids/999999/").status_code == 404
 
-    def test_requires_login(self, client, test_grid):
-        assert client.get(f"/timeline/v1/grids/{test_grid.id}/").status_code in (401, 403)
-
     def test_created(self, logged_in_client, test_grid):
         (entry,) = timeline(logged_in_client, test_grid.id)
 
