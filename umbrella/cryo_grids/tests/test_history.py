@@ -4,6 +4,8 @@ import pytest
 
 from cryo_grids.history import ChangeReason, edit_reason
 from cryo_grids.models import (
+    Cane,
+    Dewar,
     GridLabel,
     Label,
     Puck,
@@ -20,6 +22,13 @@ def latest(obj):
 
 @pytest.mark.django_db
 class TestGridHistory:
+    def test_create_writes_created_row(self, test_grid):
+        assert test_grid.history.count() == 1
+        assert latest(test_grid).history_type == CREATED
+
+    def test_updated_on_not_tracked(self, test_grid):
+        assert not hasattr(latest(test_grid), "updated_on")
+
     def test_move_grid(self, logged_in_client, test_user, test_grid, test_box_b):
         response = logged_in_client.patch(
             f"/cryo_grids/v1/grids/{test_grid.id}/move/",
@@ -163,6 +172,10 @@ class TestContainerHistory:
         row = latest(test_puck)
         assert row.history_user == test_user
         assert row.history_change_reason == reason
+
+    @pytest.mark.parametrize("model", [Puck, Cane, Dewar])
+    def test_containers_tracked(self, test_puck, model):
+        assert model.history.count() >= 1
 
 
 class TestEditReason:

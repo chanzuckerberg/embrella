@@ -59,10 +59,11 @@ def test_slurm_directives_and_env_rendered():
     assert "conda activate /test/envs/dataportal" in script
 
 
-def test_requests_slurm_notifications_for_the_submitting_hpc_account():
+def test_requests_slurm_notifications_for_the_submission_owner_when_provided():
     script = _render()
     assert "#SBATCH --mail-type=END,FAIL" in script
     assert "--mail-user" not in script
+    assert "#SBATCH --mail-user=owner@example.org" in _render(slurm_mail_user="owner@example.org")
 
 
 def test_validate_parameters_requires_output_and_config():

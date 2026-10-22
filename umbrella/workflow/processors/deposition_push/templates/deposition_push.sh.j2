@@ -13,6 +13,15 @@
 #SBATCH --qos=embrella
 {% endif %}
 
+# Refuse bucket/shared-prefix targets inside the job, before any upload can run.
+s3_dest={{ s3_dest }}
+# The current upload contract requires five-digit IDs; six-digit reservations will fail closed until updated.
+upload_uri_pattern='^s3://[a-z0-9][a-z0-9.-]+/([A-Za-z0-9_.-]+/)*[1-9][0-9]{4}/[1-9][0-9]{4}/?$'
+if [[ ! "$s3_dest" =~ $upload_uri_pattern || "$s3_dest" == *'/../'* || "$s3_dest" == *'/./'* ]]; then
+    echo "Invalid upload destination: expected an S3 URI ending in five-digit deposition and dataset IDs." >&2
+    exit 1
+fi
+
 # Group-writable staged tree.
 umask 0002
 
@@ -35,7 +44,7 @@ trap 'kill "$progress_pid" 2>/dev/null || true' EXIT
 # Keep the AWS exit status; progress logging must not change the upload result.
 set +e
 # AWS CLI uses the job account's credentials.
-aws s3 sync {{ staged_dir }} {{ s3_dest }} --follow-symlinks{% for pattern in exclude_patterns %} --exclude '{{ pattern }}'{% endfor %} 2>&1 | { tee "$upload_log" || cat; }
+aws s3 sync {{ staged_dir }} "$s3_dest" --delete --follow-symlinks{% for pattern in exclude_patterns %} --exclude '{{ pattern }}'{% endfor %} 2>&1 | { tee "$upload_log" || cat; }
 upload_status=${PIPESTATUS[0]}
 set -e
 if [ "$upload_status" -ne 0 ]; then exit "$upload_status"; fi

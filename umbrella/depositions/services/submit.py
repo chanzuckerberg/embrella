@@ -2,6 +2,8 @@
 
 import logging
 
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -16,12 +18,22 @@ from depositions.services.dataset_metadata import build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
 from depositions.services.metadata_requirements import metadata_issues
-from depositions.services.submission import PREP_ACTIVE, apply_status, on_push_complete, start_push
+from depositions.services.submission import PREP_ACTIVE, PUSH_ACTIVE, apply_status, on_push_complete, start_push
 from depositions.services.validation import require_validation
 
 logger = logging.getLogger(__name__)
 
 CONFIG_FILENAME = "dataprep_config.yaml"
+
+
+def _notification_parameters(deposition):
+    owner = deposition.submitter_user
+    address = (owner.email or owner.username).strip() if owner else ""
+    try:
+        validate_email(address)
+    except ValidationError:
+        return {}
+    return {"slurm_mail_user": address}
 
 
 def _cluster_for_dataset(dataset):
@@ -135,6 +147,7 @@ def submit_dataset_prep(dataset):
             "config_path": config_path,
             "config_yaml": config_yaml,
             "session_names": list(dataset.sessions.values_list("msi_session__name", flat=True)),
+            **_notification_parameters(deposition),
         }
         job_name = f"deposition_prep_{deposition.deposition_id}_{dataset.dataset_id}"
         slurm_job_id = launch_deposition_job(
@@ -172,6 +185,22 @@ def submit_dataset_prep(dataset):
     return job
 
 
+def cancel_dataset_upload(dataset, expected_job_id):
+    """Cancel only the upload attempt the user confirmed; the syncer records the terminal state."""
+    try:
+        job = DatasetJob.objects.using(dataset._state.db).get(dataset=dataset)
+    except DatasetJob.DoesNotExist:
+        raise SubmissionValidationError("There is no active upload to cancel.")
+    if (
+        job.state not in PUSH_ACTIVE
+        or not job.push_slurm_job_id
+        or not job.cluster_id
+        or expected_job_id != job.push_slurm_job_id
+    ):
+        raise SubmissionValidationError("The upload has changed or finished. Refresh to check its status.")
+    cancel_deposition_job(cluster_id=job.cluster_id, job_id=job.push_slurm_job_id, auth=_service_auth())
+
+
 def submit_dataset_push(dataset):
     """Launch this dataset's push job from a prep_completed state"""
     deposition = dataset.deposition
@@ -196,7 +225,7 @@ def submit_dataset_push(dataset):
         job_name = f"deposition_push_{deposition.deposition_id}_{dataset.dataset_id}"
         return launch_deposition_job(
             processor_name="deposition-push",
-            params={"staged_dir": staged_dir, "s3_dest": s3_dest},
+            params={"staged_dir": staged_dir, "s3_dest": s3_dest, **_notification_parameters(deposition)},
             cluster_id=cluster_id,
             job_name=job_name,
             auth=auth,

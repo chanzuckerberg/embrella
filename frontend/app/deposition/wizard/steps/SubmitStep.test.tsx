@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import { SubmitStep } from './SubmitStep';
 import { useSubmitFlow } from '../../hooks/useSubmitFlow';
@@ -12,6 +12,7 @@ jest.mock('../../hooks/useSubmitFlow', () => ({
 jest.mock('../../hooks/useDatasetLogs', () => ({ useDatasetLogs: jest.fn(() => ({ data: undefined })) }));
 const mockFlow = useSubmitFlow as jest.Mock;
 const mockLogs = useDatasetLogs as jest.Mock;
+const cancel = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isSuccess: false, error: null };
 
 function setLogs(data: JobLogs | undefined) {
   mockLogs.mockReturnValue({ data });
@@ -24,7 +25,7 @@ function setup(job: DatasetJob | null, { readOnly = false } = {}) {
   const submit = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
   const push = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
   const dataset = { id: 1, title: 'DS', dataset_id: 2, status: 'draft', job } as Dataset;
-  mockFlow.mockReturnValue({ submit, push });
+  mockFlow.mockReturnValue({ cancel, submit, push });
   const view = render(<SubmitStep dataset={dataset} readOnly={readOnly} reportSave={jest.fn()} />);
   return { submit, push, dataset, view };
 }
@@ -33,6 +34,28 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockLogs.mockReturnValue({ data: undefined });
 });
+
+it('confirms cancellation of the selected upload attempt', async () => {
+  setup({ id: 1, state: 'push_running', push_slurm_job_id: '99' });
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel upload' }));
+  expect(cancel.mutate).not.toHaveBeenCalled();
+  const dialog = screen.getByRole('dialog');
+  expect(dialog).toHaveTextContent('Files already uploaded to S3 will remain.');
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Keep uploading' }));
+  expect(cancel.mutate).not.toHaveBeenCalled();
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel upload' }));
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel upload' }));
+  expect(cancel.mutate).toHaveBeenCalledWith('99', expect.objectContaining({ onSuccess: expect.any(Function) }));
+});
+
+it.each([true, false])(
+  'hides upload cancellation when read-only or the upload is finished (readOnly=%s)',
+  (readOnly) => {
+    setup({ id: 1, state: readOnly ? 'push_running' : 'completed', push_slurm_job_id: '99' }, { readOnly });
+    expect(screen.queryByRole('button', { name: 'Cancel upload' })).not.toBeInTheDocument();
+  }
+);
 
 it('auto-starts preparation once on arrival', () => {
   const { submit } = setup(null);
@@ -43,6 +66,7 @@ it('keeps a rejected pending attempt from retrying on rerenders, but allows manu
   const { submit, push, dataset, view } = setup({ id: 1, state: 'pending' });
   expect(submit.mutate).toHaveBeenCalledTimes(1);
   mockFlow.mockReturnValue({
+    cancel,
     submit: {
       ...submit,
       isError: true,
@@ -76,7 +100,9 @@ it('shows a retry action and the error when sync failed', () => {
 
 it('shows success and no submit actions once pushed', () => {
   setup({ id: 1, state: 'completed', push_slurm_job_id: '99' });
-  expect(screen.getByText(/Files have been uploaded to S3/i)).toBeInTheDocument();
+  const banner = screen.getByRole('alert');
+  expect(within(banner).getByText('Upload complete')).toBeInTheDocument();
+  expect(within(banner).getByText('Files have been uploaded to S3.')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /submit/i })).toBeNull();
 });
 
@@ -101,7 +127,7 @@ it('offers retry when the launch is rejected before a job exists', () => {
   };
   const push = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
   const dataset = { id: 1, title: 'DS', dataset_id: 2, status: 'draft', job: null } as Dataset;
-  mockFlow.mockReturnValue({ submit, push });
+  mockFlow.mockReturnValue({ cancel, submit, push });
   render(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
   expect(screen.getByText('Missing dataset ids')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /retry sync/i })).toBeInTheDocument();
@@ -146,7 +172,9 @@ it.each([true, false])(
         eta: '2m 10s',
       },
     });
-    expect(screen.getByText(`12 / ${estimated ? '~' : ''}30 objects uploaded`)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Upload details' })).toHaveTextContent(
+      `12 / ${estimated ? '~' : ''}30 objects uploaded`
+    );
     expect(screen.getByText('Elapsed: 2m 10s')).toBeInTheDocument();
     const bar = screen.getByRole('progressbar', { name: 'Upload progress' });
     if (estimated) {
@@ -217,10 +245,7 @@ it('updates sync elapsed time, freezes on completion and resets on restart', () 
   try {
     const job: DatasetJob = { id: 1, state: 'prep_running', started_at: '2026-10-14T12:00:00Z' };
     const dataset = { id: 1, title: 'DS', status: 'syncing', job } as Dataset;
-    mockFlow.mockReturnValue({
-      submit: { isPending: false },
-      push: {},
-    });
+    mockFlow.mockReturnValue({ cancel, submit: { isPending: false }, push: {} });
     const props = { dataset, readOnly: true, reportSave: jest.fn() };
     const view = render(<SubmitStep {...props} />);
     expect(screen.getByText(/Elapsed: 2m 0s/)).toBeInTheDocument();
@@ -284,7 +309,7 @@ it.each(['prep', 'push'])('shows one request error instead of the saved %s failu
       push_slurm_job_id: phase === 'push' ? '99' : null,
     },
   } as Dataset;
-  mockFlow.mockReturnValue({ submit, push });
+  mockFlow.mockReturnValue({ cancel, submit, push });
   render(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
   expect(screen.getAllByRole('alert')).toHaveLength(1);
   expect(screen.getByRole('alert')).toHaveTextContent("Couldn't reach the cluster to submit. Please try again.");
@@ -330,10 +355,7 @@ it('does not offer an upload action when viewing validation before sync complete
 it('keeps a manually selected sync log open when prep completes', () => {
   const job: DatasetJob = { id: 1, state: 'prep_running' };
   const dataset = { id: 1, title: 'DS', status: 'syncing', job } as Dataset;
-  mockFlow.mockReturnValue({
-    submit: { isPending: false },
-    push: {},
-  });
+  mockFlow.mockReturnValue({ cancel, submit: { isPending: false }, push: {} });
   const props = { dataset, readOnly: false, reportSave: jest.fn() };
   const view = render(<SubmitStep {...props} />);
   fireEvent.click(screen.getByRole('button', { name: /Sync on cluster/ }));
@@ -374,7 +396,9 @@ it('labels the saved excerpt when the live log is unavailable', () => {
 
 it('shows measured upload bytes and ETA', () => {
   setup({ id: 1, state: 'push_running', push_progress: { done: 1048576, total: 4194304, eta: '30s' } });
-  expect(screen.getByText('1.0 MiB / 4.0 MiB · 25% · ETA 30s')).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Upload details' })).toHaveTextContent(
+    'Size 1.0 MiB / 4.0 MiB · 25% · ETA 30s'
+  );
   expect(screen.getByRole('progressbar', { name: 'Upload progress' })).toHaveAttribute('aria-valuenow', '25');
 });
 
@@ -451,7 +475,7 @@ it('renders grouped counts while keeping overall progress and ETA from the snaps
 it('does not fetch or display logs for non-owners', () => {
   setLogs({ logs: 'private output', source: 'stored' });
   const dataset = { id: 1, title: 'DS', is_owner: false, job: { id: 1, state: 'failed' } } as Dataset;
-  mockFlow.mockReturnValue({ submit: {}, push: {} });
+  mockFlow.mockReturnValue({ cancel, submit: {}, push: {} });
   render(<SubmitStep dataset={dataset} readOnly reportSave={jest.fn()} />);
   expect(screen.getByText('Logs are visible to the submitter only.')).toBeVisible();
   expect(mockLogs).toHaveBeenCalledWith(1, expect.objectContaining({ enabled: false }));
