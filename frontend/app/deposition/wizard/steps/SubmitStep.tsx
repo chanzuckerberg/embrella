@@ -620,13 +620,17 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
                 {uploadProgress?.elapsed && <Typography variant="body2">Elapsed: {uploadProgress.elapsed}</Typography>}
                 {job?.push_slurm_job_id && <Typography variant="body2">SLURM job {job.push_slurm_job_id}</Typography>}
               </Box>
-              {uploadTotalEstimated && (
+              {uploadTotalEstimated && pushed === 'active' && (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: '16px' }}>
                   Calculating total… Totals are estimates until the file list is complete.
                 </Typography>
               )}
               {uploadProgress?.objects && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: uploadTotalEstimated ? '4px' : '16px' }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: uploadTotalEstimated && pushed === 'active' ? '4px' : '16px' }}
+                >
                   Unchanged files skipped by sync aren’t counted.
                 </Typography>
               )}

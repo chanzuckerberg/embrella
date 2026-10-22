@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     "tem",
     "stores",
     "processes",
+    "timeline",
     "accounts",
     "people",
     "django.contrib.admin",
@@ -111,6 +112,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "django_q",
     "guardian",
+    "simple_history",
 ]
 
 MIDDLEWARE = [
@@ -120,6 +122,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "simple_history.middleware.HistoryRequestMiddleware",  # Stamps history rows with request.user
     "allauth.account.middleware.AccountMiddleware",
     "umbrella.middleware.APIAuthenticationMiddleware",
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
@@ -177,6 +180,8 @@ SPECTACULAR_SETTINGS = {
     # Several models have a `status` field with different choice sets, this helps differentiate
     "ENUM_NAME_OVERRIDES": {
         "PreserveStatusEnum": "processes.models.DirectorySummary.PRESERVE_STATUS_CHOICES",
+        "TimelineKindEnum": "timeline.serializers.KIND_CHOICES",
+        "TimelineSubjectEnum": "timeline.serializers.SUBJECT_CHOICES",
     },
 }
 

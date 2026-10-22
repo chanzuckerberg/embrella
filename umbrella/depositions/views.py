@@ -370,7 +370,7 @@ class DatasetViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
                     "annotations": [
                         {
                             "copick_kind": "picks",
-                            "copick_ref": "ribosome-0",
+                            "copick_ref": "ribosome:alice/0",
                             "object_name": "ribosome",
                             "object_count": 1200,
                             "method_type": "automated",
@@ -468,7 +468,12 @@ class DepositionSessionViewSet(
                 session=session,
                 defaults={
                     **mapped["tiltseries"],
-                    **map_session_plan_to_instrument_metadata(msi_session.session_plan),
+                    **map_session_plan_to_instrument_metadata(
+                        msi_session.session_plan,
+                        phase_plate_used=msi_session.phase_plate_used,
+                        phase_plate_type=msi_session.acquisition.phase_plate_type if msi_session.acquisition else None,
+                        energy_filter_used=msi_session.energy_filter_used,
+                    ),
                     "autofill_metadata": raw,
                 },
             )

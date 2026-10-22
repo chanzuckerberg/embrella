@@ -14,6 +14,7 @@ from django.views.decorators.http import require_http_methods
 from pydantic import ValidationError
 
 # project app imports
+from .history import ChangeReason, with_reason
 from .models import CryoGrid, Specimen
 from .utils import (
     CassetteModel,
@@ -504,7 +505,7 @@ def update_grid_trashed_status(request, grid_id):
             grid.grid_box = None
             grid.position_in_box = None
 
-        grid.save()
+        with_reason(grid, ChangeReason.TRASHED if trashed_status else ChangeReason.RESTORED).save()
 
         return JsonResponse(
             {
@@ -584,7 +585,7 @@ def update_grid_clipped_status(request, grid_id):
         clipped_status = data.get("clipped", False)
 
         grid.clipped = clipped_status
-        grid.save()
+        with_reason(grid, ChangeReason.CLIPPED if clipped_status else ChangeReason.UNCLIPPED).save()
 
         grid.refresh_from_db()
         return JsonResponse(

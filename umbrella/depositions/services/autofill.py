@@ -115,10 +115,26 @@ def map_session_to_metadata(session: dict | None) -> dict:
     return {"tiltseries": tiltseries, "tomograms": tomograms}
 
 
-def map_session_plan_to_instrument_metadata(session_plan: "SessionPlan") -> dict:
-    """Instrument/facility fields from the session's Microscope/Camera + software (reads the ORM).
+def _accessory_field(key: str, installed_value: str, used: bool | None) -> dict:
+    if used is None:
+        return {}
+    if not used:
+        return {key: ""}
+    return {key: installed_value} if installed_value else {}
 
-    Returns only non-blank values, so a blank tem column won't clobber what the user typed.
+
+def map_session_plan_to_instrument_metadata(
+    session_plan: "SessionPlan",
+    *,
+    phase_plate_used: bool | None = None,
+    phase_plate_type: str | None = None,
+    energy_filter_used: bool | None = None,
+) -> dict:
+    """Map instrument metadata using recorded accessory usage.
+
+    Explicit non-use clears stale values. Unknown phase-plate usage preserves existing values.
+    Unknown energy-filter usage is assumed used. Blank instrument names are omitted so reruns
+    preserve manual entries; a known phase-plate use without a recorded type falls back to the scope.
     """
     scope = session_plan.scope
     camera = session_plan.camera
@@ -140,14 +156,25 @@ def map_session_plan_to_instrument_metadata(session_plan: "SessionPlan") -> dict
     fields = {
         "microscope_manufacturer": scope.manufacturer,
         "microscope_model": scope.model,
-        "microscope_energy_filter": scope.energy_filter,
-        "microscope_phase_plate": scope.phase_plate,
         "microscope_image_corrector": image_corrector,
         "camera_manufacturer": camera.manufacturer,
         "camera_model": camera.model,
         "data_acquisition_software": session_plan.software.name,  # from the plan; filtered like the rest
     }
-    return {k: v for k, v in fields.items() if v}
+    out = {k: v for k, v in fields.items() if v}
+    out.update(
+        _accessory_field(
+            "microscope_phase_plate",
+            scope.phase_plate if phase_plate_type is None else phase_plate_type,
+            phase_plate_used,
+        )
+    )
+    out.update(
+        _accessory_field(
+            "microscope_energy_filter", scope.energy_filter, True if energy_filter_used is None else energy_filter_used
+        )
+    )
+    return out
 
 
 def _voxel_spacing(pixel_spacing, binned_voxel_ratio) -> float | None:

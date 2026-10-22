@@ -21,6 +21,16 @@ import django
 django.setup()
 
 import pytest
+from cryo_grids.models import (
+    Cane,
+    CryoGrid,
+    CryoGridBox,
+    Dewar,
+    PlungeFreezingDevice,
+    PlungeFreezingSession,
+    Puck,
+    Site,
+)
 from django.contrib.auth.models import User
 from processes.models import Pipe, PipeInPlan, ProcPlan, ProcRun, ProcSoftware, Task
 from tem.models import Camera, ImagingWorkflow, Microscope, MsiSession, SessionPlan, Software
@@ -85,3 +95,43 @@ def test_pipe_in_plan(db, test_proc_plan, test_pipe):
 @pytest.fixture
 def test_proc_run(db, test_proc_plan, test_msi_session):
     return ProcRun.objects.create(name="run001", proc_plan=test_proc_plan, msi_session=test_msi_session)
+
+
+# Storage chain for grid history / timeline tests: site → dewar → cane → puck → boxes A, B → grid in A position 1
+
+
+@pytest.fixture
+def test_site(db):
+    return Site.objects.create(name="SiteA")
+
+
+@pytest.fixture
+def test_puck(db, test_site):
+    dewar = Dewar.objects.create(name="DewarA", site=test_site)
+    cane = Cane.objects.create(name="CaneA", dewar=dewar, position_in_dewar=1)
+    return Puck.objects.create(name="PuckA", cane=cane, position_in_cane=1)
+
+
+@pytest.fixture
+def test_box_a(db, test_puck):
+    return CryoGridBox.objects.create(name="BoxA", puck=test_puck, position_in_puck=1)
+
+
+@pytest.fixture
+def test_box_b(db, test_puck):
+    return CryoGridBox.objects.create(name="BoxB", puck=test_puck, position_in_puck=2)
+
+
+@pytest.fixture
+def test_grid(db, test_user, test_site, test_box_a):
+    device = PlungeFreezingDevice.objects.create(name="Device", site=test_site)
+    session = PlungeFreezingSession.objects.create(user=test_user, device=device)
+    return CryoGrid.objects.create(
+        name="grid1", user=test_user, freezing_session=session, grid_box=test_box_a, position_in_box=1
+    )
+
+
+@pytest.fixture
+def logged_in_client(client, test_user):
+    client.force_login(test_user)
+    return client
