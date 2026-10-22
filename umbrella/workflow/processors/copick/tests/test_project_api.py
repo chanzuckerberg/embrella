@@ -100,21 +100,14 @@ class TestListCopickProjects:
         assert project["data_url"] == expected_root
         assert project["status"] == "completed"
 
-    def test_filters_out_non_completed_by_default(
-        self, client, bruno_cluster, krios1_session, copick_plan, copick_pipe_in_plan
-    ):
+    @pytest.mark.usefixtures("bruno_cluster")
+    @pytest.mark.parametrize("query, statuses", [("", []), ("?status=all", ["failed"])])
+    def test_status_filter(self, client, krios1_session, copick_plan, copick_pipe_in_plan, query, statuses):
+        """Only completed projects by default; status=all includes failed ones."""
         _make_run(copick_plan, krios1_session, "run001", "bruno", "failed", copick_pipe_in_plan)
 
-        response = client.get("/copick/v1/projects/")
-        assert response.json()["projects"] == []
-
-    def test_status_all_includes_failed(self, client, bruno_cluster, krios1_session, copick_plan, copick_pipe_in_plan):
-        _make_run(copick_plan, krios1_session, "run001", "bruno", "failed", copick_pipe_in_plan)
-
-        response = client.get("/copick/v1/projects/?status=all")
-        projects = response.json()["projects"]
-        assert len(projects) == 1
-        assert projects[0]["status"] == "failed"
+        response = client.get(f"/copick/v1/projects/{query}")
+        assert [p["status"] for p in response.json()["projects"]] == statuses
 
     def test_cluster_filter(
         self,
@@ -135,56 +128,23 @@ class TestListCopickProjects:
         assert projects[0]["cluster_id"] == "czii"
         assert projects[0]["root_url"].startswith("https://czii-onsite.czbiohub.org/")
 
-    def test_cluster_filter_accepts_multiple_repeated(
+    @pytest.mark.usefixtures("bruno_cluster", "czii_cluster")
+    @pytest.mark.parametrize("query", ["?cluster=czii&cluster=bruno", "?cluster=czii,bruno", ""])
+    def test_multi_cluster_filter(
         self,
         client,
-        bruno_cluster,
-        czii_cluster,
         krios1_session,
         copick_plan,
         copick_pipe_in_plan,
+        query,
     ):
+        """Repeated or comma-separated clusters combine; no filter returns every cluster."""
         _make_run(copick_plan, krios1_session, "run001", "bruno", "completed", copick_pipe_in_plan)
         _make_run(copick_plan, krios1_session, "run002", "czii", "completed", copick_pipe_in_plan)
 
-        response = client.get("/copick/v1/projects/?cluster=czii&cluster=bruno")
+        response = client.get(f"/copick/v1/projects/{query}")
         projects = response.json()["projects"]
-        assert {p["cluster_id"] for p in projects} == {"czii", "bruno"}
-        assert len(projects) == 2
-
-    def test_cluster_filter_accepts_comma_separated(
-        self,
-        client,
-        bruno_cluster,
-        czii_cluster,
-        krios1_session,
-        copick_plan,
-        copick_pipe_in_plan,
-    ):
-        _make_run(copick_plan, krios1_session, "run001", "bruno", "completed", copick_pipe_in_plan)
-        _make_run(copick_plan, krios1_session, "run002", "czii", "completed", copick_pipe_in_plan)
-
-        response = client.get("/copick/v1/projects/?cluster=czii,bruno")
-        projects = response.json()["projects"]
-        assert {p["cluster_id"] for p in projects} == {"czii", "bruno"}
-        assert len(projects) == 2
-
-    def test_no_cluster_filter_returns_all_clusters(
-        self,
-        client,
-        bruno_cluster,
-        czii_cluster,
-        krios1_session,
-        copick_plan,
-        copick_pipe_in_plan,
-    ):
-        _make_run(copick_plan, krios1_session, "run001", "bruno", "completed", copick_pipe_in_plan)
-        _make_run(copick_plan, krios1_session, "run002", "czii", "completed", copick_pipe_in_plan)
-
-        response = client.get("/copick/v1/projects/")
-        projects = response.json()["projects"]
-        assert {p["cluster_id"] for p in projects} == {"czii", "bruno"}
-        assert len(projects) == 2
+        assert sorted(p["cluster_id"] for p in projects) == ["bruno", "czii"]
 
     def test_session_id_filter(self, client, bruno_cluster, krios1_session, copick_plan, copick_pipe_in_plan):
         _make_run(copick_plan, krios1_session, "run001", "bruno", "completed", copick_pipe_in_plan)

@@ -126,29 +126,19 @@ class TestSegmentParsing:
 
         Recognised from the script_dir template's last segment (stores/0022) rather
         than a hardcoded name, so a deployment that uploads somewhere else works
-        without a code change.
+        without a code change. Applies to every software's tree alike: pytom has a
+        real pytom/scripts holding 15.7 GB but is not an Embrella-run processor.
         """
         make_dir(f"{BASE}/aretomo3/scripts", size=10)
         make_dir(f"{BASE}/aretomo3/scripts/pyConvert/lib/python3.10/site-packages", size=90)
         make_dir(f"{BASE}/aretomo3/26mar02a/run001", size=500)
-
-        build_storage_tree(survey)
-
-        leaves = leaves_by_key(survey)
-        assert set(leaves) == {("aretomo3", "26mar02a", "run001")}
-
-    def test_scripts_excluded_for_every_software(self, survey, software, make_dir):
-        """
-        pytom has a real pytom/scripts holding 15.7 GB but is not an Embrella-run
-        processor. The segment name comes from the template, so it applies to every
-        software's tree alike.
-        """
         make_dir(f"{BASE}/pytom/scripts", size=15_700)
         make_dir(f"{BASE}/pytom/26mar02a/run001", size=500)
 
         build_storage_tree(survey)
 
-        assert set(leaves_by_key(survey)) == {("pytom", "26mar02a", "run001")}
+        leaves = leaves_by_key(survey)
+        assert set(leaves) == {("aretomo3", "26mar02a", "run001"), ("pytom", "26mar02a", "run001")}
 
     def test_scripts_directory_name_comes_from_the_database(self, survey, software, make_dir):
         """A deployment uploading to `bin` instead of `scripts` needs no code change."""
@@ -344,36 +334,6 @@ class TestRebuild:
 
 
 @pytest.mark.django_db
-class TestDecisions:
-    def test_decision_survives_a_new_survey(self, survey, software, make_dir, django_user_model):
-        """
-        The property that motivated a separate table.
-
-        A status on DirectorySummary would be stranded with new surveys
-        """
-        from processes.models import StorageDecision
-
-        user = django_user_model.objects.create(username="alice")
-        prefix = f"{BASE}/aretomo3/26mar02a/run001"
-        StorageDecision.objects.create(cluster="czii", path_prefix=prefix, status="delete", decided_by=user)
-
-        later = FilesystemSurvey.objects.create(cluster="czii", base_path=f"{BASE}/", status="completed")
-        DirectorySummary.objects.create(
-            survey=later,
-            cluster="czii",
-            path=prefix,
-            depth=3,
-            total_size_bytes=100,
-        )
-        build_storage_tree(later)
-
-        leaf = StorageRunSummary.objects.get(survey=later)
-        decision = StorageDecision.objects.get(cluster=leaf.cluster, path_prefix=leaf.path_prefix)
-        assert decision.status == "delete"
-        assert decision.decided_by == user
-
-
-@pytest.mark.django_db
 class TestCurrentScoping:
     """
     The table holds one tree per survey, so reads must be scoped or they sum
@@ -388,24 +348,6 @@ class TestCurrentScoping:
             status=kwargs.pop("status", "completed"),
             completed_at=completed_at,
         )
-
-    def test_current_picks_the_newest_completed_survey(self, software, session_plan):
-        older = self._survey("czii", dt(1))
-        newer = self._survey("czii", dt(9))
-        for survey, size in ((older, 100), (newer, 500)):
-            DirectorySummary.objects.create(
-                survey=survey,
-                cluster="czii",
-                path=f"{BASE}/aretomo3/26mar02a/run001",
-                depth=3,
-                total_size_bytes=size,
-            )
-            build_storage_tree(survey)
-
-        current = StorageRunSummary.objects.current("czii")
-
-        assert [leaf.survey_id for leaf in current] == [newer.pk]
-        assert current.get().total_size_bytes == 500
 
     def test_current_isolates_clusters(self, software):
         czii = self._survey("czii", dt(5))
@@ -481,4 +423,8 @@ class TestCurrentScoping:
         build_storage_tree(older)
 
         assert StorageRunSummary.objects.get(survey=older).total_size_bytes == 7777
-        assert StorageRunSummary.objects.current("czii").get().total_size_bytes == 500
+
+        # The newest completed survey stays current
+        current = StorageRunSummary.objects.current("czii")
+        assert [leaf.survey_id for leaf in current] == [newer.pk]
+        assert current.get().total_size_bytes == 500

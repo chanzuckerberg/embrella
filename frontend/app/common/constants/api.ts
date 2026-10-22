@@ -54,7 +54,6 @@ export enum API {
   PIPELINE_EXECUTE = '/workflow/v1/execution/execute/',
   PIPELINE_PREVIEW = '/workflow/v1/execution/preview/',
   PIPELINE_EXECUTION_STATUS = '/workflow/v1/execution/:executionId/status/',
-  PIPELINE_EXECUTION_RUN = '/workflow/v1/execution/run/:runId/',
   PIPELINE_CHECK_DEPENDENCIES = '/workflow/v1/execution/check_dependencies/',
   PIPELINE_LOOKUP_IDS = '/workflow/v1/execution/lookup_ids/',
   PIPELINE_EXECUTION_BY_JOB_ID = '/workflow/v1/execution/by_job_id/:jobId/',

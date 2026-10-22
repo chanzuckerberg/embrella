@@ -11,7 +11,7 @@
     "prettier:check": "prettier --check .",
     "check": "yarn lint && yarn prettier:check && yarn typecheck",
     "fix": "eslint --fix . --cache && yarn prettier --write .",
-    "test": "jest --runInBand",
+    "test": "jest --maxWorkers=50%",
     "e2e": "playwright test --project chromium",
     "e2e:chrome": "playwright test --project chromium",
     "e2e:ff": "playwright test --project firefox",

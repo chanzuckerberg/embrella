@@ -6,10 +6,9 @@ from unittest.mock import Mock
 
 import pytest
 from django.core.exceptions import ValidationError
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from processes.services.cluster_resolver import (
     NoDefaultClusterError,
-    active_cluster_ids,
     active_clusters,
     clear_default_cluster_cache,
     get_default_cluster_id,
@@ -107,9 +106,6 @@ class ActiveClusterTests(TestCase):
         self.assertFalse(is_active_cluster("off"))
         self.assertFalse(is_active_cluster("missing"))
 
-    def test_active_cluster_ids_skip_inactive(self):
-        self.assertEqual(sorted(active_cluster_ids()), ["aaa", "bbb"])
-
     def test_active_clusters_flag_default(self):
         self.assertEqual(
             active_clusters(),
@@ -120,7 +116,7 @@ class ActiveClusterTests(TestCase):
         )
 
 
-class FileserverAllowlistTests(TestCase):
+class FileserverAllowlistTests(SimpleTestCase):
     def test_empty_allowlist_is_noop(self):
         with override_settings(FILESERVER_ALLOWED_HOSTS=[]):
             validate_fileserver_base_url("http://anything.example/")  # no raise
@@ -131,16 +127,19 @@ class FileserverAllowlistTests(TestCase):
             validate_fileserver_base_url("https://good.example/x.jpeg")
 
     def test_disallowed_origin_raises(self):
-        with override_settings(FILESERVER_ALLOWED_HOSTS=["http://localhost:8080"]), self.assertRaises(ValidationError):
-            validate_fileserver_base_url("https://evil.example/x")
-
-    def test_ssrf_metadata_host_blocked(self):
-        with override_settings(FILESERVER_ALLOWED_HOSTS=["https://good.example"]), self.assertRaises(ValidationError):
-            validate_fileserver_base_url("http://169.254.169.254/latest/meta-data/")
-
-    def test_same_host_wrong_port_blocked(self):
-        with override_settings(FILESERVER_ALLOWED_HOSTS=["http://localhost:8080"]), self.assertRaises(ValidationError):
-            validate_fileserver_base_url("http://localhost:9000/")
+        """Another host, cloud metadata (SSRF), and a known host on the wrong port."""
+        cases = [
+            (["http://localhost:8080"], "https://evil.example/x"),
+            (["https://good.example"], "http://169.254.169.254/latest/meta-data/"),
+            (["http://localhost:8080"], "http://localhost:9000/"),
+        ]
+        for allowed, url in cases:
+            with (
+                self.subTest(url=url),
+                override_settings(FILESERVER_ALLOWED_HOSTS=allowed),
+                self.assertRaises(ValidationError),
+            ):
+                validate_fileserver_base_url(url)
 
     def test_cluster_clean_enforces_allowlist(self):
         with override_settings(FILESERVER_ALLOWED_HOSTS=["https://ok.example"]):

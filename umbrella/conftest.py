@@ -20,6 +20,11 @@ import django
 # Ensure Django is set up before test collection
 django.setup()
 
+from django.conf import settings
+
+# PBKDF2 faster per create_user; tests don't need secure hashes.
+settings.PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
 import pytest
 from cryo_grids.models import (
     Cane,

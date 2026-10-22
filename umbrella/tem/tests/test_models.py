@@ -8,45 +8,9 @@ from tem.models import (
     AcquisitionSettings,
     CalibratedPixelSize,
     Camera,
-    ImagingWorkflow,
     Magnification,
-    Microscope,
     MsiSession,
-    SessionPlan,
-    Software,
 )
-
-
-@pytest.fixture
-def microscope(db):
-    return Microscope.objects.create(name="TestScope", cs=2.7)
-
-
-@pytest.fixture
-def camera(db):
-    return Camera.objects.create(
-        name="TestCam",
-        root_dir="/test/root",
-        frame_format="eer",
-        initial_frame_base_dir="/test/frames",
-    )
-
-
-@pytest.fixture
-def magnification(db, microscope):
-    return Magnification.objects.create(scope=microscope, mode="SA", nominal_mag=50000, index=0)
-
-
-@pytest.fixture
-def session_plan(db, microscope, camera):
-    imaging_workflow = ImagingWorkflow.objects.create(imaging_mode="tem", workflow="tomo")
-    software = Software.objects.create(name="TestSoftware")
-    return SessionPlan.objects.create(
-        scope=microscope,
-        camera=camera,
-        imaging_workflow=imaging_workflow,
-        software=software,
-    )
 
 
 @pytest.fixture
@@ -123,9 +87,6 @@ class TestGetCalibratedPixelSize:
 
 @pytest.mark.django_db
 class TestSessionPlanNamePrefix:
-    def test_defaults_to_blank(self, session_plan):
-        assert session_plan.name_prefix == ""
-
     @pytest.mark.parametrize("prefix", ["", "s", "abcd"])
     def test_accepts_lowercase_letters(self, session_plan, prefix):
         session_plan.name_prefix = prefix

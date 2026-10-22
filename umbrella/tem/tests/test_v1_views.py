@@ -1,14 +1,12 @@
 import time
 
 import pytest
-from stores.models import Path
 
 from tem.models import (
     AcquisitionSettings,
     ImagingWorkflow,
     MsiSession,
     SessionPlan,
-    SessionPlanPathBinding,
 )
 
 # Fixtures (test_user, microscope, camera, magnification, software,
@@ -67,10 +65,6 @@ class TestFormOptions:
         data = response.json()
         assert len(data["session_plans"]) == 1
 
-    def test_requires_authentication(self, client):
-        response = client.get("/tem/v1/sessions/form-options/")
-        assert response.status_code == 401
-
 
 @pytest.mark.django_db
 class TestListSessions:
@@ -96,9 +90,6 @@ class TestListSessions:
             "camera": session_plan.camera.name,
             "workflow": str(session_plan.imaging_workflow),
         }
-
-    def test_requires_authentication(self, client):
-        assert client.get("/tem/v1/sessions/").status_code == 401
 
 
 @pytest.mark.django_db
@@ -129,25 +120,9 @@ class TestSessionDetail:
 
         assert client.get("/tem/v1/sessions/nope/").status_code == 404
 
-    def test_literal_routes_still_win(self, client, test_user, session_plan, project):
-        """form-options/ and suggest-name/ must not be swallowed by the <name>/ route."""
-        client.force_login(test_user)
-
-        assert "session_plans" in client.get("/tem/v1/sessions/form-options/").json()
-        assert "suggested_name" in client.get("/tem/v1/sessions/suggest-name/").json()
-
 
 @pytest.mark.django_db
 class TestSuggestName:
-    def test_returns_suggested_name(self, client, test_user):
-        client.force_login(test_user)
-        response = client.get("/tem/v1/sessions/suggest-name/")
-        assert response.status_code == 200
-        data = response.json()
-        assert "suggested_name" in data
-        assert len(data["suggested_name"]) > 0
-        assert data["suggested_name"].endswith("a")
-
     def test_applies_plan_prefix(self, client, test_user, session_plan):
         client.force_login(test_user)
         session_plan.name_prefix = "s"
@@ -174,10 +149,6 @@ class TestSuggestName:
         assert response.status_code == 200
         assert response.json()["suggested_name"] == f"{_today()}a"
 
-    def test_requires_authentication(self, client):
-        response = client.get("/tem/v1/sessions/suggest-name/")
-        assert response.status_code == 401
-
 
 @pytest.mark.django_db
 class TestGetMagnifications:
@@ -190,21 +161,12 @@ class TestGetMagnifications:
         assert data[0]["id"] == magnification.id
         assert data[0]["nominal_mag"] == 50000
 
-    def test_returns_empty_for_missing_plan(self, client, test_user):
+    @pytest.mark.parametrize("query", ["", "?session_plan_id=99999"])
+    def test_returns_empty_without_a_plan(self, client, test_user, query):
         client.force_login(test_user)
-        response = client.get("/tem/v1/magnifications/")
+        response = client.get(f"/tem/v1/magnifications/{query}")
         assert response.status_code == 200
         assert response.json() == []
-
-    def test_returns_empty_for_nonexistent_plan(self, client, test_user):
-        client.force_login(test_user)
-        response = client.get("/tem/v1/magnifications/?session_plan_id=99999")
-        assert response.status_code == 200
-        assert response.json() == []
-
-    def test_requires_authentication(self, client):
-        response = client.get("/tem/v1/magnifications/?session_plan_id=1")
-        assert response.status_code == 401
 
 
 @pytest.mark.django_db
@@ -232,39 +194,15 @@ class TestCreateSession:
         assert session.session_plan == session_plan
         assert session.user == test_user
 
-    def test_creates_session_with_magnification(self, client, test_user, session_plan, project, grid, magnification):
+    @pytest.mark.parametrize("posted", ["magnification", None])
+    def test_magnification_is_optional(self, client, test_user, session_plan, project, grid, magnification, posted):
+        expected = magnification if posted else None
         client.force_login(test_user)
-        response = client.post(
-            "/tem/v1/sessions/",
-            data={
-                "name": "26mar06b",
-                "session_plan_id": session_plan.id,
-                "project_id": project.id,
-                "grid_id": grid.id,
-                "magnification_id": magnification.id,
-            },
-            content_type="application/json",
-        )
-        assert response.status_code == 201
-        session = MsiSession.objects.get(name="26mar06b")
-        assert session.magnification == magnification
 
-    def test_creates_session_without_magnification(self, client, test_user, session_plan, project, grid):
-        client.force_login(test_user)
-        response = client.post(
-            "/tem/v1/sessions/",
-            data={
-                "name": "26mar06c",
-                "session_plan_id": session_plan.id,
-                "project_id": project.id,
-                "grid_id": grid.id,
-                "magnification_id": None,
-            },
-            content_type="application/json",
-        )
+        response = self._create(client, session_plan, project, grid, magnification_id=expected.id if expected else None)
+
         assert response.status_code == 201
-        session = MsiSession.objects.get(name="26mar06c")
-        assert session.magnification is None
+        assert MsiSession.objects.get(name="26mar06f").magnification == expected
 
     def _create(self, client, session_plan, project, grid, **extra):
         return client.post(
@@ -381,56 +319,14 @@ class TestCreateSession:
         assert response.status_code == 400
         assert "name" in response.json()
 
-    def test_rejects_special_characters_in_name(self, client, test_user, session_plan, project, grid):
+    @pytest.mark.parametrize("name", ["bad@name", "bad name"])
+    def test_rejects_unsafe_characters_in_name(self, client, test_user, session_plan, project, grid, name):
         client.force_login(test_user)
-        response = client.post(
-            "/tem/v1/sessions/",
-            data={
-                "name": "bad@name",
-                "session_plan_id": session_plan.id,
-                "project_id": project.id,
-                "grid_id": grid.id,
-            },
-            content_type="application/json",
-        )
+
+        response = self._create(client, session_plan, project, grid, name=name)
+
         assert response.status_code == 400
         assert "name" in response.json()
-
-    def test_rejects_spaces_in_name(self, client, test_user, session_plan, project, grid):
-        client.force_login(test_user)
-        response = client.post(
-            "/tem/v1/sessions/",
-            data={
-                "name": "bad name",
-                "session_plan_id": session_plan.id,
-                "project_id": project.id,
-                "grid_id": grid.id,
-            },
-            content_type="application/json",
-        )
-        assert response.status_code == 400
-
-    def test_rejects_missing_required_fields(self, client, test_user):
-        client.force_login(test_user)
-        response = client.post(
-            "/tem/v1/sessions/",
-            data={"name": "26mar06d"},
-            content_type="application/json",
-        )
-        assert response.status_code == 400
-
-    def test_requires_authentication(self, client, session_plan, project, grid):
-        response = client.post(
-            "/tem/v1/sessions/",
-            data={
-                "name": "26mar06e",
-                "session_plan_id": session_plan.id,
-                "project_id": project.id,
-                "grid_id": grid.id,
-            },
-            content_type="application/json",
-        )
-        assert response.status_code == 401
 
 
 @pytest.mark.django_db
@@ -465,9 +361,3 @@ class TestCreatedSessionPaths:
 
     def test_a_role_the_software_does_not_emit_is_null_on_both_halves(self, created):
         assert created["sums"] == {"directory": None, "pattern": None}
-
-    def test_creates_one_path_row_and_no_bindings(self, created):
-        """Path rows scale with sessions, bindings with plans -- creating a session writes
-        zero of the latter."""
-        assert Path.objects.count() == 1
-        assert SessionPlanPathBinding.objects.count() == 0

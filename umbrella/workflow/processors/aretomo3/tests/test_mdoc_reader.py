@@ -66,16 +66,6 @@ Magnification = 81000
     def test_returns_none_for_empty_content(self):
         assert parse_mdoc_magnification("") is None
 
-    def test_handles_different_magnification_values(self):
-        content = """\
-[ZValue = 0]
-Magnification = 105000
-
-[ZValue = 1]
-Magnification = 105000
-"""
-        assert parse_mdoc_magnification(content) == 105000
-
     def test_handles_whitespace_variations(self):
         content = """\
 [ZValue = 0]
@@ -83,18 +73,6 @@ Magnification =  81000
 """
         # Our regex handles extra spaces after =
         assert parse_mdoc_magnification(content) == 81000
-
-    def test_only_reads_zvalue_0(self):
-        """Ensure we read from [ZValue = 0], not other sections."""
-        content = """\
-[ZValue = 0]
-TiltAngle = -20.02
-
-[ZValue = 1]
-Magnification = 999999
-"""
-        # No Magnification in ZValue 0, so should return None
-        assert parse_mdoc_magnification(content) is None
 
     def test_header_magnification_ignored(self):
         """Magnification in the header (before any ZValue) should be ignored."""

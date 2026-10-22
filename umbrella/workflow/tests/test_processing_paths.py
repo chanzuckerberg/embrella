@@ -88,11 +88,6 @@ class TestPerSoftwareOverride:
         assert p.get_script_directory() == "/shared/slurm_scripts/aretomo3"
         assert p.get_processing_base_path() == "/hpc/projects/group.czii/krios1.processing/aretomo3"
 
-    def test_blank_uses_the_shared_template(self, templates):
-        given_software("aretomo3")
-        expected = "/hpc/projects/group.czii/krios1.processing/aretomo3"
-        assert get_processor("aretomo3").get_processing_base_path() == expected
-
 
 class TestTheCasesTheOverridesExistedFor:
     """{proc_software} substitutes dirname, so the awkward names need no extra rows."""

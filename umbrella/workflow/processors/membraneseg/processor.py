@@ -123,23 +123,6 @@ class MembranesegProcessor(BaseProcessor):
 
         return script
 
-    def get_default_slurm_options(self) -> Dict[str, Any]:
-        """
-        Get default SLURM options for membrane segmentation jobs.
-
-        Returns:
-            Dictionary of SLURM options
-        """
-        return {
-            "partition": "gpu",
-            "gpus": 4,
-            "nodes": 1,
-            "cpus_per_task": 4,
-            "mem_per_cpu": "32G",
-            "time": "72:00:00",
-            "job_name": "membraneseg",
-        }
-
     def on_job_submit(self, run_context: RunContext, job_id: str) -> None:
         """
         Hook called after successful job submission.

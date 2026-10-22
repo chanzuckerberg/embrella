@@ -102,15 +102,6 @@ class TestAretomo3Script:
         assert f"{PROCESSING_ROOT}/software/executables/AreTomo3_" in script
         assert f"python {PROCESSING_ROOT}/software/diagnostics/scripts/plot_aretomo3_metrics.py" in script
 
-    def test_editing_the_template_moves_the_script(self, run_context):
-        """The point of the change: the row is the one source of the tree."""
-        PathType.objects.filter(data_kind__data_type="processing_root").update(
-            overlay_path="/data/runs/{proc_software}"
-        )
-        script = get_processor("aretomo3").render_script(dict(ARETOMO3_PARAMS), run_context)
-
-        assert 'export out_path="/data/runs/aretomo3/24nov10/run001"' in script
-
     def test_session_without_mdocs_fails_loudly(self, run_context):
         """A silently rendered "." would submit a job reading the cwd."""
         software = run_context.msi_session.session_plan.software

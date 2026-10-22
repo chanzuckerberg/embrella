@@ -124,23 +124,6 @@ class DenoisETProcessor(BaseProcessor):
 
         return script
 
-    def get_default_slurm_options(self) -> Dict[str, Any]:
-        """
-        Get default SLURM options for DenoisET jobs.
-
-        Returns:
-            Dictionary of SLURM options
-        """
-        return {
-            "partition": "gpu",
-            "gpus": 1,  # DenoisET uses single GPU
-            "nodes": 1,
-            "cpus_per_task": 8,
-            "mem_per_gpu": "32G",
-            "time": "12:00:00",  # 12 hours
-            "job_name": "denoiset",
-        }
-
     def on_job_submit(self, run_context: RunContext, job_id: str) -> None:
         """
         Hook called after successful job submission.

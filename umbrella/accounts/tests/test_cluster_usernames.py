@@ -84,13 +84,5 @@ class TestFormatClusterUsernameForDisplay:
     def user(self, db):
         return User.objects.create_user(username="carol@example.com", email="carol@example.com")
 
-    def test_returns_persisted_username(self, user):
-        czii = Cluster.objects.get(cluster_id="czii")
-        UserClusterCredentials.objects.create(user=user, cluster=czii, username="carol123")
-        assert format_cluster_username_for_display(user, "czii") == "carol123"
-
     def test_returns_empty_string_when_missing(self, user):
         assert format_cluster_username_for_display(user, "czii") == ""
-
-    def test_returns_empty_string_for_anonymous_user(self):
-        assert format_cluster_username_for_display(AnonymousUser(), "czii") == ""

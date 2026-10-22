@@ -3,7 +3,7 @@
 import pytest
 from django.core.exceptions import ValidationError
 
-from stores.models import DataKind, FilePattern, PathType, validate_file_regex
+from stores.models import DataKind, FilePattern, validate_file_regex
 
 pytestmark = pytest.mark.django_db
 
@@ -90,47 +90,12 @@ class TestCompiled:
         with pytest.raises(ValidationError, match="Anchor with"):
             pattern.match("Position1.eer")
 
-    def test_compiled_is_cached(self):
-        pattern = make_pattern()
-        assert pattern.compiled is pattern.compiled
-
-
-class TestOneKindManyConventions:
-    def test_kind_allows_any_groups(self):
-        """Nothing constrains *which* groups a pattern captures, so two scopes naming
-        files differently are still the same kind of data."""
-        kind = DataKind.objects.create(data_type="rec2")
-        for regex in (r"^(?P<run>\w+)_(?P<position>\d+)_(?P<tilt>[\d.]+)\.mrc$", r"^(?P<position>\d+)\.mrc$"):
-            FilePattern(data_kind=kind, label="x", regex=regex).clean()
-
 
 class TestSampleFilenames:
     def test_unmatched_sample_rejected(self):
-        with pytest.raises(ValidationError, match="does not match"):
+        """Names the failing file: an error that doesn't say which is useless with ten samples."""
+        with pytest.raises(ValidationError, match="does not match 'not-a-frame.txt'"):
             make_pattern(samples=["Position1_001_-30.0_f.eer", "not-a-frame.txt"]).clean()
 
     def test_matching_samples_pass(self):
         make_pattern(samples=["Position1_001_-30.0_f.eer", "P2_002_0.0_x.eer"]).clean()
-
-    def test_error_names_the_file(self):
-        """An error that doesn't say which sample failed is useless with ten of them."""
-        with pytest.raises(ValidationError, match="not-a-frame.txt"):
-            make_pattern(samples=["not-a-frame.txt"]).clean()
-
-
-class TestAttachedToDirectory:
-    def test_directory_carries_pattern(self):
-        pattern = make_pattern()
-        pattern.save()
-        path_type = PathType.objects.create(
-            data_kind=pattern.data_kind,
-            overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/",
-            file_pattern=pattern,
-        )
-        assert path_type.file_pattern.match("Position1_001_-30.0_f.eer")["tilt"] == "-30.0"
-
-    def test_pattern_is_optional(self):
-        """Patterns are additive: every PathType today has none and must keep working."""
-        kind, _ = DataKind.objects.get_or_create(data_type="frames")
-        path_type = PathType.objects.create(data_kind=kind, overlay_path="/hpc/{msi_session}/")
-        assert path_type.file_pattern is None

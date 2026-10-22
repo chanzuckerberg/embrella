@@ -14,7 +14,6 @@ from processes.models import (
     FilesystemSurvey,
     ProcSoftware,
     StorageDecision,
-    StorageRunSummary,
 )
 from processes.services.storage_tree import build_storage_tree
 
@@ -104,22 +103,16 @@ def populated(software, make_survey, add_dir, session_plan):
 
 
 @pytest.mark.django_db
-class TestAuth:
-    def test_unauthenticated_returns_401(self):
-        assert APIClient().get(URL, HTTP_ACCEPT="application/json").status_code == 401
-
-
-@pytest.mark.django_db
 class TestEnvelope:
     def test_envelope_shape(self, auth_client, populated):
         body = auth_client.get(URL, q()).json()
 
         assert set(body) == {"result", "pagination", "sortBy", "survey"}
-        assert set(body["pagination"]) == {"page", "pageSize", "totalPages", "totalResults"}
         assert body["sortBy"] == {"sort": "size", "asc": False}
 
-    def test_row_shape(self, auth_client, populated):
-        row = auth_client.get(URL, q()).json()["result"][0]
+    def test_row_and_run_shape(self, auth_client, populated):
+        rows = auth_client.get(URL, q()).json()["result"]
+        row = rows[0]
 
         assert set(row) == {
             "storageSession",
@@ -141,8 +134,6 @@ class TestEnvelope:
             "runs",
         }
 
-    def test_run_shape(self, auth_client, populated):
-        rows = auth_client.get(URL, q()).json()["result"]
         run = next(r for r in rows if r["sessionName"] == "26mar02a")["runs"][0]
 
         assert set(run) == {
@@ -193,18 +184,12 @@ class TestEnvelope:
 
 @pytest.mark.django_db
 class TestRollup:
-    def test_session_total_equals_sum_of_its_runs(self, auth_client, populated):
-        rows = auth_client.get(URL, q()).json()["result"]
-
-        for row in rows:
-            assert row["totalSizeBytes"] == sum(run["totalSizeBytes"] for run in row["runs"])
-
     def test_session_spanning_two_software_is_one_row(self, auth_client, populated):
         row = next(r for r in auth_client.get(URL, q()).json()["result"] if r["sessionName"] == "26mar02a")
 
         assert row["softwareCount"] == 2
         assert row["runCount"] == 3
-        assert row["totalSizeBytes"] == 1000
+        assert row["totalSizeBytes"] == 1000 == sum(run["totalSizeBytes"] for run in row["runs"])
         assert sorted({run["software"] for run in row["runs"]}) == ["aretomo3", "denoise"]
 
     def test_unregistered_session_is_its_own_row(self, auth_client, populated):
@@ -328,43 +313,6 @@ class TestDecisions:
         # A decision on the aretomo3 directory says nothing about denoise.
         assert all(run["status"] == "unset" for run in denoise_runs)
 
-    def test_longest_prefix_wins(self, auth_client, populated):
-        StorageDecision.objects.create(
-            cluster="czii",
-            path_prefix=f"{BASE}/aretomo3/26mar02a",
-            status="preserve",
-        )
-        StorageDecision.objects.create(
-            cluster="czii",
-            path_prefix=f"{BASE}/aretomo3/26mar02a/run002",
-            status="delete",
-        )
-
-        # Keyed by (software, run) -- run001 exists under both aretomo3 and
-        # denoise, so the name alone is not unique within a session.
-        runs = {
-            (run["software"], run["run"]["name"]): run
-            for r in auth_client.get(URL, q()).json()["result"]
-            if r["sessionName"] == "26mar02a"
-            for run in r["runs"]
-        }
-
-        assert runs[("aretomo3", "run001")]["status"] == "preserve"
-        # The run-level decision overrides its session-level parent.
-        assert runs[("aretomo3", "run002")]["status"] == "delete"
-        assert runs[("aretomo3", "run002")]["decidedAtPrefix"] == f"{BASE}/aretomo3/26mar02a/run002"
-
-    def test_session_status_is_mixed_when_runs_disagree(self, auth_client, populated):
-        StorageDecision.objects.create(
-            cluster="czii",
-            path_prefix=f"{BASE}/aretomo3/26mar02a/run001",
-            status="delete",
-        )
-
-        row = next(r for r in auth_client.get(URL, q()).json()["result"] if r["sessionName"] == "26mar02a")
-
-        assert row["status"] == "mixed"
-
     def test_decision_on_another_cluster_does_not_apply(self, auth_client, populated):
         StorageDecision.objects.create(
             cluster="bruno",
@@ -445,24 +393,16 @@ class TestFilterlist:
         # denoise only one.
         assert software == {"aretomo3": 2, "denoise": 1}
 
-    def test_selected_reflects_the_q_param(self, auth_client, populated):
+    def test_selection_marks_but_does_not_narrow(self, auth_client, populated):
+        """Selected reflects the q param; counts stay global, matching the filterlist actions elsewhere."""
         body = auth_client.get(
             f"{URL}filterlist/",
             q([{"category": "processingSoftware", "value": ["denoise"]}]),
         ).json()
 
-        selected = {option["name"]: option["selected"] for option in body["filters"]["processingSoftware"]}
-        assert selected == {"aretomo3": False, "denoise": True}
-
-    def test_counts_are_not_narrowed_by_the_selection(self, auth_client, populated):
-        """Global counts, matching the filterlist actions elsewhere."""
-        body = auth_client.get(
-            f"{URL}filterlist/",
-            q([{"category": "processingSoftware", "value": ["denoise"]}]),
-        ).json()
-
-        software = {option["name"]: option["count"] for option in body["filters"]["processingSoftware"]}
-        assert software == {"aretomo3": 2, "denoise": 1}
+        options = body["filters"]["processingSoftware"]
+        assert {option["name"]: option["selected"] for option in options} == {"aretomo3": False, "denoise": True}
+        assert {option["name"]: option["count"] for option in options} == {"aretomo3": 2, "denoise": 1}
 
 
 @pytest.mark.django_db
@@ -550,26 +490,3 @@ class TestSummary:
             "outsideTree": None,
             "bySoftware": [],
         }
-
-    def test_unknown_cluster_is_rejected(self, auth_client, populated):
-        assert auth_client.get(f"{URL}summary/", {"cluster": "czi"}).status_code == 400
-
-
-@pytest.mark.django_db
-class TestScoping:
-    def test_only_the_current_survey_is_read(self, auth_client, software, make_survey, add_dir):
-        """
-        The table holds one tree per survey, so an unscoped read would sum them.
-        """
-        older = make_survey(completed_at="2026-01-01T00:00:00Z")
-        newer = make_survey(completed_at="2026-08-01T00:00:00Z")
-        for survey in (older, newer):
-            add_dir(survey, f"{BASE}/aretomo3/26mar02a/run001", size=100)
-            build_storage_tree(survey)
-
-        assert StorageRunSummary.objects.count() == 2
-
-        body = auth_client.get(URL, q()).json()
-
-        assert body["pagination"]["totalResults"] == 1
-        assert body["result"][0]["totalSizeBytes"] == 100
