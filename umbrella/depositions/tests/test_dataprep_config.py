@@ -1,13 +1,23 @@
 """Deployment-config generation uses saved data without init, SSH, or SLURM."""
 
 from copy import deepcopy
+from types import SimpleNamespace
 
 import pytest
 import yaml
 from stores.models import PathType
 from tem.models import MsiSession
 
-from depositions.models import Dataset, Deposition, DepositionSession, TiltseriesMetadata, TomogramMetadata
+from depositions.models import (
+    Dataset,
+    Deposition,
+    DepositionAnnotation,
+    DepositionAnnotationMethodLink,
+    DepositionSession,
+    TiltseriesMetadata,
+    TomogramMetadata,
+)
+from depositions.services import annotation_config
 from depositions.services.dataprep_config import (
     build_dataprep_config,
     dataprep_config_yaml,
@@ -272,4 +282,58 @@ def test_invalid_configured_destination_is_rejected(dataset):
         overlay_path="/local/path"
     )
     with pytest.raises(SubmissionValidationError, match="S3 destination"):
+        _build(dataset)
+
+
+@pytest.mark.parametrize("kind,expected", [("picks", "picks"), ("segmentations", "segmentation_mask")])
+def test_selected_annotations_use_sync_contract_and_reviewed_authors(dataset, monkeypatch, kind, expected):
+    dataset.deposition.authors_json = [{"full_name": "Ada", "is_primary": True, "is_corresponding": True}]
+    dataset.deposition.save()
+    session = dataset.sessions.get()
+    session.selected_copick_runs = ["run003", "run004"]
+    session.save()
+    TomogramMetadata.objects.create(session=session, flavor="filtered", voxel_spacing=12, is_visualization_default=True)
+    selected = DepositionAnnotation.objects.create(
+        session=session,
+        copick_kind=kind,
+        copick_ref="ribosome:alice/0",
+        object_id="GO:0022626",
+        object_name="ribosome",
+        annotation_method="Manual annotation",
+        annotation_software="Copick",
+        method_type="manual",
+        ground_truth_status=True,
+    )
+    DepositionAnnotationMethodLink.objects.create(
+        annotation=selected, link_type="source_code", link="https://example.org/code"
+    )
+    monkeypatch.setattr(annotation_config, "cluster_id_for_run", lambda *a: "cluster-a")
+    monkeypatch.setattr(
+        annotation_config, "get_processor", lambda _: SimpleNamespace(get_processing_base_path=lambda **kw: "/copick")
+    )
+    annotations = _session(_build(dataset))["annotations"]
+    assert len(annotations) == 1
+    entry = annotations[0]
+    assert entry["kind"] == expected and entry["copick_ref"] == "ribosome:alice/0"
+    assert entry["copick_config"] == ["/copick/24nov10/run003/config.json", "/copick/24nov10/run004/config.json"]
+    assert entry["voxel_spacing"] == 12
+    assert entry["authors"] == [{"name": "Ada", "primary_author_status": True, "corresponding_author_status": True}]
+    assert entry["method_links"] == [{"link_type": "source_code", "link": "https://example.org/code"}]
+
+    selected.is_selected = False
+    selected.save(update_fields=["is_selected"])
+    assert "annotations" not in _session(_build(dataset))
+
+
+@pytest.mark.parametrize("problem,match", [("mesh", "mesh"), ("spacing", "voxel spacing")])
+def test_annotation_export_rejects_unsupported_or_incomplete_selections(dataset, problem, match):
+    session = dataset.sessions.get()
+    session.selected_copick_runs = ["run003"]
+    session.save()
+    if problem != "spacing":
+        TomogramMetadata.objects.create(session=session, flavor="filtered", voxel_spacing=12)
+    DepositionAnnotation.objects.create(
+        session=session, copick_kind="meshes" if problem == "mesh" else "picks", copick_ref="ribosome:alice/0"
+    )
+    with pytest.raises(SubmissionValidationError, match=match):
         _build(dataset)

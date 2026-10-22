@@ -370,7 +370,7 @@ class DatasetViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
                     "annotations": [
                         {
                             "copick_kind": "picks",
-                            "copick_ref": "ribosome-0",
+                            "copick_ref": "ribosome:alice/0",
                             "object_name": "ribosome",
                             "object_count": 1200,
                             "method_type": "automated",
