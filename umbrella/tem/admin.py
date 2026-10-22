@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from django.contrib.admin.views.main import ChangeList
 from django.db.models import Count
@@ -8,6 +9,7 @@ from stores.placeholders import placeholders_in
 
 from .models import (
     CAMERA_PATH_ROLES,
+    PHASE_PLATE_CHOICES,
     ROLE_OWNERS,
     SOFTWARE_PATH_ROLES,
     AcquisitionSettings,
@@ -52,10 +54,37 @@ class _ProfilesFirstChangeList(ChangeList):
         return ["-plan_count", "label", "-pk"]
 
 
+class AcquisitionSettingsForm(forms.ModelForm):
+    phase_plate_type = forms.TypedChoiceField(
+        choices=[("unknown", "Unknown"), *PHASE_PLATE_CHOICES],
+        coerce=lambda value: None if value == "unknown" else value,
+        empty_value="",
+        required=False,
+    )
+
+    class Meta:
+        model = AcquisitionSettings
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.phase_plate_type is None:
+            self.initial["phase_plate_type"] = "unknown"
+
+
 @admin.register(AcquisitionSettings)
 class AcquisitionSettingsAdmin(admin.ModelAdmin):
-    list_display = ("__str__", "super_resolution", "plan_count", "session")
-    list_filter = ("super_resolution",)
+    form = AcquisitionSettingsForm
+    list_display = (
+        "__str__",
+        "super_resolution",
+        "phase_plate_used",
+        "phase_plate_type",
+        "energy_filter_used",
+        "plan_count",
+        "session",
+    )
+    list_filter = ("super_resolution", "phase_plate_used", "phase_plate_type", "energy_filter_used")
     search_fields = ("label",)
 
     def get_changelist(self, request, **kwargs):
@@ -69,8 +98,23 @@ class AcquisitionSettingsAdmin(admin.ModelAdmin):
         return obj.plan_count or ""
 
 
+class MicroscopeForm(forms.ModelForm):
+    phase_plate = forms.ChoiceField(choices=PHASE_PLATE_CHOICES, required=False)
+
+    class Meta:
+        model = Microscope
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        current = self.instance.phase_plate
+        if current and current not in dict(PHASE_PLATE_CHOICES):
+            self.fields["phase_plate"].choices = [*PHASE_PLATE_CHOICES, (current, current)]
+
+
 @admin.register(Microscope)
 class MicroscopeAdmin(admin.ModelAdmin):
+    form = MicroscopeForm
     list_display = ("name", "manufacturer", "model", "cs", "energy_filter", "phase_plate", "image_correctors")
     search_fields = ("name", "manufacturer", "model")
 

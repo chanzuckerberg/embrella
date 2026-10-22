@@ -102,15 +102,30 @@ class TestSessionPlanNamePrefix:
 @pytest.mark.django_db
 class TestAcquisitionSettings:
     def test_plan_without_profile_reports_field_defaults(self, session_plan):
-        assert session_plan.acquisition_values() == {"super_resolution": False}
+        assert session_plan.acquisition_values() == {
+            "super_resolution": False,
+            "phase_plate_used": False,
+            "phase_plate_type": None,
+            "energy_filter_used": True,
+        }
 
     def test_snapshot_copies_then_overrides(self):
         profile = AcquisitionSettings.objects.create(label="krios2", super_resolution=True)
 
         copy = profile.snapshot("snapshot 26sep15a")
-        assert copy.values() == {"super_resolution": True}
+        assert copy.values() == {
+            "super_resolution": True,
+            "phase_plate_used": False,
+            "phase_plate_type": None,
+            "energy_filter_used": True,
+        }
         assert str(copy) == "snapshot 26sep15a"
-        assert profile.snapshot("x", super_resolution=False).values() == {"super_resolution": False}
+        assert profile.snapshot("x", super_resolution=False).values() == {
+            "super_resolution": False,
+            "phase_plate_used": False,
+            "phase_plate_type": None,
+            "energy_filter_used": True,
+        }
 
     def test_snapshot_does_not_alias_the_profile(self, msi_session):
         profile = AcquisitionSettings.objects.create(label="krios2", super_resolution=True)
@@ -126,3 +141,42 @@ class TestAcquisitionSettings:
 
     def test_session_without_row_is_not_super_resolution(self, msi_session):
         assert msi_session.super_resolution is False
+
+
+@pytest.mark.parametrize("usage", [True, False, None])
+def test_session_accessory_usage_preserves_unknown(msi_session, usage):
+    assert msi_session.phase_plate_used is None
+    assert msi_session.energy_filter_used is None
+    msi_session.acquisition = AcquisitionSettings.objects.create(phase_plate_used=usage, energy_filter_used=usage)
+    assert msi_session.phase_plate_used is usage
+    assert msi_session.energy_filter_used is usage
+
+
+@pytest.mark.parametrize("used, plate_type", [(True, ""), (False, "Laser")])
+def test_acquisition_rejects_conflicting_phase_plate_usage(used, plate_type):
+    with pytest.raises(ValidationError, match="Select a phase plate type"):
+        AcquisitionSettings(phase_plate_used=used, phase_plate_type=plate_type).full_clean()
+
+
+def test_microscope_admin_preserves_legacy_phase_plate(microscope):
+    from tem.admin import MicroscopeForm
+
+    microscope.phase_plate = "Zernike"
+    microscope.save()
+    form = MicroscopeForm(
+        {"name": microscope.name, "cs": microscope.cs, "phase_plate": "Zernike", "image_correctors": "[]"},
+        instance=microscope,
+    )
+    assert form.is_valid(), form.errors
+    assert form.save().phase_plate == "Zernike"
+
+
+@pytest.mark.parametrize("selected, expected", [("", ""), ("unknown", None)])
+def test_acquisition_admin_distinguishes_none_from_unknown(selected, expected):
+    from tem.admin import AcquisitionSettingsForm
+
+    form = AcquisitionSettingsForm(
+        {"phase_plate_used": "False", "phase_plate_type": selected, "energy_filter_used": "True"}
+    )
+    assert form.is_valid(), form.errors
+    assert form.save(commit=False).phase_plate_type == expected

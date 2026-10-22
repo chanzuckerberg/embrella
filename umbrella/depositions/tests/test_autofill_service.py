@@ -173,7 +173,7 @@ class TestInstrumentMetadata:
             camera=SimpleNamespace(manufacturer="Gatan", model="K3"),
             software=SimpleNamespace(name="tomo5"),
         )
-        assert map_session_plan_to_instrument_metadata(plan) == {
+        assert map_session_plan_to_instrument_metadata(plan, phase_plate_used=True, energy_filter_used=True) == {
             "microscope_manufacturer": "TFS",
             "microscope_model": "Krios G4",
             "microscope_energy_filter": "Selectris X",
@@ -184,14 +184,33 @@ class TestInstrumentMetadata:
             "data_acquisition_software": "tomo5",
         }
 
-    def test_blank_fields_are_dropped_so_reruns_dont_wipe_edits(self):
+    def test_phase_plate_requires_usage_and_energy_filter_defaults_to_used(self):
+        scope = SimpleNamespace(
+            manufacturer="", model="", energy_filter="Selectris X", phase_plate="Volta", image_correctors=[]
+        )
+        plan = SimpleNamespace(
+            scope=scope, camera=SimpleNamespace(manufacturer="", model=""), software=SimpleNamespace(name="")
+        )
+        assert map_session_plan_to_instrument_metadata(plan) == {"microscope_energy_filter": "Selectris X"}
+        assert map_session_plan_to_instrument_metadata(plan, phase_plate_used=False, energy_filter_used=False) == {
+            "microscope_phase_plate": "",
+            "microscope_energy_filter": "",
+        }
+        # Used asserts the installed value.
+        assert map_session_plan_to_instrument_metadata(plan, phase_plate_used=True, energy_filter_used=True) == {
+            "microscope_phase_plate": "Volta",
+            "microscope_energy_filter": "Selectris X",
+        }
+
+    @pytest.mark.parametrize("usage", [None, True])
+    def test_blank_fields_are_dropped_so_reruns_dont_wipe_edits(self, usage):
         plan = SimpleNamespace(
             scope=SimpleNamespace(manufacturer="TFS", model="", energy_filter="", phase_plate="", image_correctors=[]),
             camera=SimpleNamespace(manufacturer="", model=""),
             software=SimpleNamespace(name="tomo5"),
         )
         # Only the non-blank fields come back; blanks are omitted, not written as "".
-        assert map_session_plan_to_instrument_metadata(plan) == {
+        assert map_session_plan_to_instrument_metadata(plan, phase_plate_used=usage, energy_filter_used=usage) == {
             "microscope_manufacturer": "TFS",
             "data_acquisition_software": "tomo5",
         }

@@ -42,6 +42,13 @@ interface SessionSummaryProps {
  * Shared by the created-session dialog and the launch form's session accordion.
  */
 export function SessionSummary({ session, notice }: SessionSummaryProps) {
+  let phasePlateLabel = 'Unknown';
+  if (session.acquisition?.phase_plate_used === false) phasePlateLabel = 'None';
+  if (session.acquisition?.phase_plate_used === true)
+    phasePlateLabel = session.acquisition.phase_plate_type || 'Unknown type';
+  let energyFilterLabel = 'Unknown';
+  if (session.acquisition?.energy_filter_used === true) energyFilterLabel = 'Yes';
+  if (session.acquisition?.energy_filter_used === false) energyFilterLabel = 'No';
   const details = [
     { label: 'Name', value: session.name },
     { label: 'Project', value: session.project_name },
@@ -49,7 +56,11 @@ export function SessionSummary({ session, notice }: SessionSummaryProps) {
     { label: 'Session Plan', value: session.session_plan_name },
     ...(session.magnification_display ? [{ label: 'Magnification', value: session.magnification_display }] : []),
     ...(session.acquisition
-      ? [{ label: 'Super-resolution', value: session.acquisition.super_resolution ? 'Yes' : 'No' }]
+      ? [
+          { label: 'Super-resolution', value: session.acquisition.super_resolution ? 'Yes' : 'No' },
+          { label: 'Energy filter used', value: energyFilterLabel },
+          { label: 'Phase plate', value: phasePlateLabel },
+        ]
       : []),
   ];
 
