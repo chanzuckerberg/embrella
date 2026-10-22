@@ -9,9 +9,6 @@ PARAMS = {
     "output_dir": "/staged/dep_1/ds_2",
     "config_yaml": "deposition_id: 1\n",
     "config_path": "/staged/dep_1/ds_2/dataprep_config.yaml",
-    "copick_config": "/staged/dep_1/ds_2/copick.json",
-    "target_dir": "/staged/dep_1/ds_2",
-    "copick_flags": '--picks "VLP:relionrefine/2"',
     "prep_env": "/test/envs/dataportal",
 }
 
@@ -21,11 +18,9 @@ def _render(**overrides):
     return DepositionPrepProcessor().render_script(params, SimpleNamespace(cluster_id="cluster-a"))
 
 
-def test_runs_sync_deposit_and_validation():
+def test_runs_sync_and_validation():
     script = _render()
     assert "cryoetportalprep sync /staged/dep_1/ds_2/dataprep_config.yaml" in script
-    assert "copick deposit --config /staged/dep_1/ds_2/copick.json" in script
-    assert '--picks "VLP:relionrefine/2"' in script
     # Pre-flight validation runs via the embedded script; behavior is covered by test_validation_runner.py.
     assert "DEPOSITION_VALIDATION=" in script
     assert script.index("cryoetportalprep sync") < script.index("END_DEPOSITION_VALIDATION")
@@ -45,10 +40,6 @@ def test_prep_never_uploads_or_inits():
     script = _render()
     assert "--force" not in script
     assert "cryoetportalprep init" not in script
-
-
-def test_copick_deposit_skipped_without_selected_annotations():
-    assert "copick deposit" not in _render(copick_flags="")
 
 
 def test_slurm_directives_and_env_rendered():
@@ -84,12 +75,6 @@ def test_paths_with_spaces_are_shell_quoted():
     assert "cd '/staged/my dep'" in script
 
 
-def test_copick_flags_require_config_and_target():
-    proc = DepositionPrepProcessor()
-    errors = proc.validate_parameters({"output_dir": "/o", "config_path": "/c", "copick_flags": '--picks "x"'})
-    assert any("copick_config and target_dir" in e for e in errors)
-
-
 def test_script_writes_config_without_shell_expansion_and_preserves_group_access(tmp_path):
     import stat
     import subprocess
@@ -102,7 +87,6 @@ def test_script_writes_config_without_shell_expansion_and_preserves_group_access
         output_dir=str(output_dir),
         config_path=str(config_path),
         config_yaml=payload,
-        copick_flags="",
     )
     stubs = """ml() { :; }; conda() { :; }; cryoetportalprep() {
       test -r "$2"
@@ -124,7 +108,6 @@ def test_directory_creation_failure_stops_before_sync(tmp_path):
     script = _render(
         output_dir=str(blocked_parent / "deposition"),
         config_path=str(blocked_parent / "deposition/dataprep_config.yaml"),
-        copick_flags="",
     )
     stubs = f'ml() {{ :; }}; conda() {{ :; }}; cryoetportalprep() {{ touch "{synced}"; }};\n'
     result = subprocess.run(["bash"], input=stubs + script, text=True, capture_output=True)
@@ -147,7 +130,6 @@ def test_staging_permission_denied_stops_before_sync(tmp_path):
     script = _render(
         output_dir=str(parent / "deposition"),
         config_path=str(parent / "deposition/dataprep_config.yaml"),
-        copick_flags="",
     )
     stubs = f'ml() {{ :; }}; conda() {{ :; }}; cryoetportalprep() {{ touch "{synced}"; }};\n'
     try:
