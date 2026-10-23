@@ -442,6 +442,105 @@ class TestPipelineExecutor:
         assert "not allowed" in exc_info.value.errors[0]
 
 
+@pytest.fixture
+def reusing_processor(test_processor_class):
+    """The test processor, opted in to re-executing an existing run."""
+    from workflow.processors import _PROCESSOR_REGISTRY
+
+    class ReusingProcessor(test_processor_class):
+        allows_run_reuse = True
+
+    original_registry = _PROCESSOR_REGISTRY.copy()
+    _PROCESSOR_REGISTRY["test_processor"] = ReusingProcessor
+
+    yield ReusingProcessor
+
+    _PROCESSOR_REGISTRY.clear()
+    _PROCESSOR_REGISTRY.update(original_registry)
+
+
+class TestRunReuse:
+    """allows_run_reuse: the run's PipeExecution is restarted in place and keeps its attempt history."""
+
+    def _execute(self, mock_submitter_class, test_pipe_in_plan, test_proc_run, test_user, job_id="222"):
+        mock_submitter = MagicMock()
+        mock_submitter.run_script.return_value = (f"Submitted batch job {job_id}", "")
+        mock_submitter.last_script_path = f"/scripts/{job_id}.sh"
+        mock_submitter_class.return_value = mock_submitter
+
+        return PipelineExecutor().execute_pipe(
+            pipe_in_plan=test_pipe_in_plan,
+            proc_run=test_proc_run,
+            user=test_user,
+            parameters={"test_param": 50},
+            auth={"username": "test", "password": "pass"},
+        )
+
+    @patch("workflow.execution.RemoteJobSubmitter")
+    def test_first_execution_is_created_as_usual(
+        self, mock_submitter_class, test_proc_run, test_pipe_in_plan, test_user, reusing_processor
+    ):
+        result = self._execute(mock_submitter_class, test_pipe_in_plan, test_proc_run, test_user)
+
+        execution = PipeExecution.objects.get(id=result["pipe_execution_id"])
+        assert execution.job_id == "222"
+        assert "_attempts" not in execution.parameters
+
+    @patch("workflow.execution.RemoteJobSubmitter")
+    def test_rerun_restarts_record_and_keeps_history(
+        self, mock_submitter_class, test_proc_run, test_pipe_in_plan, test_user, reusing_processor
+    ):
+        from django.utils import timezone
+        from processes.models import JobLog
+
+        earlier = {"job_id": "100", "status": "cancelled"}
+        submitted = timezone.now()
+        existing = PipeExecution.objects.create(
+            proc_run=test_proc_run,
+            pipe_in_plan=test_pipe_in_plan,
+            status="failed",
+            job_id="111",
+            parameters={"test_param": 1, "_attempts": [earlier]},
+            script_path="/scripts/111.sh",
+            submitted_at=submitted,
+            started_at=submitted,
+            completed_at=submitted,
+            error_message="exit 1",
+            stdout_log="old out",
+            stderr_log="old err",
+            logs_fetched_at=submitted,
+            syncer_active=True,
+        )
+
+        result = self._execute(mock_submitter_class, test_pipe_in_plan, test_proc_run, test_user)
+
+        assert result["pipe_execution_id"] == existing.id
+        assert PipeExecution.objects.count() == 1
+        execution = PipeExecution.objects.get(id=existing.id)
+        assert (execution.job_id, execution.status) == ("222", "submitted")
+        assert execution.script_path == "/scripts/222.sh"
+        assert execution.script_content == "#!/bin/bash\necho 50"
+        assert execution.parameters["test_param"] == 50
+        assert execution.parameters["_attempts"] == [
+            earlier,
+            {
+                "job_id": "111",
+                "status": "failed",
+                "submitted_at": submitted.isoformat(),
+                "started_at": submitted.isoformat(),
+                "completed_at": submitted.isoformat(),
+                "script_path": "/scripts/111.sh",
+                "error_message": "exit 1",
+            },
+        ]
+        assert execution.submitted_at > submitted
+        assert execution.started_at is None and execution.completed_at is None
+        assert execution.error_message is None
+        assert execution.stdout_log is None and execution.stderr_log is None and execution.logs_fetched_at is None
+        assert not execution.syncer_active
+        assert JobLog.objects.filter(job_id="222").exists()
+
+
 # API Endpoint Tests
 
 
