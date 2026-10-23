@@ -1,10 +1,7 @@
-export type PhasePlateType = '' | 'Volta' | 'Laser';
-
 /** Accessory acquisition parameters; mirrors `tem.models.ACQUISITION_FIELDS`. */
 export interface AcquisitionValues {
   super_resolution: boolean;
   phase_plate_used: boolean | null;
-  phase_plate_type: PhasePlateType | null;
   energy_filter_used: boolean | null;
 }
 
@@ -18,7 +15,6 @@ export interface SessionPlanOption {
   camera: string;
   /** Prefills Acquisition settings when the plan is chosen. */
   acquisition_defaults: AcquisitionValues;
-  phase_plate: string;
 }
 
 // Top tier first. Scope then software is the real decision; workflow and camera mostly follow.
@@ -91,7 +87,6 @@ export interface SessionFormState {
   name: string;
   filterUserId: number | null;
   superResolution: boolean;
-  /** Null preserves an older recorded use whose type is outside the standard choices. */
-  phasePlateType: PhasePlateType | null;
+  phasePlateUsed: boolean;
   energyFilterUsed: boolean;
 }

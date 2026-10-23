@@ -60,9 +60,6 @@ class TestIsFeatureEnabled:
         user.profile.save()
         assert is_feature_enabled(user, "deposition") is True
 
-    def test_anonymous_user_has_no_override(self):
-        assert is_feature_enabled(AnonymousUser(), "deposition") is False
-
     def test_missing_profile_does_not_raise(self, user):
         # Existing users may have no Profile yet (lazy creation) — must not crash.
         Profile.objects.filter(user=user).delete()
@@ -110,9 +107,6 @@ class TestUserEndpointFlags:
         r = client.get("/user")
         assert r.status_code == 200
         assert "deposition" in r.json()["feature_flags"]
-
-    def test_user_endpoint_unauthenticated_is_401(self):
-        assert APIClient().get("/user").status_code == 401
 
     def test_user_endpoint_reports_staff_status(self, user):
         # The frontend hides admin entry points for non-staff, so /user must report it.

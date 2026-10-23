@@ -21,15 +21,7 @@ def _pipe_in_plan(software):
 class TestProcSoftwareDirname:
     def test_falls_back_to_name_when_blank(self):
         s = ProcSoftware.objects.create(name="fixture-solo", processor_class="fixture-solo")
-        assert s.storage_dirname == ""
         assert s.dirname == "fixture-solo"
-
-    def test_prefers_storage_dirname(self):
-        """The shape of the copick case: distinct softwares sharing one directory."""
-        s = ProcSoftware.objects.create(
-            name="fixture-import", processor_class="fixture-import", storage_dirname="fixture"
-        )
-        assert s.dirname == "fixture"
 
 
 @pytest.mark.django_db

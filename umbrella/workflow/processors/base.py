@@ -4,6 +4,7 @@ Base Processor Class
 Defines the abstract interface that all processing software integrations must implement.
 """
 
+import functools
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -63,6 +64,7 @@ class BaseProcessor(ABC):
     hidden_from_list: bool = False
 
     @classmethod
+    @functools.cache
     def _get_schema_file_path(cls) -> Optional[Path]:
         """
         Get path to schema.yaml file for this processor.
@@ -370,30 +372,6 @@ class BaseProcessor(ABC):
         keys that could actually be derived.
         """
         return {}
-
-    def get_default_slurm_options(self) -> Dict[str, Any]:
-        """
-        Get default SLURM options for this processor.
-
-        Override to provide processor-specific defaults.
-
-        Returns:
-            Dict of SLURM option names to values:
-            {
-                "partition": "cpu",
-                "nodes": 1,
-                "ntasks_per_node": 1,
-                "mem": "32G",
-                "time": "24:00:00"
-            }
-        """
-        return {
-            "partition": "cpu",
-            "nodes": 1,
-            "ntasks_per_node": 1,
-            "mem": "16G",
-            "time": "24:00:00",
-        }
 
     def get_hetjob_info(self) -> Optional[Dict[str, Any]]:
         """
@@ -1254,7 +1232,7 @@ class BaseProcessor(ABC):
         - context_vars: Framework-provided variables (run_number, user_id, etc.)
         - calculated_vars: Processor-specific calculations
         - cli_args: Structured CLI arguments (for Jinja loops)
-        - control_vars: Control-flow booleans (use_advanced_params, etc.)
+        - control_vars: Control-flow booleans from the schema
 
         Args:
             params: User-provided parameters

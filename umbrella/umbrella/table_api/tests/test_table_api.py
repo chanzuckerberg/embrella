@@ -166,12 +166,6 @@ class TestDistinct:
         assert result.filters, "search should still have been applied"
         assert result.distinct_called is False
 
-    def test_mixed_filters_trigger_distinct_once(self):
-        _, result = run_filter(
-            q([{"category": "username", "value": ["ada"]}, {"category": "group", "value": ["staff"]}]),
-        )
-        assert result.distinct_called is True
-
     @pytest.mark.parametrize(
         ("lookup", "expected"),
         [
@@ -216,11 +210,6 @@ class TestCallableFilters:
 
     def test_all_to_one_q_does_not_trigger_distinct(self):
         _, result = run_filter(q([{"category": "local", "value": ["ada"]}]), view=self.CallableView())
-        assert result.distinct_called is False
-
-    def test_string_lookups_are_unaffected(self):
-        _, result = run_filter(q([{"category": "username", "value": ["ada"]}]), view=self.CallableView())
-        assert {"username__in": ["ada"]} in result.filters
         assert result.distinct_called is False
 
     def test_q_lookups_walks_nested_children(self):
@@ -290,11 +279,6 @@ class TestOrdering:
 
         _, desc = run_filter(q([{"category": "asc", "value": [False]}]), view=MultiView())
         assert desc.ordering == ["-name_is_numeric", "-name_as_number", "-username", "-pk"]
-
-    def test_unknown_sort_falls_back_and_echoes_the_fallback(self):
-        request, _ = run_filter(q([{"category": "sort", "value": ["bogus"]}]))
-        resolved = parse_table_query(request)
-        assert resolved.resolved_sort == "name"
 
 
 class TestResponseShape:

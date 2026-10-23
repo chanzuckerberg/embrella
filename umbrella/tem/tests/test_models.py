@@ -8,45 +8,9 @@ from tem.models import (
     AcquisitionSettings,
     CalibratedPixelSize,
     Camera,
-    ImagingWorkflow,
     Magnification,
-    Microscope,
     MsiSession,
-    SessionPlan,
-    Software,
 )
-
-
-@pytest.fixture
-def microscope(db):
-    return Microscope.objects.create(name="TestScope", cs=2.7)
-
-
-@pytest.fixture
-def camera(db):
-    return Camera.objects.create(
-        name="TestCam",
-        root_dir="/test/root",
-        frame_format="eer",
-        initial_frame_base_dir="/test/frames",
-    )
-
-
-@pytest.fixture
-def magnification(db, microscope):
-    return Magnification.objects.create(scope=microscope, mode="SA", nominal_mag=50000, index=0)
-
-
-@pytest.fixture
-def session_plan(db, microscope, camera):
-    imaging_workflow = ImagingWorkflow.objects.create(imaging_mode="tem", workflow="tomo")
-    software = Software.objects.create(name="TestSoftware")
-    return SessionPlan.objects.create(
-        scope=microscope,
-        camera=camera,
-        imaging_workflow=imaging_workflow,
-        software=software,
-    )
 
 
 @pytest.fixture
@@ -123,9 +87,6 @@ class TestGetCalibratedPixelSize:
 
 @pytest.mark.django_db
 class TestSessionPlanNamePrefix:
-    def test_defaults_to_blank(self, session_plan):
-        assert session_plan.name_prefix == ""
-
     @pytest.mark.parametrize("prefix", ["", "s", "abcd"])
     def test_accepts_lowercase_letters(self, session_plan, prefix):
         session_plan.name_prefix = prefix
@@ -144,7 +105,6 @@ class TestAcquisitionSettings:
         assert session_plan.acquisition_values() == {
             "super_resolution": False,
             "phase_plate_used": False,
-            "phase_plate_type": None,
             "energy_filter_used": True,
         }
 
@@ -155,14 +115,12 @@ class TestAcquisitionSettings:
         assert copy.values() == {
             "super_resolution": True,
             "phase_plate_used": False,
-            "phase_plate_type": None,
             "energy_filter_used": True,
         }
         assert str(copy) == "snapshot 26sep15a"
         assert profile.snapshot("x", super_resolution=False).values() == {
             "super_resolution": False,
             "phase_plate_used": False,
-            "phase_plate_type": None,
             "energy_filter_used": True,
         }
 
@@ -191,12 +149,6 @@ def test_session_accessory_usage_preserves_unknown(msi_session, usage):
     assert msi_session.energy_filter_used is usage
 
 
-@pytest.mark.parametrize("used, plate_type", [(True, ""), (False, "Laser")])
-def test_acquisition_rejects_conflicting_phase_plate_usage(used, plate_type):
-    with pytest.raises(ValidationError, match="Select a phase plate type"):
-        AcquisitionSettings(phase_plate_used=used, phase_plate_type=plate_type).full_clean()
-
-
 def test_microscope_admin_preserves_legacy_phase_plate(microscope):
     from tem.admin import MicroscopeForm
 
@@ -208,14 +160,3 @@ def test_microscope_admin_preserves_legacy_phase_plate(microscope):
     )
     assert form.is_valid(), form.errors
     assert form.save().phase_plate == "Zernike"
-
-
-@pytest.mark.parametrize("selected, expected", [("", ""), ("unknown", None)])
-def test_acquisition_admin_distinguishes_none_from_unknown(selected, expected):
-    from tem.admin import AcquisitionSettingsForm
-
-    form = AcquisitionSettingsForm(
-        {"phase_plate_used": "False", "phase_plate_type": selected, "energy_filter_used": "True"}
-    )
-    assert form.is_valid(), form.errors
-    assert form.save(commit=False).phase_plate_type == expected

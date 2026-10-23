@@ -54,4 +54,4 @@ jobs:
       - name: Jest
         run: |
           docker run --rm -v "$PWD/.cache/jest:/cache" \
-            "$IMAGE" yarn test --ci --cacheDirectory /cache
+            "$IMAGE" yarn jest --ci --maxWorkers=100% --cacheDirectory /cache

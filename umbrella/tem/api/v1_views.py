@@ -174,7 +174,6 @@ def form_options(request):
                     "software": str(sp.software),
                     "camera": sp.camera.name,
                     "acquisition_defaults": sp.acquisition_values(),
-                    "phase_plate": sp.scope.phase_plate,
                 }
                 for sp in session_plans
             ],

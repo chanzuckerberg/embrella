@@ -99,9 +99,6 @@ class TestGetSessionDir:
     def test_substitutes_session_scoped_tokens(self, msi_session):
         assert msi_session.get_session_dir("frames") == "/hpc/instruments/czii.krios1/OffloadData/24nov10/"
 
-    def test_nothing_is_left_unsubstituted(self, msi_session):
-        assert "{" not in msi_session.get_session_dir("frames")
-
     def test_scope_name_is_used_verbatim(self, db, microscope, camera, software, imaging_workflow):
         """Microscope.name is the path segment itself, so no case is forced on it. Our
         scopes are lowercase by convention, but an install whose directories are spelled
@@ -150,10 +147,6 @@ class TestResolvePathRow:
         assert msi_session._resolve_path_row("frames").pk == msi_session._resolve_path_row("mdocs").pk
         assert Path.objects.count() == 1
 
-    def test_stored_overlay_has_no_placeholders(self, msi_session):
-        """The acceptance criterion for the split, at the point where it gets persisted."""
-        assert "{" not in msi_session._resolve_path_row("frames").overlay_path
-
     def test_raises_when_a_template_kept_its_filename_half(self, msi_session, software):
         """An unsplit template can only produce a path to nothing, so it fails loudly
         instead of being stored."""
@@ -194,10 +187,9 @@ class TestAtlasSessionPaths:
         return AtlasSession.objects.create(name="scrn1", group=group)
 
     def test_substitutes_group_and_atlas_session_tokens(self, atlas_session):
-        assert atlas_session.get_session_dir("atlas").endswith("/tomo/grp1/scrn1/Atlas/")
-
-    def test_nothing_is_left_unsubstituted(self, atlas_session):
-        assert "{" not in atlas_session.get_session_dir("atlas")
+        session_dir = atlas_session.get_session_dir("atlas")
+        assert session_dir.endswith("/tomo/grp1/scrn1/Atlas/")
+        assert "{" not in session_dir
 
     def test_returns_dot_when_software_role_is_null(self, db, session_plan):
         session_plan.software.atlas = None

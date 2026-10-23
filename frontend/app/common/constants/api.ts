@@ -54,7 +54,6 @@ export enum API {
   PIPELINE_EXECUTE = '/workflow/v1/execution/execute/',
   PIPELINE_PREVIEW = '/workflow/v1/execution/preview/',
   PIPELINE_EXECUTION_STATUS = '/workflow/v1/execution/:executionId/status/',
-  PIPELINE_EXECUTION_RUN = '/workflow/v1/execution/run/:runId/',
   PIPELINE_CHECK_DEPENDENCIES = '/workflow/v1/execution/check_dependencies/',
   PIPELINE_LOOKUP_IDS = '/workflow/v1/execution/lookup_ids/',
   PIPELINE_EXECUTION_BY_JOB_ID = '/workflow/v1/execution/by_job_id/:jobId/',
@@ -79,7 +78,6 @@ export enum API {
 
   // Session/Run Selection
   MSI_SESSIONS = '/tem/v1/sessions/',
-  MSI_SESSIONS_LIST = '/workflow/get_msi_session_list',
   MSI_SESSION_ID = '/workflow/get_msisession_id',
 
   // Mocked out:

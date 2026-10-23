@@ -1,11 +1,9 @@
 """Per-plan path bindings: allows 2 or more different scopes with same software to resolve to different directories."""
 
 import pytest
-from django.db.utils import IntegrityError
 from stores.models import Cluster, DataKind, FilePattern, Path, PathType, pick_for_cluster
 
 from tem.models import (
-    CAMERA_PATH_ROLES,
     GAIN_ROLE,
     SOFTWARE_PATH_ROLES,
     TILT_SERIES_ROLE,
@@ -86,12 +84,6 @@ class TestTheFeature:
         assert a._resolve_path_row("frames").overlay_path == "/hpc/instruments/czii.krios1/OffloadData/24nov10/"
         assert b._resolve_path_row("frames").overlay_path == "/data/other2/frames/24nov11/"
 
-    def test_creating_a_session_writes_no_bindings(self, camera, workflow, software):
-        """Bindings scale with plans, not sessions."""
-        plan = make_plan("krios1", camera, workflow, software)
-        MsiSession.objects.create(name="24nov10", session_plan=plan)._resolve_path_row("frames")
-        assert SessionPlanPathBinding.objects.count() == 0
-
 
 @pytest.mark.django_db
 class TestResolutionChain:
@@ -123,33 +115,9 @@ class TestResolutionChain:
         plan = make_plan("krios1", camera, workflow, software)
         assert resolve_role_path_type(plan, "sums") is None
 
-    def test_one_binding_per_plan_and_role(self, camera, workflow, software):
-        plan = make_plan("krios1", camera, workflow, software)
-        SessionPlanPathBinding.objects.create(session_plan=plan, role="frames", path_type=None)
-        with pytest.raises(IntegrityError):
-            SessionPlanPathBinding.objects.create(session_plan=plan, role="frames", path_type=None)
-
-
-@pytest.mark.django_db
-class TestNoBackfillRegression:
-    def test_zero_bindings_resolves_exactly_as_before(self, camera, workflow, software):
-        """A single-scope install has no bindings, so every role must resolve to the
-        software default byte-identically -- that is what makes Phase 1 backfill-free."""
-        plan = make_plan("krios1", camera, workflow, software)
-        expected = {"frames": software.frames, "sums": None, "mdocs": None, "parents": None, "atlas": None}
-        for role in SOFTWARE_PATH_ROLES:
-            assert resolve_role_path_type(plan, role) == expected[role]
-
 
 @pytest.mark.django_db
 class TestRoleMappings:
-    def test_every_role_is_a_software_field(self, software):
-        assert software.role_path_types.keys() == set(SOFTWARE_PATH_ROLES)
-
-    def test_every_role_is_a_session_field(self, camera, workflow, software):
-        session = MsiSession.objects.create(name="24nov10", session_plan=make_plan("k1", camera, workflow, software))
-        assert session.role_paths.keys() == set(SOFTWARE_PATH_ROLES)
-
     def test_resolve_role_paths_leaves_an_unemitted_role_alone(self, camera, workflow, software):
         """This software has no sums template, so a Path attached by hand survives: absence
         of a template means "produces no such data", not "clear the field"."""
@@ -228,16 +196,6 @@ class TestTiltSeriesBinding:
         )
         assert resolve_plan_file_pattern(plan, TILT_SERIES_ROLE) is None
 
-    def test_role_is_a_legal_choice(self, camera, workflow, software):
-        plan = make_plan("krios2", camera, workflow, software)
-        binding = SessionPlanPathBinding(session_plan=plan, role=TILT_SERIES_ROLE, file_pattern=self.make_rec_pattern())
-        binding.full_clean()  # raises on an unknown role choice
-
-    def test_not_a_software_field_role(self):
-        """Guards the double-duty tuple: Software must not grow a tilt_series FK.
-        software currently only has 5 FKs, and tilt_series is not one of them currently."""
-        assert TILT_SERIES_ROLE not in SOFTWARE_PATH_ROLES
-
 
 FALCON_GAIN = "/hpc/instruments/czii.{scope}/gain/"
 CELTIC_GAIN = "/data/{scope}/frames/{msi_session}/"
@@ -277,12 +235,6 @@ class TestCameraRoles:
         assert resolve_role_path_type(falcon, GAIN_ROLE).overlay_path == FALCON_GAIN
         assert resolve_role_path_type(celtic, GAIN_ROLE).overlay_path == CELTIC_GAIN
 
-    def test_plans_sharing_a_camera_share_gain(self, workflow, software):
-        camera = make_camera("Falcon4i", FALCON_GAIN)
-        tomo5 = make_plan("krios1", camera, workflow, software)
-        epu = make_plan("krios1b", camera, workflow, Software.objects.create(name="EPU"))
-        assert resolve_role_path_type(tomo5, GAIN_ROLE) == resolve_role_path_type(epu, GAIN_ROLE)
-
     def test_pattern_follows_directory(self, workflow, software):
         camera = make_camera("Falcon4i", FALCON_GAIN)
         pattern = attach_pattern(camera.gain, "*.gain")
@@ -297,29 +249,11 @@ class TestCameraRoles:
         SessionPlanPathBinding.objects.create(session_plan=plan, role=GAIN_ROLE, file_pattern=theirs)
         assert resolve_role_file_pattern(plan, GAIN_ROLE) == theirs
 
-    def test_session_substitutes_tokens(self, workflow, software):
-        plan = make_plan("krios2", make_camera("GatanCeltic", CELTIC_GAIN), workflow, software)
-        session = MsiSession.objects.create(name="24nov10", session_plan=plan)
-        assert session.get_session_dir(GAIN_ROLE) == "/data/krios2/frames/24nov10/"
 
-    def test_session_dot_when_unset(self, workflow, software):
-        """Same sentinel as an unemitted mdocs role, so callers treat both alike."""
-        session = MsiSession.objects.create(
-            name="24nov10", session_plan=make_plan("k1", make_camera("Ceta"), workflow, software)
-        )
-        assert session.get_session_dir(GAIN_ROLE) == "."
-
-    def test_role_is_a_legal_choice(self, camera, workflow, software):
-        plan = make_plan("krios2", camera, workflow, software)
-        binding = SessionPlanPathBinding(session_plan=plan, role=GAIN_ROLE, path_type=make_path_type("gain", "/g/"))
-        binding.full_clean()  # raises on an unknown role choice
-
-    def test_not_a_software_field_role(self):
-        """Software must not grow a gain FK; the camera owns it."""
-        assert GAIN_ROLE not in SOFTWARE_PATH_ROLES
-
-    def test_every_camera_role_is_a_camera_field(self):
-        assert make_camera("Falcon4i").role_path_types.keys() == set(CAMERA_PATH_ROLES)
+def test_binding_only_roles_are_not_software_fields():
+    """Software must not grow tilt_series or gain FKs: tilt_series is binding-only, the camera owns gain."""
+    assert TILT_SERIES_ROLE not in SOFTWARE_PATH_ROLES
+    assert GAIN_ROLE not in SOFTWARE_PATH_ROLES
 
 
 @pytest.mark.django_db

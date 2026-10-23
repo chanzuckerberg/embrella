@@ -54,37 +54,17 @@ class _ProfilesFirstChangeList(ChangeList):
         return ["-plan_count", "label", "-pk"]
 
 
-class AcquisitionSettingsForm(forms.ModelForm):
-    phase_plate_type = forms.TypedChoiceField(
-        choices=[("unknown", "Unknown"), *PHASE_PLATE_CHOICES],
-        coerce=lambda value: None if value == "unknown" else value,
-        empty_value="",
-        required=False,
-    )
-
-    class Meta:
-        model = AcquisitionSettings
-        fields = "__all__"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.instance.phase_plate_type is None:
-            self.initial["phase_plate_type"] = "unknown"
-
-
 @admin.register(AcquisitionSettings)
 class AcquisitionSettingsAdmin(admin.ModelAdmin):
-    form = AcquisitionSettingsForm
     list_display = (
         "__str__",
         "super_resolution",
         "phase_plate_used",
-        "phase_plate_type",
         "energy_filter_used",
         "plan_count",
         "session",
     )
-    list_filter = ("super_resolution", "phase_plate_used", "phase_plate_type", "energy_filter_used")
+    list_filter = ("super_resolution", "phase_plate_used", "energy_filter_used")
     search_fields = ("label",)
 
     def get_changelist(self, request, **kwargs):

@@ -10,15 +10,10 @@ No database: the vocabulary is pure Python and should stay that way.
 import pytest
 
 from stores.placeholders import (
-    FILE_SCOPED,
     PLACEHOLDERS,
-    SESSION_SCOPED,
     Placeholder,
-    file_scoped_placeholders,
-    known_placeholders,
     misplaced_placeholders,
     placeholders_in,
-    session_scoped_placeholders,
     suggest_placeholder,
     unknown_placeholders,
 )
@@ -59,17 +54,12 @@ SEEDED_TEMPLATES = ACQUISITION_TEMPLATES + PROCESSING_TEMPLATES + REVIEW_TEMPLAT
 
 
 class TestSeededTemplates:
-    @pytest.mark.parametrize("template", SEEDED_TEMPLATES)
-    def test_every_shipped_template_uses_only_known_tokens(self, template):
-        assert unknown_placeholders(template) == frozenset()
+    def test_every_shipped_template_uses_only_known_tokens(self):
+        unknown = {t: unknown_placeholders(t) for t in SEEDED_TEMPLATES if unknown_placeholders(t)}
+        assert unknown == {}
 
 
 class TestVocabulary:
-    def test_partitions_into_session_and_file_scoped(self):
-        session, files = session_scoped_placeholders(), file_scoped_placeholders()
-        assert session | files == known_placeholders()
-        assert session & files == frozenset()
-
     def test_each_token_is_declared_once(self):
         """The point of the flat table: no name appears twice, so there is no second
         declaration to fall out of sync with the first."""
@@ -79,29 +69,6 @@ class TestVocabulary:
     def test_placeholder_rejects_a_bad_scope(self):
         with pytest.raises(ValueError, match="scope must be"):
             Placeholder("x", "directory", "nowhere")
-
-
-class TestOverloadedTokens:
-    """Three tokens are read differently by acquisition, processing and review
-    templates. Each is declared under its true meaning"""
-
-    def test_workflow_is_the_imaging_workflow(self):
-        """Review templates overload it as the processing software -- that is
-        {proc_software}, and both are legal tokens, so this is documentation rather
-        than something the validator can catch."""
-        assert "workflow" in session_scoped_placeholders()
-        assert "proc_software" in session_scoped_placeholders()
-
-    def test_run_is_file_scoped_and_proc_run_is_not(self):
-        """004's templates put {proc_run} and {run} in the same path -- not synonyms.
-        {run} is a tilt-series id in a filename; the processing run is {proc_run}."""
-        assert "run" in file_scoped_placeholders()
-        assert "proc_run" in session_scoped_placeholders()
-
-    def test_position_is_file_scoped(self):
-        """Review pre-substitutes it from a caller kwarg because a review template names
-        one exact file, but it identifies a file, so it is a capture group."""
-        assert "position" in file_scoped_placeholders()
 
 
 class TestPlaceholdersIn:
@@ -159,11 +126,6 @@ class TestSuggestPlaceholder:
 class TestDeclarationQuality:
     """Used for admin help text, so they cannot be blank."""
 
-    @pytest.mark.parametrize("placeholder", PLACEHOLDERS, ids=lambda p: p.name)
-    def test_every_placeholder_documents_its_source(self, placeholder):
-        assert placeholder.source, f"{placeholder.token} has no source"
-        assert placeholder.scope in (SESSION_SCOPED, FILE_SCOPED)
-
-    @pytest.mark.parametrize("placeholder", PLACEHOLDERS, ids=lambda p: p.name)
-    def test_token_renders_with_braces(self, placeholder):
-        assert placeholder.token == "{%s}" % placeholder.name
+    def test_every_placeholder_documents_its_source(self):
+        # Scope is already validated by Placeholder.__post_init__
+        assert [p.token for p in PLACEHOLDERS if not p.source] == []

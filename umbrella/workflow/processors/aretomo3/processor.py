@@ -95,15 +95,6 @@ class AreTomo3Processor(BaseProcessor):
         """
         errors = []
 
-        # Validate advanced parameters if enabled
-        if params.get("use_advanced_params"):
-            advanced_params = ["tilt_axis", "vol_z", "align_z"]
-            missing = [p for p in advanced_params if p not in params]
-            if missing:
-                errors.append(
-                    f"Advanced parameters required when use_advanced_params is true: {', '.join(missing)}",
-                )
-
         # Validate pixel size for binning calculation
         pixel_size = params.get("pixel_size")
         if pixel_size:
@@ -434,17 +425,6 @@ class AreTomo3Processor(BaseProcessor):
     def session_defaults(self, msi_session) -> Dict[str, Any]:
         pixel_size = msi_session.get_calibrated_pixel_size()
         return {} if pixel_size is None else {"pixel_size": pixel_size}
-
-    def get_default_slurm_options(self) -> Dict[str, Any]:
-        """Get default SLURM options for AreTomo3."""
-        return {
-            "partition": "gpu",
-            "gpus": 8,
-            "nodes": 1,
-            "cpus_per_task": 16,
-            "mem_per_gpu": "96G",
-            "time": "140:00:00",
-        }
 
     def get_hetjob_info(self) -> Dict[str, Any]:
         """

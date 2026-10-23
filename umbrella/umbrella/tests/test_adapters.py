@@ -26,11 +26,9 @@ class TestPopulateUsername:
         assert username != "test.me"
         assert username.startswith("test.me")
 
-    def test_missing_last_name_falls_back_to_email_local_part(self):
-        assert _populate("Test", "", "this.part@example.com") == "this.part"
-
-    def test_no_names_falls_back_to_email_local_part(self):
-        assert _populate("", "", "this.part@example.com") == "this.part"
+    @pytest.mark.parametrize("first_name", ["Test", ""])
+    def test_missing_names_fall_back_to_email_local_part(self, first_name):
+        assert _populate(first_name, "", "this.part@example.com") == "this.part"
 
     def test_existing_username_preserved(self):
         adapter = UmbrellaAccountAdapter()

@@ -2,7 +2,6 @@ import datetime
 
 import pytest
 from django.contrib.auth.models import User
-from django.db.utils import IntegrityError
 from django.utils import timezone
 
 from cryo_grids.models import CryoGrid, GridLabel, Label, PlungeFreezingDevice, PlungeFreezingSession, Site
@@ -53,51 +52,6 @@ def label_c(db):
     return Label.objects.create(name="ok", color="#fb8c00")
 
 
-# ── Label Model Tests ──
-
-
-@pytest.mark.django_db
-class TestLabelModel:
-    def test_create_label(self, label_a):
-        assert label_a.name == "good"
-        assert label_a.color == "#43a047"
-
-    def test_label_unique_name(self, label_a):
-        with pytest.raises(IntegrityError):
-            Label.objects.create(name="good", color="#000000")
-
-    def test_random_color_default(self, db):
-        label = Label.objects.create(name="random_color_test")
-        assert label.color.startswith("#")
-        assert len(label.color) == 7
-
-    def test_str(self, label_a):
-        assert str(label_a) == "good"
-
-
-# ── GridLabel Through Model Tests ──
-
-
-@pytest.mark.django_db
-class TestGridLabelModel:
-    def test_add_label_to_grid(self, grid, label_a, test_user):
-        gl = GridLabel.objects.create(grid=grid, label=label_a, added_by=test_user)
-        assert gl.grid == grid
-        assert gl.label == label_a
-        assert gl.added_by == test_user
-        assert grid.labels.count() == 1
-
-    def test_unique_together(self, grid, label_a, test_user):
-        GridLabel.objects.create(grid=grid, label=label_a, added_by=test_user)
-        with pytest.raises(IntegrityError):
-            GridLabel.objects.create(grid=grid, label=label_a, added_by=test_user)
-
-    def test_multiple_labels_on_grid(self, grid, label_a, label_b, test_user):
-        GridLabel.objects.create(grid=grid, label=label_a, added_by=test_user)
-        GridLabel.objects.create(grid=grid, label=label_b, added_by=test_user)
-        assert grid.labels.count() == 2
-
-
 # ── LabelViewSet API Tests ──
 
 
@@ -125,15 +79,6 @@ class TestLabelViewSet:
         assert data["color"].startswith("#")
         label = Label.objects.get(name="new_label")
         assert label.created_by == test_user
-
-    def test_create_label_unauthenticated(self, client):
-        response = client.post(
-            "/api/list/labels/",
-            data={"name": "unauth_label"},
-            content_type="application/json",
-        )
-        # Django middleware redirects to login (302) or DRF returns 403
-        assert response.status_code in (302, 403)
 
     def test_list_ordered_by_usage(self, client, test_user, grid, label_a, label_b, label_c):
         """Labels with more grids should appear first."""

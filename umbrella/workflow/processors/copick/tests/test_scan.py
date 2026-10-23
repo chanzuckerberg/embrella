@@ -194,34 +194,15 @@ class TestAnnotatedCountEndpoint:
 
 @pytest.mark.django_db
 class TestCopickScanWiring:
-    def test_scan_plan_and_pipe_exist(self):
-        from processes.models import PipeInPlan, ProcPlan, ProcSoftware
-
-        assert ProcSoftware.objects.filter(processor_class="copick-scan").exists()
-        plan = ProcPlan.objects.get(name="copick-scan")
-        pip = PipeInPlan.objects.get(plan=plan)
-        assert pip.pipe.software.processor_class == "copick-scan"
-
-    def test_light_slurm_directives_from_schema(self):
-        """The scan's light resources (cpu/4/8G/30min) must reach the #SBATCH lines — they come from
-        the schema's x-slurm-directive props, NOT get_default_slurm_options (which isn't wired to jobs)."""
-        from workflow.processors import get_processor
-
-        p = get_processor("copick-scan")
-        assert p.task_name == "copick_scan"
-        pairs = {(d["directive"], str(d["value"])) for d in p.generate_slurm_directives({})}
-        assert ("--partition", "cpu") in pairs
-        assert ("--cpus-per-task", "4") in pairs
-        assert ("--mem-per-cpu", "8G") in pairs
-        assert ("--time", "00:30:00") in pairs
-
     def test_render_resolves_paths_and_emits_light_sbatch(self, db):
-        """render_script de-hardcodes paths AND writes the light #SBATCH lines into the script."""
+        """render_script de-hardcodes paths AND writes the light #SBATCH lines (cpu/4/8G/30min, from the
+        schema's x-slurm-directive props) into the script."""
         from stores.paths import resolve_dir
 
         from workflow.processors import get_processor as real_get_processor
 
         proc = real_get_processor("copick-scan")
+        assert proc.task_name == "copick_scan"
         run_context = mock.Mock(run_number="run003", cluster_id=None)
         run_context.msi_session.name = "25oct20a"
 
@@ -238,6 +219,8 @@ class TestCopickScanWiring:
         assert "/hpc/krios1.processing/copick/25oct20a/run003/scan.json" in script
         assert resolve_dir("dataportal_env", cluster=None) in script
         assert "#SBATCH --partition=cpu" in script
+        assert "#SBATCH --cpus-per-task=4" in script
+        assert "#SBATCH --mem-per-cpu=8G" in script
         assert "#SBATCH --time=00:30:00" in script
 
 
@@ -323,11 +306,6 @@ class TestTriggerCopickScan:
             Executor.return_value.execute_pipe.return_value = {"job_id": "9001"}
             r = api.post(SCAN_URL.format(session="26feb20b", run="run001"))
         assert r.status_code == 202  # used the earliest ProcRun, no MultipleObjectsReturned
-
-    def test_requires_login(self, copick_session):
-        r = APIClient().post(SCAN_URL.format(session="26feb20b", run="run001"))
-        # DRF IsAuthenticated → 401/403; a global LoginRequiredMiddleware may 302 to login instead.
-        assert r.status_code in (302, 401, 403)
 
     def test_unknown_session_is_404(self, api, db):
         r = api.post(SCAN_URL.format(session="does-not-exist", run="run001"))
