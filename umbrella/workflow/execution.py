@@ -196,6 +196,7 @@ class PipelineExecutor:
             submitter.last_script_path,
             context.job_name,  # Pass the full job name from context
             script_content,  # Pass the rendered script content for storage
+            reuse=processor.allows_run_reuse,
         )
 
         # 7. Start universal job status syncer (uses sacct for accurate timing)
@@ -253,7 +254,7 @@ class PipelineExecutor:
 
         self._check_cluster_allowed(software, cluster_id)
 
-        if mode is RunMode.EXECUTE:
+        if mode is RunMode.EXECUTE and not processor.allows_run_reuse:
             self._reject_duplicate_execution(pipe_in_plan, proc_run)
 
         context = self._build_run_context(pipe_in_plan, proc_run, user, processor, cluster_id, mode)
@@ -443,6 +444,7 @@ class PipelineExecutor:
         script_path: Optional[str],
         job_name: str,
         script_content: Optional[str] = None,
+        reuse: bool = False,
     ) -> "PipeExecution":
         """
         Create PipeExecution record in database and corresponding JobLog for user tracking.
@@ -456,24 +458,29 @@ class PipelineExecutor:
             script_path: Path to uploaded script
             job_name: Full descriptive job name from RunContext
             script_content: Full rendered SLURM script content
+            reuse: The processor allows run reuse; an existing record is restarted in place
 
         Returns:
-            Created PipeExecution instance
+            Created (or restarted) PipeExecution instance
         """
         from processes.models import PipeExecution
 
-        pipe_exec = PipeExecution.objects.create(
-            proc_run=proc_run,
-            pipe_in_plan=pipe_in_plan,
-            status="submitted",
-            job_id=job_id,
-            parameters=parameters,
-            script_path=script_path,
-            script_content=script_content,
-            submitted_at=timezone.now(),
-        )
+        existing = PipeExecution.objects.filter(proc_run=proc_run, pipe_in_plan=pipe_in_plan).first() if reuse else None
+        if existing:
+            pipe_exec = self._restart_execution(existing, job_id, parameters, script_path, script_content)
+        else:
+            pipe_exec = PipeExecution.objects.create(
+                proc_run=proc_run,
+                pipe_in_plan=pipe_in_plan,
+                status="submitted",
+                job_id=job_id,
+                parameters=parameters,
+                script_path=script_path,
+                script_content=script_content,
+                submitted_at=timezone.now(),
+            )
 
-        logger.info(f"Created PipeExecution record {pipe_exec.id} for job {job_id}")
+            logger.info(f"Created PipeExecution record {pipe_exec.id} for job {job_id}")
 
         # Create JobLog record for user tracking
         try:
@@ -490,6 +497,54 @@ class PipelineExecutor:
             # Don't fail the whole submission if JobLog creation fails
             logger.warning(f"Failed to create JobLog for job {job_id}: {e}", exc_info=True)
 
+        return pipe_exec
+
+    @staticmethod
+    def _attempt_summary(pipe_exec: PipeExecution) -> Dict[str, Any]:
+        """Summary of one previous attempt, as kept in parameters["_attempts"]."""
+
+        def iso(value):
+            return value.isoformat() if value else None
+
+        return {
+            "job_id": pipe_exec.job_id,
+            "status": pipe_exec.status,
+            "submitted_at": iso(pipe_exec.submitted_at),
+            "started_at": iso(pipe_exec.started_at),
+            "completed_at": iso(pipe_exec.completed_at),
+            "script_path": pipe_exec.script_path,
+            "error_message": pipe_exec.error_message,
+        }
+
+    def _restart_execution(
+        self,
+        pipe_exec: PipeExecution,
+        job_id: str,
+        parameters: Dict[str, Any],
+        script_path: Optional[str],
+        script_content: Optional[str],
+    ) -> PipeExecution:
+        """Point an existing PipeExecution at a new job, appending the previous attempt to its history."""
+        attempts = [*(pipe_exec.parameters or {}).get("_attempts", []), self._attempt_summary(pipe_exec)]
+
+        pipe_exec.job_id = job_id
+        pipe_exec.status = "submitted"
+        pipe_exec.parameters = {**parameters, "_attempts": attempts}
+        pipe_exec.script_path = script_path
+        pipe_exec.script_content = script_content
+        pipe_exec.submitted_at = timezone.now()
+        pipe_exec.started_at = None
+        pipe_exec.completed_at = None
+        pipe_exec.error_message = None
+        pipe_exec.stdout_log = None
+        pipe_exec.stderr_log = None
+        pipe_exec.logs_fetched_at = None
+        pipe_exec.log_fetch_error = None
+        # The new job's status syncer marks it active again.
+        pipe_exec.syncer_active = False
+        pipe_exec.save()
+
+        logger.info(f"Restarted PipeExecution record {pipe_exec.id} for job {job_id} (attempt {len(attempts) + 1})")
         return pipe_exec
 
     def check_dependencies_met(
