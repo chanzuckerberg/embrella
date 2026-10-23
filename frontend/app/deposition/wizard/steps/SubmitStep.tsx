@@ -19,6 +19,7 @@ import type {
 import type { StepProps } from '../wizardTypes';
 import { useSubmitFlow } from '../../hooks/useSubmitFlow';
 import { useDatasetLogs } from '../../hooks/useDatasetLogs';
+import { useSelectedTomogramCount } from '../../hooks/useSources';
 
 import { canUpload, isActiveJobPhase, submissionPhases, type PhaseStatus, type SubmitPhase } from '../../submitPhases';
 import { groupSyncProgress } from '../../syncProgressGroups';
@@ -237,20 +238,57 @@ function CommandBox({ text }: { text: string }) {
   );
 }
 
-function SyncChecklist({ items }: { items: SyncChecklistItem[] }) {
+function selectionRow(label: string, selected: number | undefined, noun: string, syncComplete: boolean) {
+  const n = selected?.toLocaleString() ?? '-';
+  const selectionLabel = `${n} ${noun}${selected === 1 ? '' : 's'} selected`;
+  const complete = syncComplete && selected != null && selected > 0;
+  const count = complete ? `${n} / ${n}` : selectionLabel;
+  return {
+    label,
+    count,
+    description: `${label}: ${count}`,
+    complete,
+  };
+}
+
+function SyncChecklist({
+  items,
+  selectedAnnotations,
+  selectedTomograms,
+  syncComplete,
+}: {
+  items: SyncChecklistItem[];
+  selectedAnnotations: number;
+  selectedTomograms: number | undefined;
+  syncComplete: boolean;
+}) {
+  const rows = groupSyncProgress(items).map((item) => {
+    if (item.label === 'Symlink tomograms') {
+      return selectionRow(item.label, selectedTomograms, 'tomogram', syncComplete);
+    }
+    if (item.label === 'Deposit annotations') {
+      return selectionRow(item.label, selectedAnnotations, 'annotation', syncComplete);
+    }
+    const complete = item.total > 0 && item.done >= item.total;
+    return {
+      label: item.label,
+      count: `${item.done.toLocaleString()} / ${item.total.toLocaleString()}`,
+      description: `${item.label}: ${item.done} of ${item.total}, ${complete ? 'complete' : 'incomplete'}`,
+      complete,
+    };
+  });
   return (
     <Stack
       role="list"
       aria-label="Sync progress by group"
       sx={{ mt: '20px', border: '1px solid', borderColor: 'divider', borderRadius: '6px', overflow: 'hidden' }}
     >
-      {groupSyncProgress(items).map((it) => {
-        const complete = it.total > 0 && it.done === it.total;
+      {rows.map(({ label, count, description, complete }) => {
         return (
           <Box
-            key={it.label}
+            key={label}
             role="listitem"
-            aria-label={`${it.label}: ${it.done} of ${it.total}, ${complete ? 'complete' : 'incomplete'}`}
+            aria-label={description}
             sx={{
               display: 'flex',
               alignItems: 'center',
@@ -267,7 +305,7 @@ function SyncChecklist({ items }: { items: SyncChecklistItem[] }) {
               ) : (
                 <EmptyCircle color="primary.main" size={16} />
               )}
-              <Typography variant="body2">{it.label}</Typography>
+              <Typography variant="body2">{label}</Typography>
             </Box>
             <Typography
               variant="body2"
@@ -277,7 +315,7 @@ function SyncChecklist({ items }: { items: SyncChecklistItem[] }) {
                 whiteSpace: 'nowrap',
               }}
             >
-              {it.done.toLocaleString()} / {it.total.toLocaleString()}
+              {count}
             </Typography>
           </Box>
         );
@@ -347,6 +385,11 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
     }
   }, [readOnly, sync, submit.isPending, runSync]);
 
+  const selectedAnnotations = (dataset.sessions ?? []).reduce(
+    (count, session) => count + (session.annotations ?? []).filter((annotation) => annotation.is_selected).length,
+    0
+  );
+  const selectedTomograms = useSelectedTomogramCount(dataset);
   const progress = job?.sync_progress ?? null;
   const uploadProgress = job?.push_progress ?? null;
   const uploadTotalEstimated = uploadProgress?.estimated ?? uploadProgress?.objects?.estimated ?? false;
@@ -472,7 +515,6 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
                       {progress.eta && sync === 'active' ? ` · ETA ${progress.eta}` : ''}
                     </Typography>
                   </Box>
-                  {progress.items && progress.items.length > 0 && <SyncChecklist items={progress.items} />}
                 </>
               ) : (
                 <>
@@ -486,6 +528,12 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
                   </Typography>
                 </>
               )}
+              <SyncChecklist
+                items={progress?.items ?? []}
+                selectedAnnotations={selectedAnnotations}
+                selectedTomograms={selectedTomograms}
+                syncComplete={sync === 'done'}
+              />
             </Box>
           )}
 
