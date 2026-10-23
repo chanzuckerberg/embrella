@@ -301,6 +301,33 @@ class BaseProcessor(ABC):
         """
         pass
 
+    def reserve_runs(self, run_context: "RunContext", params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Hook called before rendering when a job is about to be submitted; never for a preview.
+
+        Override to claim something the script must name before it exists, e.g. run
+        directories another tool writes into. A non-empty result reaches render_script
+        as params["_reserved_runs"] and is stored with the PipeExecution parameters.
+
+        Args:
+            run_context: Execution context
+            params: Validated parameters, defaults applied
+
+        Returns:
+            JSON-serializable description of what was reserved; {} reserves nothing
+        """
+        return {}
+
+    def release_runs(self, run_context: "RunContext", reservation: Dict[str, Any]) -> None:
+        """
+        Undo reserve_runs when rendering, submission or record creation fails.
+
+        Args:
+            run_context: Execution context
+            reservation: What reserve_runs returned
+        """
+        return None
+
     def _proc_software(self):
         """This processor's ProcSoftware row, or None if it has not synced yet."""
         from processes.models import ProcSoftware
