@@ -12,7 +12,7 @@ from stores.paths import resolve_dir
 
 from common import clusterio
 from depositions import tasks
-from depositions.models import DatasetJob, Deposition, DepositionAnnotation
+from depositions.models import DatasetJob, Deposition
 from depositions.services.dataprep_config import dataprep_config_yaml, dataset_is_ready, resolve_sync_destination
 from depositions.services.dataset_metadata import build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
@@ -81,13 +81,6 @@ def submit_dataset_prep(dataset):
             raise SubmissionValidationError(
                 "This dataset isn't ready to submit - add sessions and run auto-fill first."
             )
-        if DepositionAnnotation.objects.filter(session__dataset=dataset, is_selected=True).exists():
-            # Annotation export isn't wired yet; refuse rather than mark the dataset done without it.
-            # TODO(#1291): annotation export.
-            raise SubmissionValidationError(
-                "Depositing annotations isn't supported yet; deselect them to submit this dataset."
-            )
-
         auth = _service_auth()
         cluster_id = _cluster_for_dataset(dataset)
         if (

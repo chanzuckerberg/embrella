@@ -44,10 +44,6 @@ progress_pid=$!
 
 cryoetportalprep sync {{ config_path }}{{ session_flags }}
 
-{% if copick_flags -%}
-copick deposit --config {{ copick_config }} --target-dir {{ target_dir }} {{ copick_flags }}
-{% endif -%}
-
 # Allow the reporter to publish its final snapshot without holding the job open.
 touch "$progress_file.done" 2>/dev/null || true
 for ((i=0; i<50; i++)); do

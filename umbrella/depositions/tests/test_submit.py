@@ -140,13 +140,6 @@ class TestSubmitDatasetPrep:
             submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
 
-    def test_rejects_selected_annotations_until_supported(self, dataset, mocks):
-        session = dataset.sessions.get()
-        DepositionAnnotation.objects.create(session=session, copick_kind="picks", copick_ref="ribosome-0")
-        with pytest.raises(SubmissionValidationError, match="annotations isn't supported"):
-            submit.submit_dataset_prep(dataset)
-        assert mocks["launched"] is None
-
     def test_deselected_annotations_do_not_block(self, dataset, mocks):
         session = dataset.sessions.get()
         DepositionAnnotation.objects.create(
