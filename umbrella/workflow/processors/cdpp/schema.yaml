@@ -43,6 +43,13 @@ properties:
     default: 10.4
     x-bash-skip: true
 
+  publish_aretomo3:
+    type: boolean
+    title: Publish refined AreTomo3 run (review/deposition)
+    description: "Also lay the miss-alignment-refined global reconstruction out as a new AreTomo3 run of this session (vol001 CTF-corrected, vol002 WBP; no SART), converted for review once the pipeline has finished"
+    default: false
+    x-bash-skip: true
+
   config_overrides:
     type: string
     title: Config Overrides
