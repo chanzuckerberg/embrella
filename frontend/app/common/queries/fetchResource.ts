@@ -7,9 +7,13 @@ function getCsrfToken(): string | null {
 
 function redirectIfUnauthenticated(response: Response): void {
   if (response.status === 401 || response.status === 302 || response.url?.includes('/accounts/login')) {
-    window.location.href = `${DJANGO_URL}/accounts/login/?next=${encodeURI(window.location.href)}`;
-    throw new Error('Authentication required');
+    redirectToLogin();
   }
+}
+
+function redirectToLogin(): never {
+  window.location.href = `${DJANGO_URL}/accounts/login/?next=${encodeURI(window.location.href)}`;
+  throw new Error('Authentication required');
 }
 
 /** Shared core for state-changing requests: attaches CSRF token + credentials. */
@@ -59,6 +63,55 @@ export async function postFormData(requestURL: string, body: FormData): Promise<
 
   redirectIfUnauthenticated(response);
   return response;
+}
+
+export interface FormDataResult {
+  ok: boolean;
+  status: number;
+  body: string;
+}
+
+/**
+ * Like postFormData, but reports upload progress as 0–1. XHR because fetch() can't.
+ * Resolves for any HTTP status; rejects only on network failure.
+ */
+export function postFormDataWithProgress(
+  requestURL: string,
+  body: FormData,
+  onProgress: (fraction: number) => void
+): Promise<FormDataResult> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', requestURL);
+    xhr.withCredentials = true;
+
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      xhr.setRequestHeader('X-CSRFToken', csrfToken);
+    }
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        onProgress(event.loaded / event.total);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status === 401) {
+        try {
+          redirectToLogin();
+        } catch (error) {
+          reject(error);
+        }
+        return;
+      }
+
+      resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, body: xhr.responseText });
+    };
+    xhr.onerror = () => reject(new Error('Upload failed. Check your connection and try again.'));
+
+    xhr.send(body);
+  });
 }
 
 export function patchResource(requestURL: string, body: Record<string, unknown>): Promise<Response> {

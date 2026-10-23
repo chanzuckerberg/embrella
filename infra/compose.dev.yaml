@@ -42,6 +42,10 @@ services:
       - frontend_next:/app/frontend/.next
       - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
       - ${HOME}/.gitconfig:/home/embrella/.gitconfig:ro
+      # Uploaded images in a host folder, laid out like prod so `just fetchmedia` can mirror it.
+      # Default: .scratch/media beside DB snapshots (created by the devcontainer precheck / `just devup`).
+      # Override with an absolute path.
+      - ${EMBRELLA_MEDIA_HOST_DIR:-../.scratch/media}:/srv/media
     stdin_open: true
     tty: true
 
@@ -88,6 +92,7 @@ services:
       - '8080:80'
     volumes:
       - ./nginx_dev.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+      - ${EMBRELLA_MEDIA_HOST_DIR:-../.scratch/media}:/srv/media:ro
 
 volumes:
   frontend_node_modules:
