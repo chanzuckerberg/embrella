@@ -13,6 +13,7 @@ import yaml
 from stores.paths import resolve_dir
 
 from depositions.models import TiltseriesMetadata
+from depositions.services.annotation_config import session_annotations
 from depositions.services.dataset_metadata import build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
 
@@ -37,7 +38,7 @@ ACQUISITION_FIELDS = {
 }
 
 
-def _session_config(session):
+def _session_config(session, authors):
     name = session.msi_session.name
     try:
         metadata = session.tiltseries_metadata
@@ -54,6 +55,9 @@ def _session_config(session):
         raise SubmissionValidationError(f"Session {name!r} has no saved acquisition config.")
 
     config = deepcopy(raw)
+    annotations = session_annotations(session, authors)
+    if annotations:
+        config["annotations"] = annotations
     for config_field, model_field in ACQUISITION_FIELDS.items():
         config["acquisition"][config_field] = getattr(metadata, model_field)
     # Autofill maps these acquisition values onto the filtered reconstruction.
@@ -87,6 +91,7 @@ def dataset_is_ready(dataset):
 def _dataset_block(dataset):
     if dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve the dataset_id before preparing the dataset.")
+    metadata = build_dataset_metadata(dataset)
     sessions = {}
     selected_sessions = (
         dataset.sessions.select_related("msi_session", "tiltseries_metadata")
@@ -94,10 +99,10 @@ def _dataset_block(dataset):
         .order_by("msi_session__name")
     )
     for session in selected_sessions:
-        sessions[session.msi_session.name] = _session_config(session)
+        sessions[session.msi_session.name] = _session_config(session, metadata.get("authors", []))
     if not sessions:
         raise SubmissionValidationError("Select at least one session before preparing the dataset.")
-    return {"dataset_id": dataset.dataset_id, "metadata": build_dataset_metadata(dataset), "sessions": sessions}
+    return {"dataset_id": dataset.dataset_id, "metadata": metadata, "sessions": sessions}
 
 
 def build_dataprep_config(deposition, *, output_dir, sync_destination=None, required_dataset_ids=None):
