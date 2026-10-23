@@ -2,14 +2,12 @@ import uuid
 
 from django.conf import settings
 from django.db import models
-from django.utils import timezone
 from projects.models import Project
 from simple_history.models import HistoricalRecords
 
-
-def _upload_path(instance, filename):
-    """Bucket files by month; names are chosen by images.services, e.g. images/2026/10/<uuid>_thumb.webp."""
-    return f"images/{timezone.now():%Y/%m}/{filename}"
+# Bucketed by month; renditions apart so they can be wiped and regenerated, e.g. images/renditions/2026/10/<uuid>_thumb.webp
+_ORIGINALS_DIR = "images/originals/%Y/%m/"
+_RENDITIONS_DIR = "images/renditions/%Y/%m/"
 
 
 class Image(models.Model):
@@ -20,9 +18,9 @@ class Image(models.Model):
     # Mirrors the owner's project; kept for future project-based permissions
     project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True, blank=True, related_name="images")
 
-    original = models.FileField(upload_to=_upload_path, max_length=255)
-    preview = models.FileField(upload_to=_upload_path, max_length=255)
-    thumb = models.FileField(upload_to=_upload_path, max_length=255)
+    original = models.FileField(upload_to=_ORIGINALS_DIR, max_length=255)
+    preview = models.FileField(upload_to=_RENDITIONS_DIR, max_length=255)
+    thumb = models.FileField(upload_to=_RENDITIONS_DIR, max_length=255)
 
     original_name = models.CharField(max_length=255, help_text="Filename as uploaded; used for downloads")
     content_type = models.CharField(max_length=50, help_text="Detected from the file's bytes, e.g. image/tiff")
