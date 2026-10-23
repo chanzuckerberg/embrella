@@ -132,6 +132,7 @@ urlpatterns = (
         path("projects/", include("projects.urls"), name="projects"),
         path("tem/", include(tem_v1_urlpatterns)),
         path("copick/", include("workflow.processors.copick.api_urls")),
+        path("cdpp/", include("workflow.processors.cdpp.api_urls")),
         path("people/", include("people.urls")),
         path("timeline/", include("timeline.urls")),
     ]
