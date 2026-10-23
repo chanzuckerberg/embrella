@@ -4,12 +4,14 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { SubmitStep } from './SubmitStep';
 import { useSubmitFlow } from '../../hooks/useSubmitFlow';
 import { useDatasetLogs } from '../../hooks/useDatasetLogs';
+import { useTomogramSelectionCounts } from '../../hooks/useSources';
 import type { Dataset, DatasetJob, JobLogs } from '../../types';
 
 jest.mock('../../hooks/useSubmitFlow', () => ({
   useSubmitFlow: jest.fn(),
 }));
 jest.mock('../../hooks/useDatasetLogs', () => ({ useDatasetLogs: jest.fn(() => ({ data: undefined })) }));
+jest.mock('../../hooks/useSources', () => ({ useTomogramSelectionCounts: jest.fn() }));
 const mockFlow = useSubmitFlow as jest.Mock;
 const mockLogs = useDatasetLogs as jest.Mock;
 const cancel = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isSuccess: false, error: null };
@@ -21,10 +23,13 @@ function setLogs(data: JobLogs | undefined) {
 const passed = { status: 'passed' as const, attempt: 'prep-1', warnings: [], blocking_issues: [] };
 const prepared: DatasetJob = { id: 1, state: 'prep_completed', prep_slurm_job_id: 'prep-1', validation: passed };
 
-function setup(job: DatasetJob | null, { readOnly = false } = {}) {
+function setup(
+  job: DatasetJob | null,
+  { readOnly = false, sessions = [] }: { readOnly?: boolean; sessions?: Dataset['sessions'] } = {}
+) {
   const submit = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
   const push = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
-  const dataset = { id: 1, title: 'DS', dataset_id: 2, status: 'draft', job } as Dataset;
+  const dataset = { id: 1, title: 'DS', dataset_id: 2, status: 'draft', job, sessions } as Dataset;
   mockFlow.mockReturnValue({ cancel, submit, push });
   const view = render(<SubmitStep dataset={dataset} readOnly={readOnly} reportSave={jest.fn()} />);
   return { submit, push, dataset, view };
@@ -32,6 +37,7 @@ function setup(job: DatasetJob | null, { readOnly = false } = {}) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (useTomogramSelectionCounts as jest.Mock).mockReturnValue(undefined);
   mockLogs.mockReturnValue({ data: undefined });
 });
 
@@ -98,6 +104,18 @@ it('shows a retry action and the error when sync failed', () => {
   expect(screen.getByRole('button', { name: /retry sync/i })).toBeInTheDocument();
 });
 
+it('retries preparation when the job fails after sync completes', () => {
+  const { submit } = setup({
+    id: 1,
+    state: 'failed',
+    error_message: 'Validation job stopped',
+    sync_progress: { done: 10, total: 10, completed_at: '2026-10-23T19:00:00Z' },
+  });
+  expect(screen.getByText('Validation job stopped')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry sync' }));
+  expect(submit.mutate).toHaveBeenCalledTimes(1);
+});
+
 it('shows success and no submit actions once pushed', () => {
   setup({ id: 1, state: 'completed', push_slurm_job_id: '99' });
   const banner = screen.getByRole('alert');
@@ -148,6 +166,76 @@ it('renders live progress from the job payload', () => {
   expect(screen.getByRole('button', { name: /Sync on cluster/ })).toHaveTextContent('85% · ETA 0:05');
   expect(screen.getByText('Symlink tiltseries')).toBeInTheDocument();
   expect(screen.getByText('582 / 582')).toBeInTheDocument();
+});
+
+it('shows selected picks, segmentations and meshes across sessions between file groups', () => {
+  (useTomogramSelectionCounts as jest.Mock).mockReturnValue({ selected: 100, total: 291 });
+  setup(
+    {
+      id: 1,
+      state: 'prep_running',
+      sync_progress: {
+        done: 3,
+        total: 4,
+        items: [
+          { label: 'Tilt series', done: 1, total: 1 },
+          { label: 'Tomograms', done: 1, total: 1 },
+          { label: 'Metadata', done: 1, total: 2 },
+        ],
+      },
+    },
+    {
+      sessions: [
+        {
+          id: 1,
+          msi_session: 1,
+          annotations: [
+            { copick_kind: 'picks', copick_ref: 'a:user/0', is_selected: true },
+            { copick_kind: 'segmentations', copick_ref: 'b:user/0', is_selected: true },
+            { copick_kind: 'picks', copick_ref: 'c:user/0', is_selected: false },
+          ],
+        },
+        {
+          id: 2,
+          msi_session: 2,
+          annotations: [{ copick_kind: 'meshes', copick_ref: 'd:user/0', is_selected: true }],
+        },
+      ],
+    }
+  );
+  const rows = within(screen.getByRole('list', { name: 'Sync progress by group' })).getAllByRole('listitem');
+  expect(rows.map((row) => row.textContent)).toEqual([
+    'Symlink tiltseries1 / 1',
+    'Symlink tomograms100 / 291 selected',
+    'Deposit annotations3 / 4 selected',
+    'Other items1 / 2',
+  ]);
+});
+
+it('marks selected tomograms and annotations complete when sync finishes', () => {
+  (useTomogramSelectionCounts as jest.Mock).mockReturnValue({ selected: 100, total: 291 });
+  const { dataset, view } = setup(prepared, {
+    sessions: [
+      { id: 1, msi_session: 1, annotations: [{ copick_kind: 'picks', copick_ref: 'a:user/0', is_selected: true }] },
+    ],
+  });
+  fireEvent.click(screen.getByRole('button', { name: /Sync on cluster/ }));
+  expect(screen.getByRole('listitem', { name: 'Deposit annotations: 1 / 1 selected, complete' })).toBeInTheDocument();
+  expect(screen.getByRole('listitem', { name: 'Symlink tomograms: 100 / 291 selected, complete' })).toBeInTheDocument();
+  (useTomogramSelectionCounts as jest.Mock).mockReturnValue({ selected: 0, total: 0 });
+  view.rerender(<SubmitStep dataset={{ ...dataset, sessions: [] }} readOnly={false} reportSave={jest.fn()} />);
+  expect(screen.getByRole('listitem', { name: 'Deposit annotations: 0 / 0 selected, incomplete' })).toBeInTheDocument();
+  expect(screen.getByRole('listitem', { name: 'Symlink tomograms: 0 / 0 selected, incomplete' })).toBeInTheDocument();
+});
+
+it('reports unavailable tilt-series stacks after sync instead of hiding the expected total', () => {
+  setup({
+    ...prepared,
+    sync_progress: { done: 10, total: 10, items: [{ label: 'Tilt series', done: 0, total: 402 }] },
+  });
+  fireEvent.click(screen.getByRole('button', { name: /Sync on cluster/ }));
+  const row = screen.getByRole('listitem', { name: 'Symlink tiltseries: 0 of 402, incomplete' });
+  expect(row).toHaveTextContent('0 / 402 · unavailable');
 });
 
 it('shows a clean validation pass as success, not a warning', () => {
@@ -251,12 +339,21 @@ it('updates sync elapsed time, freezes on completion and resets on restart', () 
     expect(screen.getByText(/Elapsed: 2m 0s/)).toBeInTheDocument();
     act(() => jest.advanceTimersByTime(2000));
     expect(screen.getByText(/Elapsed: 2m 2s/)).toBeInTheDocument();
+    job.sync_progress = { done: 10, total: 10, completed_at: '2026-10-14T12:02:02Z' };
+    view.rerender(<SubmitStep {...props} />);
+    expect(screen.getByText('Validation running…')).toBeInTheDocument();
+    act(() => jest.advanceTimersByTime(60000));
+    expect(screen.getByText(/Completed in: 2m 2s/)).toBeInTheDocument();
     job.state = 'prep_completed';
-    job.prep_completed_at = '2026-10-14T12:02:02Z';
+    job.prep_completed_at = '2026-10-14T12:03:02Z';
+    job.validation = { ...passed, duration_seconds: 60 };
     view.rerender(<SubmitStep {...props} />);
     act(() => jest.advanceTimersByTime(60000));
     expect(screen.getByText(/Completed in: 2m 2s/)).toBeInTheDocument();
+    expect(screen.getByText('Passed · 1m 0s')).toBeInTheDocument();
     job.state = 'prep_running';
+    job.sync_progress = null;
+    job.validation = null;
     job.started_at = new Date(Date.now()).toISOString();
     job.prep_completed_at = null;
     view.rerender(<SubmitStep {...props} />);
@@ -461,11 +558,11 @@ it('renders grouped counts while keeping overall progress and ETA from the snaps
     },
   });
   expect(screen.getAllByRole('listitem').map((row) => row.getAttribute('aria-label'))).toEqual([
-    'Symlink tiltseries: 4 of 8, incomplete',
-    'Symlink tomograms: 3 of 3, complete',
-    'Other items: 3 of 9, incomplete',
+    'Symlink tiltseries: 0 of 4, incomplete',
+    'Symlink tomograms: - / - selected, incomplete',
+    'Deposit annotations: 0 / 0 selected, incomplete',
+    'Other items: 7 of 13, incomplete',
   ]);
-  expect(screen.queryByText('Deposit annotations')).not.toBeInTheDocument();
   expect(screen.queryByText('Alignment')).not.toBeInTheDocument();
   expect(screen.getByText('10 / 20 objects')).toBeInTheDocument();
   expect(screen.getAllByText('50% · ETA 30s')).toHaveLength(2);

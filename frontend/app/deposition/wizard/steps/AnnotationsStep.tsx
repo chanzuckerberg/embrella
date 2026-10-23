@@ -360,9 +360,11 @@ export function AnnotationsStep({ dataset, reportSave, readOnly }: StepProps) {
         '& > :not(:last-child)': { flexShrink: 0 },
       }}
     >
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Select annotations to deposit, then fill in metadata for each.
-      </Typography>
+      {list.length > 0 && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Select annotations to deposit, then fill in metadata for each.
+        </Typography>
+      )}
 
       <Box
         sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 2 }}

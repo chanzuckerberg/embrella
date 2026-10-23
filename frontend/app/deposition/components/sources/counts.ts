@@ -1,7 +1,7 @@
 import type { TomogramSubsetMode } from '../../types';
 import type { SourceRow } from './types';
 
-export function subsetCount(row: SourceRow): number | undefined {
+export function subsetCount(row: Pick<SourceRow, 'subset_selection'>): number | undefined {
   const sel = row.subset_selection;
   if (Array.isArray(sel)) return sel.length; // CSV → one entry per row
   if (sel && typeof sel === 'object') {
@@ -11,7 +11,10 @@ export function subsetCount(row: SourceRow): number | undefined {
   return undefined;
 }
 
-export function rowSelected(row: SourceRow, mode: TomogramSubsetMode): number | undefined {
+export function rowSelected(
+  row: Pick<SourceRow, 'tomogram_total' | 'tomogram_selected' | 'subset_csv_path' | 'subset_selection'>,
+  mode: TomogramSubsetMode
+): number | undefined {
   if (row.tomogram_total == null) return undefined;
   if (mode === 'all') return row.tomogram_total;
   if (mode === 'annotated') return row.tomogram_selected;

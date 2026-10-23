@@ -13,22 +13,22 @@ it('sums categories in display order without mutating the snapshot', () => {
   ];
   const before = JSON.stringify(items);
   expect(groupSyncProgress(items)).toEqual([
-    { label: 'Symlink tiltseries', done: 5, total: 8 },
+    { label: 'Symlink tiltseries', done: 2, total: 4 },
     { label: 'Symlink tomograms', done: 3, total: 4 },
-    { label: 'Other items', done: 5, total: 9 },
+    { label: 'Deposit annotations', done: 0, total: 0 },
+    { label: 'Other items', done: 8, total: 13 },
   ]);
   expect(JSON.stringify(items)).toBe(before);
 });
 
-it('hides all groups without a positive total, including annotations', () => {
-  expect(groupSyncProgress([])).toEqual([]);
-  expect(
-    groupSyncProgress([
-      { label: 'Tilt series', done: 0, total: 0 },
-      { label: 'Tomograms', done: 0, total: 0 },
-      { label: 'Metadata', done: 0, total: 0 },
-    ])
-  ).toEqual([]);
+it('keeps file groups visible without progress', () => {
+  const emptyGroups = [
+    { label: 'Symlink tiltseries', done: 0, total: 0 },
+    { label: 'Symlink tomograms', done: 0, total: 0 },
+    { label: 'Deposit annotations', done: 0, total: 0 },
+    { label: 'Other items', done: 0, total: 0 },
+  ];
+  expect(groupSyncProgress([])).toEqual(emptyGroups);
 });
 
 it('adds unknown categories to Other items alongside known categories', () => {
@@ -37,5 +37,10 @@ it('adds unknown categories to Other items alongside known categories', () => {
       { label: 'Future category', done: 1, total: 4 },
       { label: 'Metadata', done: 2, total: 3 },
     ])
-  ).toEqual([{ label: 'Other items', done: 3, total: 7 }]);
+  ).toEqual([
+    { label: 'Symlink tiltseries', done: 0, total: 0 },
+    { label: 'Symlink tomograms', done: 0, total: 0 },
+    { label: 'Deposit annotations', done: 0, total: 0 },
+    { label: 'Other items', done: 3, total: 7 },
+  ]);
 });
