@@ -42,6 +42,22 @@ class ValidationError(Exception):
         super().__init__(f"Validation failed: {'; '.join(errors)}")
 
 
+def duplicate_execution_message(pipe_execution: PipeExecution) -> str:
+    """What to tell the user when the run already has an execution of this pipe."""
+    return (
+        f"Run {pipe_execution.proc_run.name} already has an execution of {pipe_execution.pipe_in_plan.name} "
+        f"(job {pipe_execution.job_id}, status {pipe_execution.status}). Start a new run instead."
+    )
+
+
+class DuplicateExecutionError(Exception):
+    """Raised when the run already has an execution of this pipe (one PipeExecution per run and pipe)."""
+
+    def __init__(self, pipe_execution: PipeExecution):
+        self.pipe_execution = pipe_execution
+        super().__init__(duplicate_execution_message(pipe_execution))
+
+
 class RunMode(Enum):
     """PREVIEW renders against an unsaved run; EXECUTE also resolves upstream inputs."""
 
@@ -103,6 +119,7 @@ class PipelineExecutor:
 
         Raises:
             ValidationError: If parameters are invalid or cluster not allowed
+            DuplicateExecutionError: If the run already has an execution of this pipe
             ValueError: If dependencies not met or processor not found
             Exception: If job submission fails
         """
@@ -214,6 +231,7 @@ class PipelineExecutor:
 
         Raises:
             ValidationError: Parameters invalid or cluster not allowed
+            DuplicateExecutionError: The run already executed this pipe (EXECUTE only)
             ValueError: No processor, inputs missing (EXECUTE only), render failed
         """
         software = pipe_in_plan.pipe.software
@@ -226,6 +244,9 @@ class PipelineExecutor:
             )
 
         self._check_cluster_allowed(software, cluster_id)
+
+        if mode is RunMode.EXECUTE:
+            self._reject_duplicate_execution(pipe_in_plan, proc_run)
 
         context = self._build_run_context(pipe_in_plan, proc_run, user, processor, cluster_id, mode)
 
@@ -259,6 +280,12 @@ class PipelineExecutor:
     ) -> str:
         """Rendered script for a run that may be unsaved. Nothing is submitted or recorded."""
         return self.prepare(pipe_in_plan, proc_run, user, parameters, cluster_id, RunMode.PREVIEW).script
+
+    def _reject_duplicate_execution(self, pipe_in_plan: PipeInPlan, proc_run: ProcRun) -> None:
+        """Fail before sbatch: the record is created after submission, and a duplicate would orphan the job."""
+        existing = PipeExecution.objects.filter(proc_run=proc_run, pipe_in_plan=pipe_in_plan).first()
+        if existing:
+            raise DuplicateExecutionError(existing)
 
     def _check_cluster_allowed(self, software: ProcSoftware, cluster_id: Optional[str]) -> None:
         if not cluster_id:
