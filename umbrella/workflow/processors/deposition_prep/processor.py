@@ -1,5 +1,5 @@
 """DepositionPrepProcessor - Runs one SLURM job to stage and validate a dataset before the push.
-``sync -> copick deposit -> pre-flight validation (push --dry-run, scoped to this dataset)``
+``sync -> pre-flight validation (push --dry-run, scoped to this dataset)``
 """
 
 import logging

@@ -237,41 +237,20 @@ function CommandBox({ text }: { text: string }) {
   );
 }
 
-function SyncChecklist({ items, selectedAnnotations }: { items: SyncChecklistItem[]; selectedAnnotations: number }) {
-  const rows = groupSyncProgress(items)
-    .filter((item) => item.label !== 'Deposit annotations')
-    .map((item) => {
-      const complete = item.total > 0 && item.done === item.total;
-      return {
-        label: item.label,
-        count: `${item.done.toLocaleString()} / ${item.total.toLocaleString()}`,
-        description: `${item.label}: ${item.done} of ${item.total}, ${complete ? 'complete' : 'incomplete'}`,
-        complete,
-      };
-    });
-  if (selectedAnnotations > 0) {
-    const count = `${selectedAnnotations.toLocaleString()} annotation${selectedAnnotations === 1 ? '' : 's'} selected`;
-    const otherIndex = rows.findIndex((row) => row.label === 'Other items');
-    rows.splice(otherIndex === -1 ? rows.length : otherIndex, 0, {
-      label: 'Deposit annotations',
-      count,
-      description: `Deposit annotations: ${count}`,
-      complete: false,
-    });
-  }
-  if (rows.length === 0) return null;
+function SyncChecklist({ items }: { items: SyncChecklistItem[] }) {
   return (
     <Stack
       role="list"
       aria-label="Sync progress by group"
       sx={{ mt: '20px', border: '1px solid', borderColor: 'divider', borderRadius: '6px', overflow: 'hidden' }}
     >
-      {rows.map(({ label, count, description, complete }) => {
+      {groupSyncProgress(items).map((it) => {
+        const complete = it.total > 0 && it.done === it.total;
         return (
           <Box
-            key={label}
+            key={it.label}
             role="listitem"
-            aria-label={description}
+            aria-label={`${it.label}: ${it.done} of ${it.total}, ${complete ? 'complete' : 'incomplete'}`}
             sx={{
               display: 'flex',
               alignItems: 'center',
@@ -288,7 +267,7 @@ function SyncChecklist({ items, selectedAnnotations }: { items: SyncChecklistIte
               ) : (
                 <EmptyCircle color="primary.main" size={16} />
               )}
-              <Typography variant="body2">{label}</Typography>
+              <Typography variant="body2">{it.label}</Typography>
             </Box>
             <Typography
               variant="body2"
@@ -298,7 +277,7 @@ function SyncChecklist({ items, selectedAnnotations }: { items: SyncChecklistIte
                 whiteSpace: 'nowrap',
               }}
             >
-              {count}
+              {it.done.toLocaleString()} / {it.total.toLocaleString()}
             </Typography>
           </Box>
         );
@@ -368,10 +347,6 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
     }
   }, [readOnly, sync, submit.isPending, runSync]);
 
-  const selectedAnnotations = (dataset.sessions ?? []).reduce(
-    (count, session) => count + (session.annotations ?? []).filter((annotation) => annotation.is_selected).length,
-    0
-  );
   const progress = job?.sync_progress ?? null;
   const uploadProgress = job?.push_progress ?? null;
   const uploadTotalEstimated = uploadProgress?.estimated ?? uploadProgress?.objects?.estimated ?? false;
@@ -497,6 +472,7 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
                       {progress.eta && sync === 'active' ? ` · ETA ${progress.eta}` : ''}
                     </Typography>
                   </Box>
+                  {progress.items && progress.items.length > 0 && <SyncChecklist items={progress.items} />}
                 </>
               ) : (
                 <>
@@ -510,7 +486,6 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
                   </Typography>
                 </>
               )}
-              <SyncChecklist items={progress?.items ?? []} selectedAnnotations={selectedAnnotations} />
             </Box>
           )}
 

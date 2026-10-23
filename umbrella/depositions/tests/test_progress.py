@@ -105,50 +105,6 @@ def test_upload_progress_reads_latest_aws_total(estimated):
     }
 
 
-@pytest.mark.parametrize("selected_sources", [[], ["dctf_vol"], ["denoise"], ["dctf_vol", "denoise"]])
-def test_tomogram_progress_only_counts_configured_sources(tmp_path, selected_sources):
-    import yaml
-
-    source = tmp_path / "source"
-    source.mkdir()
-    (source / "TiltSeries_Metrics.csv").write_text("Tilt_Series\nPosition_1.mrc\n")
-    volume = source / "Position_1_Vol.mrc"
-    volume.write_bytes(b"volume")
-    config = tmp_path / "config.yaml"
-    config.write_text(
-        yaml.safe_dump(
-            {
-                "output_dir": str(tmp_path),
-                "datasets": {
-                    "ds": {
-                        "dataset_id": 2,
-                        "sessions": {
-                            "session": {
-                                "paths": {"aretomo3": str(source), **{key: str(source) for key in selected_sources}}
-                            }
-                        },
-                    }
-                },
-            }
-        )
-    )
-    root, inventory = reporter.prep_inventory(config, "2")
-    root.mkdir()
-    # Both outputs can remain from an earlier prep; only selected sources should count.
-    for suffix in ("_dctf_Vol.mrc", "_Vol.mrc", "_annotation_abc.mrc"):
-        (root / f"session_Position_1{suffix}").symlink_to(volume)
-    for complete in (False, True):
-        items = {item["label"]: item for item in reporter.prep_sample(root, inventory, complete)["items"]}
-        if selected_sources:
-            assert items["Tomograms"] == {
-                "label": "Tomograms",
-                "done": len(selected_sources),
-                "total": len(selected_sources),
-            }
-        else:
-            assert "Tomograms" not in items
-
-
 @pytest.mark.parametrize("separator", ["\n", "\r", "\r\n"])
 def test_upload_reporter_counts_completed_files_across_reads(tmp_path, monkeypatch, separator):
     source = tmp_path / "upload.log"

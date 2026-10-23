@@ -140,12 +140,6 @@ class TestSubmitDatasetPrep:
             submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
 
-    def test_selected_annotations_no_longer_block_submission(self, dataset, mocks):
-        session = dataset.sessions.get()
-        DepositionAnnotation.objects.create(session=session, copick_kind="picks", copick_ref="ribosome:alice/0")
-        assert submit.submit_dataset_prep(dataset).state == "prep_submitted"
-        assert mocks["launched"] is not None
-
     def test_deselected_annotations_do_not_block(self, dataset, mocks):
         session = dataset.sessions.get()
         DepositionAnnotation.objects.create(
