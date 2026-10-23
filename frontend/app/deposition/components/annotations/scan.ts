@@ -56,14 +56,14 @@ export function normalizeScan(scan: ScanResult): ScannedAnnotation[] {
 }
 
 export const REQUIRED_ANNOTATION_FIELDS = [
-  ['object_name', 'Object name'],
-  ['object_id', 'Ontology ID'],
-  ['annotation_method', 'Annotation method'],
-  ['annotation_software', 'Annotation software'],
+  'object_name',
+  'object_id',
+  'annotation_method',
+  'annotation_software',
 ] as const;
 
 export function annotationNeedsMetadata(a: DepositionAnnotation): boolean {
-  return !!a.is_selected && REQUIRED_ANNOTATION_FIELDS.some(([key]) => !a[key]?.trim());
+  return !!a.is_selected && REQUIRED_ANNOTATION_FIELDS.some((key) => !a[key]?.trim());
 }
 
 export function stripIncompleteLinks(a: DepositionAnnotation): DepositionAnnotation {

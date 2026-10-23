@@ -194,7 +194,7 @@ export function AnnotationMetadataForm({
 }) {
   const showRequiredErrors = !readOnly && !!annotation.is_selected;
   const text = (key: keyof DepositionAnnotation, label: string, multiline = false) => {
-    const required = REQUIRED_ANNOTATION_FIELDS.some(([field]) => field === key);
+    const required = REQUIRED_ANNOTATION_FIELDS.some((field) => field === key);
     const missing = showRequiredErrors && required && !(annotation[key] as string)?.trim();
     return (
       <TextField

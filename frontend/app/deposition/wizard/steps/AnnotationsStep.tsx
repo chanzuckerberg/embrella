@@ -24,7 +24,6 @@ import { AnnotationList, annId } from '../../components/annotations/AnnotationLi
 import { AnnotationMetadataForm } from '../../components/annotations/AnnotationMetadataForm';
 import {
   annotationNeedsMetadata,
-  REQUIRED_ANNOTATION_FIELDS,
   compatibleRuns,
   incompatibleRuns,
   mergeAnnotations,
@@ -153,11 +152,10 @@ export function AnnotationsStep({ dataset, reportSave, readOnly, reportBlocking 
   const activeAnn = list.find((a) => annId(a) === activeAnnId) ?? null;
 
   // Block Next while any selected annotation (across sessions) is missing required metadata.
-  const incompleteAnnotations = useMemo(
-    () => Object.values(bySession).flat().filter(annotationNeedsMetadata),
+  const incompleteCount = useMemo(
+    () => Object.values(bySession).flat().filter(annotationNeedsMetadata).length,
     [bySession]
   );
-  const incompleteCount = incompleteAnnotations.length;
   useEffect(() => {
     reportBlocking?.(readOnly ? 0 : incompleteCount);
   }, [incompleteCount, readOnly, reportBlocking]);
@@ -414,16 +412,8 @@ export function AnnotationsStep({ dataset, reportSave, readOnly, reportBlocking 
       )}
 
       {!readOnly && incompleteCount > 0 && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          Complete metadata for {incompleteCount} selected annotation{incompleteCount === 1 ? '' : 's'} across sessions
-          before preparation:
-          <Box component="ul" sx={{ my: 0.5, pl: 3 }}>
-            {REQUIRED_ANNOTATION_FIELDS.filter(([key]) => incompleteAnnotations.some((a) => !a[key]?.trim())).map(
-              ([key, label]) => (
-                <li key={key}>{label} is required.</li>
-              )
-            )}
-          </Box>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          {incompleteCount} selected annotation{incompleteCount === 1 ? ' is' : 's are'} incomplete across sessions.
         </Alert>
       )}
 
