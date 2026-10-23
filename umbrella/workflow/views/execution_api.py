@@ -24,8 +24,9 @@ from umbrella_logger import logger
 
 from common import clusterio
 from workflow.defaults import resolve_defaults
-from workflow.execution import PipelineExecutor, ValidationError
+from workflow.execution import DuplicateExecutionError, PipelineExecutor, ValidationError, duplicate_execution_message
 from workflow.processors import get_processor, list_processors
+from workflow.run_numbers import next_run_name_from
 
 # OpenAPI shapes shared by the processor list and schema endpoints.
 _CLUSTER_FIELDS = {
@@ -294,6 +295,14 @@ def execute_pipe(request):
             "ssh_setup_required": true,
             "cluster_id": "czii"
         }
+
+        OR 409 (if the run already has an execution of this pipe; nothing is submitted):
+
+        {
+            "success": false,
+            "error": "Run run001 already has an execution of vol001 (...)",
+            "pipe_execution_id": 789
+        }
     """
     try:
         # Parse request body
@@ -472,6 +481,18 @@ def execute_pipe(request):
                     "validation_errors": e.errors,
                 },
                 status=400,
+            )
+
+        except DuplicateExecutionError as e:
+            # The message is built from the existing record, not from the exception.
+            existing = e.pipe_execution
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": duplicate_execution_message(existing),
+                    "pipe_execution_id": existing.id,
+                },
+                status=409,
             )
 
         except ValueError as e:
@@ -1500,19 +1521,22 @@ Used to determine the next available run number when submitting jobs.
 - `copick-import` → copick-import plan (import tomograms)
 - `membraneseg` → membraneseg plan (membrane segmentation)
 - `octopi` → czii-octopi plan
+- `cdpp` → czii-cdpp plan (CryoET Data Portal Pipeline)
 
 **Example response:**
 ```json
 {
   "sessions": [
-    {"name": "24nov10", "run_numbers": ["001", "002", "003"]},
-    {"name": "24dec05", "run_numbers": ["001"]}
+    {"name": "24nov10", "run_numbers": ["003", "002", "001"], "next_run_name": "run004"},
+    {"name": "24dec05", "run_numbers": ["001"], "next_run_name": "run002"}
   ]
 }
 ```
 
-Run numbers are returned without the 'run' prefix. To get the next run name,
-find the max number and increment (e.g., max "003" → next is "run004").
+Run numbers are returned without the 'run' prefix, most recent first.
+`next_run_name` is one past the highest `runNNN` recorded in the database for the
+session. Run directories on disk are not listed here (that would be an SSH round trip
+per session); the server-side allocator checks them when it reserves a run.
 """,
     parameters=[
         OpenApiParameter(
@@ -1520,7 +1544,16 @@ find the max number and increment (e.g., max "003" → next is "run004").
             required=False,
             type=OpenApiTypes.STR,
             description="Processing plan type. Defaults to 'aretomo3'.",
-            enum=["aretomo3", "denoiset", "copick", "copick-add-object", "copick-import", "membraneseg", "octopi"],
+            enum=[
+                "aretomo3",
+                "denoiset",
+                "copick",
+                "copick-add-object",
+                "copick-import",
+                "membraneseg",
+                "octopi",
+                "cdpp",
+            ],
         ),
         OpenApiParameter(
             name="session_name",
@@ -1553,6 +1586,7 @@ def get_plan_runs(request):
             "copick-import": "copick-import",
             "membraneseg": "membraneseg",
             "octopi": "czii-octopi",
+            "cdpp": "czii-cdpp",
         }
         if plan_type not in plan_map:
             return JsonResponse({"error": f'Unsupported plan_type "{plan_type}"'}, status=400)
@@ -1585,22 +1619,26 @@ def get_plan_runs(request):
 
         # Group results by name and collect unique run numbers with sorting by created_at
         grouped_sessions = {}
+        run_names = {}
         for entry in query_results:
             name = entry["name"]
             run_number = entry["run_number"]
             created_at = entry["run_created_at"]
             if name not in grouped_sessions:
                 grouped_sessions[name] = []
+                run_names[name] = []
             if run_number:
                 # Remove 'run' prefix if it exists
                 stripped_run_number = run_number.replace("run", "")
                 grouped_sessions[name].append((stripped_run_number, created_at))
+                run_names[name].append(run_number)
 
         # Sort run numbers by created_at (most recent first) and format the response
         formatted_sessions = [
             {
                 "name": name,
                 "run_numbers": [run[0] for run in sorted(run_numbers, key=lambda x: x[1], reverse=True)],
+                "next_run_name": next_run_name_from(run_names[name]),
             }
             for name, run_numbers in grouped_sessions.items()
         ]
