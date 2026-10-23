@@ -103,7 +103,7 @@ export function useAnnotatedCount(sessionName: string, runs: string[], enabled: 
   return useQuery(annotatedCountOptions(sessionName, runs, enabled));
 }
 
-export function useSelectedTomogramCount(dataset: Dataset): number | undefined {
+export function useTomogramSelectionCounts(dataset: Dataset): { selected: number; total: number } | undefined {
   const sessions = dataset.sessions ?? [];
   const mode = dataset.tomogram_subset_mode ?? 'all';
   const aretomo = useQueries({
@@ -117,6 +117,7 @@ export function useSelectedTomogramCount(dataset: Dataset): number | undefined {
       annotatedCountOptions(s.msi_session_name ?? '', (s.selected_copick_runs ?? []) as string[], mode === 'annotated')
     ),
   });
+  let selectedTotal = 0;
   let total = 0;
   for (const [i, session] of sessions.entries()) {
     for (const [run, query] of [
@@ -137,8 +138,9 @@ export function useSelectedTomogramCount(dataset: Dataset): number | undefined {
       );
       if (selected == null) return undefined;
       // Annotated counts can exceed a source's available volumes.
-      total += Math.min(selected, sourceTotal);
+      selectedTotal += Math.min(selected, sourceTotal);
+      total += sourceTotal;
     }
   }
-  return total;
+  return { selected: selectedTotal, total };
 }

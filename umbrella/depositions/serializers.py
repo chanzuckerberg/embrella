@@ -124,7 +124,7 @@ class DatasetJobSerializer(serializers.ModelSerializer):
             return result
         # CLI text can contain private paths; only the owner sees it.
         return {
-            **{key: result[key] for key in ("status", "attempt", "dataset_id") if key in result},
+            **{key: result[key] for key in ("status", "attempt", "dataset_id", "duration_seconds") if key in result},
             "warnings": [
                 {"message": "Validation warning. Details are available to the submission owner."}
                 for _ in result.get("warnings", [])
