@@ -1466,6 +1466,7 @@ def test_validation_diagnostics_are_owner_only(auth_client, is_owner, endpoint):
         validation={
             "status": "failed",
             "attempt": "42",
+            "duration_seconds": 12,
             "warnings": [{"message": warning, "path": path}],
             "blocking_issues": [{"message": issue, "path": path}],
         },
@@ -1486,6 +1487,7 @@ def test_validation_diagnostics_are_owner_only(auth_client, is_owner, endpoint):
     if endpoint == "job_status":
         validation = response.json()["validation"]
         assert validation["status"] == "failed" and validation["attempt"] == "42"
+        assert validation["duration_seconds"] == 12
         assert len(validation["warnings"]) == len(validation["blocking_issues"]) == 1
         if not is_owner:
             assert "submission owner" in validation["blocking_issues"][0]["message"]

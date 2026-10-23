@@ -41,9 +41,13 @@ function focusPhase(sync: PhaseStatus, push: PhaseStatus): 1 | 2 | 3 {
 export function submissionPhases(job: DatasetJob | null | undefined) {
   const state = job?.state;
   const hasPushId = !!job?.push_slurm_job_id;
-  const sync = syncStatus(state, hasPushId);
+  const sync = job?.sync_progress?.completed_at ? 'done' : syncStatus(state, hasPushId);
   const pushed = pushStatus(state, hasPushId);
-  return { sync, pushed, validation: validationStatus(job?.validation), focus: focusPhase(sync, pushed) };
+  const validation =
+    sync === 'done' && isActiveJobPhase(state, 'prep') && !job?.validation
+      ? 'active'
+      : validationStatus(job?.validation);
+  return { sync, pushed, validation, focus: focusPhase(sync, pushed) };
 }
 
 export function canUpload(job: DatasetJob | null | undefined): boolean {

@@ -19,7 +19,7 @@ import type {
 import type { StepProps } from '../wizardTypes';
 import { useSubmitFlow } from '../../hooks/useSubmitFlow';
 import { useDatasetLogs } from '../../hooks/useDatasetLogs';
-import { useSelectedTomogramCount } from '../../hooks/useSources';
+import { useTomogramSelectionCounts } from '../../hooks/useSources';
 
 import { canUpload, isActiveJobPhase, submissionPhases, type PhaseStatus, type SubmitPhase } from '../../submitPhases';
 import { groupSyncProgress } from '../../syncProgressGroups';
@@ -47,9 +47,11 @@ const DEFAULT_SYNC_COMMAND = 'cryoetportalprep sync ./dataprep_config.yaml';
 
 function SyncTiming({ job }: { job: DatasetJob | null | undefined }) {
   const [now, setNow] = useState(() => Date.now());
-  const active = isActiveJobPhase(job?.state, 'prep');
+  const syncEnd = job?.sync_progress?.completed_at;
+  const active = isActiveJobPhase(job?.state, 'prep') && !syncEnd;
   const start = job?.started_at ? Date.parse(job.started_at) : NaN;
-  const end = job?.prep_completed_at ?? (job?.state === 'failed' && !job.push_slurm_job_id ? job.completed_at : null);
+  const end =
+    syncEnd ?? job?.prep_completed_at ?? (job?.state === 'failed' && !job.push_slurm_job_id ? job.completed_at : null);
 
   useEffect(() => {
     if (!active || !Number.isFinite(start)) return;
@@ -65,7 +67,7 @@ function SyncTiming({ job }: { job: DatasetJob | null | undefined }) {
   const minutes = Math.floor(seconds / 60);
   let label = 'Stopped after';
   if (active) label = 'Elapsed';
-  else if (job?.prep_completed_at) label = 'Completed in';
+  else if (syncEnd || job?.prep_completed_at) label = 'Completed in';
   return (
     <span title="Includes time waiting in the cluster queue">
       {' '}
@@ -95,9 +97,12 @@ function syncSub(status: PhaseStatus, progress?: SyncProgress | null, summary?: 
 }
 
 function validationSub(status: PhaseStatus, validation?: JobValidation | null): string {
-  if (status === 'warning' && validation) return `Passed · ${pluralWarnings(validation.warnings.length)}`;
-  if (status === 'done') return 'Passed';
-  if (status === 'error') return 'Issues found';
+  if (status === 'active') return 'Validation running…';
+  const seconds = validation?.duration_seconds;
+  const duration = seconds != null ? ` · ${Math.floor(seconds / 60)}m ${seconds % 60}s` : '';
+  if (status === 'warning' && validation) return `Passed · ${pluralWarnings(validation.warnings.length)}${duration}`;
+  if (status === 'done') return `Passed${duration}`;
+  if (status === 'error') return `Issues found${duration}`;
   return validation?.status === 'unavailable' ? 'Unavailable' : 'Not run';
 }
 
@@ -238,15 +243,14 @@ function CommandBox({ text }: { text: string }) {
   );
 }
 
-function selectionRow(label: string, selected: number | undefined, noun: string, syncComplete: boolean) {
+function selectionRow(label: string, selected: number | undefined, total: number | undefined, syncComplete: boolean) {
   const n = selected?.toLocaleString() ?? '-';
-  const selectionLabel = `${n} ${noun}${selected === 1 ? '' : 's'} selected`;
   const complete = syncComplete && selected != null && selected > 0;
-  const count = complete ? `${n} / ${n}` : selectionLabel;
+  const count = `${n} / ${total?.toLocaleString() ?? '-'} selected`;
   return {
     label,
     count,
-    description: `${label}: ${count}`,
+    description: `${label}: ${count}, ${complete ? 'complete' : 'incomplete'}`,
     complete,
   };
 }
@@ -254,20 +258,24 @@ function selectionRow(label: string, selected: number | undefined, noun: string,
 function SyncChecklist({
   items,
   selectedAnnotations,
+  totalAnnotations,
   selectedTomograms,
+  totalTomograms,
   syncComplete,
 }: {
   items: SyncChecklistItem[];
   selectedAnnotations: number;
+  totalAnnotations: number;
   selectedTomograms: number | undefined;
+  totalTomograms: number | undefined;
   syncComplete: boolean;
 }) {
   const rows = groupSyncProgress(items).map((item) => {
     if (item.label === 'Symlink tomograms') {
-      return selectionRow(item.label, selectedTomograms, 'tomogram', syncComplete);
+      return selectionRow(item.label, selectedTomograms, totalTomograms, syncComplete);
     }
     if (item.label === 'Deposit annotations') {
-      return selectionRow(item.label, selectedAnnotations, 'annotation', syncComplete);
+      return selectionRow(item.label, selectedAnnotations, totalAnnotations, syncComplete);
     }
     const complete = item.total > 0 && item.done >= item.total;
     return {
@@ -385,11 +393,10 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
     }
   }, [readOnly, sync, submit.isPending, runSync]);
 
-  const selectedAnnotations = (dataset.sessions ?? []).reduce(
-    (count, session) => count + (session.annotations ?? []).filter((annotation) => annotation.is_selected).length,
-    0
-  );
-  const selectedTomograms = useSelectedTomogramCount(dataset);
+  const annotations = (dataset.sessions ?? []).flatMap((session) => session.annotations ?? []);
+  const selectedAnnotations = annotations.filter((annotation) => annotation.is_selected).length;
+  const totalAnnotations = annotations.length;
+  const tomograms = useTomogramSelectionCounts(dataset);
   const progress = job?.sync_progress ?? null;
   const uploadProgress = job?.push_progress ?? null;
   const uploadTotalEstimated = uploadProgress?.estimated ?? uploadProgress?.objects?.estimated ?? false;
@@ -531,7 +538,9 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
               <SyncChecklist
                 items={progress?.items ?? []}
                 selectedAnnotations={selectedAnnotations}
-                selectedTomograms={selectedTomograms}
+                totalAnnotations={totalAnnotations}
+                selectedTomograms={tomograms?.selected}
+                totalTomograms={tomograms?.total}
                 syncComplete={sync === 'done'}
               />
             </Box>
@@ -568,7 +577,11 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
                   {blockingIssues.length > 0 && <WarningsList warnings={blockingIssues} blocking />}
                 </>
               ) : (
-                <Alert severity="info">Pre-flight validation has not run. Upload requires a passed check.</Alert>
+                <Alert severity="info">
+                  {validation === 'active'
+                    ? 'Pre-flight validation is running.'
+                    : 'Pre-flight validation has not run. Upload requires a passed check.'}
+                </Alert>
               )}
             </Box>
           )}
@@ -707,7 +720,7 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
               </Box>
             </Box>
           )}
-          {!readOnly && (sync === 'error' || pushed === 'error' || (submit.isError && !isActiveJobPhase(state))) && (
+          {!readOnly && (state === 'failed' || (submit.isError && !isActiveJobPhase(state))) && (
             <Box>
               {pushed === 'error' && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
