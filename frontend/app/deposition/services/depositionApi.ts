@@ -133,8 +133,8 @@ export async function autoFillSession(id: number): Promise<DepositionSession> {
 }
 
 export async function listMsiSessions(): Promise<string[]> {
-  const data = await parse<{ session_names?: string[] }>(await fetchResource(url(API.MSI_SESSIONS_LIST)));
-  return data.session_names ?? [];
+  const data = await parse<{ sessions: { name: string }[] }>(await fetchResource(url(API.MSI_SESSIONS)));
+  return data.sessions.map((session) => session.name);
 }
 
 export async function getMsiSessionId(sessionName: string): Promise<number> {
