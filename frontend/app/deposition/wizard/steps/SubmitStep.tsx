@@ -278,9 +278,11 @@ function SyncChecklist({
       return selectionRow(item.label, selectedAnnotations, totalAnnotations, syncComplete);
     }
     const complete = item.total > 0 && item.done >= item.total;
+    let count = `${item.done.toLocaleString()} / ${item.total.toLocaleString()}`;
+    if (item.label === 'Symlink tiltseries' && syncComplete && item.done < item.total) count += ' · unavailable';
     return {
       label: item.label,
-      count: `${item.done.toLocaleString()} / ${item.total.toLocaleString()}`,
+      count,
       description: `${item.label}: ${item.done} of ${item.total}, ${complete ? 'complete' : 'incomplete'}`,
       complete,
     };

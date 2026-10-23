@@ -228,6 +228,16 @@ it('marks selected tomograms and annotations complete when sync finishes', () =>
   expect(screen.getByRole('listitem', { name: 'Symlink tomograms: 0 / 0 selected, incomplete' })).toBeInTheDocument();
 });
 
+it('reports unavailable tilt-series stacks after sync instead of hiding the expected total', () => {
+  setup({
+    ...prepared,
+    sync_progress: { done: 10, total: 10, items: [{ label: 'Tilt series', done: 0, total: 402 }] },
+  });
+  fireEvent.click(screen.getByRole('button', { name: /Sync on cluster/ }));
+  const row = screen.getByRole('listitem', { name: 'Symlink tiltseries: 0 of 402, incomplete' });
+  expect(row).toHaveTextContent('0 / 402 · unavailable');
+});
+
 it('shows a clean validation pass as success, not a warning', () => {
   setup({ id: 1, state: 'prep_completed', prep_slurm_job_id: 'prep-1', validation: passed });
   expect(screen.getByText('Validation passed')).toBeInTheDocument();

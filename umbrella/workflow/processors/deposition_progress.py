@@ -21,7 +21,6 @@ def prep_inventory(config_path, dataset_id):
     links = (
         ("aretomo3", "{pos}.aln", "{run}.aln", "Alignment"),
         ("aretomo3", "{pos}_CTF.txt", "{run}_CTFFIND_format_CTF.txt", "CTF"),
-        ("aretomo3", "{pos}.mrc", "{run}_TS.mrc", "Tilt series"),
         ("dctf_vol", "{pos}_Vol.mrc", "{run}_dctf_Vol.mrc", "Tomograms"),
         ("denoise", "{pos}_Vol.mrc", "{run}_Vol.mrc", "Tomograms"),
         ("memseg", "{pos}_Vol_Segment_mask.mrc", "{run}_Vol_Segment_mask.mrc", "Masks"),
@@ -43,6 +42,7 @@ def prep_inventory(config_path, dataset_id):
             positions = [row["Tilt_Series"].removesuffix(".mrc") for row in csv.DictReader(handle)]
         for pos in positions:
             run = f"{prefix}_{pos}"
+            inventory[f"{run}_TS.mrc"] = "Tilt series"
             for key, source, target, label in links:
                 if paths.get(key) and (Path(paths[key]) / source.format(pos=pos)).exists():
                     inventory[target.format(run=run)] = label
@@ -75,7 +75,11 @@ def staged_files(root):
 def prep_sample(root, inventory, complete):
     files = staged_files(root)
     totals = Counter(inventory.values())
-    counts = Counter(inventory[name] for name in files.keys() & inventory.keys())
+    counts = Counter(
+        inventory[name]
+        for name in files.keys() & inventory.keys()
+        if inventory[name] != "Tilt series" or files[name].is_file()
+    )
     sample = {
         "done": sum(counts.values()),
         "total": len(inventory),

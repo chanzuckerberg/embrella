@@ -78,7 +78,6 @@ def test_reporter_counts_real_staged_files_and_followed_link_bytes(tmp_path):
     source = tmp_path / "source"
     source.mkdir()
     (source / "TiltSeries_Metrics.csv").write_text("Tilt_Series\nPosition_1.mrc\n")
-    (source / "Position_1.mrc").write_bytes(b"mrc")
     config = tmp_path / "config.yaml"
     config.write_text(
         yaml.safe_dump(
@@ -91,6 +90,11 @@ def test_reporter_counts_real_staged_files_and_followed_link_bytes(tmp_path):
     root, inventory = reporter.prep_inventory(config, "2")
     root.mkdir()
     (root / "session_Position_1_TS.mrc").symlink_to(source / "Position_1.mrc")
+    tiltseries = next(
+        item for item in reporter.prep_sample(root, inventory, True)["items"] if item["label"] == "Tilt series"
+    )
+    assert tiltseries == {"label": "Tilt series", "done": 0, "total": 1}
+    (source / "Position_1.mrc").write_bytes(b"mrc")
     assert reporter.prep_sample(root, inventory, False)["done"] == 1
     assert reporter.prep_sample(root, inventory, True)["summary"] == {"objects": 1, "bytes": 3}
 
