@@ -395,6 +395,128 @@ class TestPipelineExecutor:
         assert "not allowed" in exc_info.value.errors[0]
 
 
+RESERVATION = {"runs": ["run007"]}
+
+
+@pytest.fixture
+def reserving_processor(test_processor_class):
+    """A registered processor whose reservation feeds its script; records reserve/release calls."""
+    from workflow.processors import _PROCESSOR_REGISTRY
+
+    class ReservingProcessor(test_processor_class):
+        reserved = []
+        released = []
+
+        def reserve_runs(self, run_context, params):
+            self.reserved.append(dict(params))
+            return RESERVATION
+
+        def release_runs(self, run_context, reservation):
+            self.released.append(reservation)
+
+        def render_script(self, params, run_context):
+            runs = params.get("_reserved_runs", {}).get("runs", ["none"])
+            return f"#!/bin/bash\necho {runs[0]}"
+
+    original_registry = _PROCESSOR_REGISTRY.copy()
+    _PROCESSOR_REGISTRY["test_processor"] = ReservingProcessor
+
+    yield ReservingProcessor
+
+    _PROCESSOR_REGISTRY.clear()
+    _PROCESSOR_REGISTRY.update(original_registry)
+
+
+def _submitter(mock_submitter_class, side_effect=None):
+    mock_submitter = MagicMock()
+    mock_submitter.run_script.return_value = ("Submitted batch job 123456", "")
+    mock_submitter.run_script.side_effect = side_effect
+    mock_submitter.last_script_path = "/scripts/test_script.sh"
+    mock_submitter_class.return_value = mock_submitter
+    return mock_submitter
+
+
+class TestReserveRuns:
+    """processor.reserve_runs runs only for a real submission, and is released if it fails."""
+
+    def test_default_reserves_nothing(self, test_processor_class):
+        # test_execute_pipe pins the stored parameters, so no "_reserved_runs" key leaks in either.
+        processor = test_processor_class()
+
+        assert processor.reserve_runs(_bare_context({}), {"test_param": 1}) == {}
+        assert processor.release_runs(_bare_context({}), {}) is None
+
+    def _execute(self, test_pipe_in_plan, test_proc_run, test_user):
+        return PipelineExecutor().execute_pipe(
+            pipe_in_plan=test_pipe_in_plan,
+            proc_run=test_proc_run,
+            user=test_user,
+            parameters={"test_param": 50},
+            auth={"username": "test", "password": "pass"},
+        )
+
+    @patch("workflow.execution.RemoteJobSubmitter")
+    def test_reservation_reaches_script_and_record(
+        self, mock_submitter_class, test_proc_run, test_pipe_in_plan, test_user, reserving_processor
+    ):
+        _submitter(mock_submitter_class)
+
+        result = self._execute(test_pipe_in_plan, test_proc_run, test_user)
+
+        execution = PipeExecution.objects.get(id=result["pipe_execution_id"])
+        assert execution.script_content == "#!/bin/bash\necho run007"
+        assert execution.parameters["_reserved_runs"] == RESERVATION
+        assert execution.parameters["test_param"] == 50
+        assert reserving_processor.reserved == [{"test_param": 50}]
+        assert reserving_processor.released == []
+
+    @patch("workflow.execution.RemoteJobSubmitter")
+    def test_released_when_submission_fails(
+        self, mock_submitter_class, test_proc_run, test_pipe_in_plan, test_user, reserving_processor
+    ):
+        _submitter(mock_submitter_class, side_effect=RuntimeError("sbatch failed"))
+
+        with pytest.raises(RuntimeError, match="sbatch failed"):
+            self._execute(test_pipe_in_plan, test_proc_run, test_user)
+
+        assert reserving_processor.released == [RESERVATION]
+        assert PipeExecution.objects.count() == 0
+
+    @patch.object(PipelineExecutor, "_create_execution_record", side_effect=RuntimeError("db down"))
+    @patch("workflow.execution.RemoteJobSubmitter")
+    def test_kept_when_record_creation_fails_after_submission(
+        self, mock_submitter_class, _create, test_proc_run, test_pipe_in_plan, test_user, reserving_processor
+    ):
+        """The job was submitted and writes into the reserved runs, so they stay reserved."""
+        _submitter(mock_submitter_class)
+
+        with pytest.raises(RuntimeError, match="db down"):
+            self._execute(test_pipe_in_plan, test_proc_run, test_user)
+
+        assert reserving_processor.released == []
+
+    def test_released_when_render_fails(self, test_proc_run, test_pipe_in_plan, test_user, reserving_processor):
+        with (
+            patch.object(reserving_processor, "render_script", side_effect=KeyError("boom")),
+            pytest.raises(ValueError, match="Failed to render script"),
+        ):
+            self._execute(test_pipe_in_plan, test_proc_run, test_user)
+
+        assert reserving_processor.released == [RESERVATION]
+
+    def test_preview_never_reserves(self, test_proc_run, test_pipe_in_plan, test_user, reserving_processor):
+        script = PipelineExecutor().preview(
+            pipe_in_plan=test_pipe_in_plan,
+            proc_run=test_proc_run,
+            user=test_user,
+            parameters={"test_param": 50},
+        )
+
+        assert script == "#!/bin/bash\necho none"
+        assert reserving_processor.reserved == []
+        assert reserving_processor.released == []
+
+
 # API Endpoint Tests
 
 
