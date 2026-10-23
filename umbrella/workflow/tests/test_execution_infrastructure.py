@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from processes.models import PipeExecution
-from workflow.execution import PipelineExecutor, RunContext, ValidationError
+from workflow.execution import DuplicateExecutionError, PipelineExecutor, RunContext, ValidationError
 from workflow.processors import get_processor, register_processor
 from workflow.processors.base import BaseProcessor
 from workflow.processors.copick import CopickProcessor
@@ -371,6 +371,53 @@ class TestPipelineExecutor:
 
         assert exc_info.value.errors == ["Required parameter missing: test_param"]
 
+    @patch("workflow.execution.RemoteJobSubmitter")
+    def test_execute_pipe_rejects_duplicate_before_submitting(
+        self,
+        mock_submitter_class,
+        test_proc_run,
+        test_pipe_in_plan,
+        test_user,
+        registered_test_processor,
+    ):
+        """A second execute on the same run and pipe must not reach SLURM: its record could never be saved."""
+        existing = PipeExecution.objects.create(
+            proc_run=test_proc_run, pipe_in_plan=test_pipe_in_plan, status="running", job_id="111"
+        )
+
+        with pytest.raises(DuplicateExecutionError) as exc_info:
+            PipelineExecutor().execute_pipe(
+                pipe_in_plan=test_pipe_in_plan,
+                proc_run=test_proc_run,
+                user=test_user,
+                parameters={"test_param": 50},
+                auth={"username": "test", "password": "pass"},
+            )
+
+        assert exc_info.value.pipe_execution == existing
+        assert "job 111" in str(exc_info.value)
+        mock_submitter_class.assert_not_called()
+        assert PipeExecution.objects.count() == 1
+
+    def test_preview_allowed_on_executed_run(
+        self,
+        test_proc_run,
+        test_pipe_in_plan,
+        test_user,
+        registered_test_processor,
+    ):
+        """Only a submission is refused; previewing an executed run still renders."""
+        PipeExecution.objects.create(proc_run=test_proc_run, pipe_in_plan=test_pipe_in_plan, job_id="111")
+
+        script = PipelineExecutor().preview(
+            pipe_in_plan=test_pipe_in_plan,
+            proc_run=test_proc_run,
+            user=test_user,
+            parameters={"test_param": 50},
+        )
+
+        assert script == "#!/bin/bash\necho 50"
+
     def test_cluster_not_allowed(
         self,
         test_proc_run,
@@ -517,6 +564,105 @@ class TestReserveRuns:
         assert reserving_processor.released == []
 
 
+@pytest.fixture
+def reusing_processor(test_processor_class):
+    """The test processor, opted in to re-executing an existing run."""
+    from workflow.processors import _PROCESSOR_REGISTRY
+
+    class ReusingProcessor(test_processor_class):
+        allows_run_reuse = True
+
+    original_registry = _PROCESSOR_REGISTRY.copy()
+    _PROCESSOR_REGISTRY["test_processor"] = ReusingProcessor
+
+    yield ReusingProcessor
+
+    _PROCESSOR_REGISTRY.clear()
+    _PROCESSOR_REGISTRY.update(original_registry)
+
+
+class TestRunReuse:
+    """allows_run_reuse: the run's PipeExecution is restarted in place and keeps its attempt history."""
+
+    def _execute(self, mock_submitter_class, test_pipe_in_plan, test_proc_run, test_user, job_id="222"):
+        mock_submitter = MagicMock()
+        mock_submitter.run_script.return_value = (f"Submitted batch job {job_id}", "")
+        mock_submitter.last_script_path = f"/scripts/{job_id}.sh"
+        mock_submitter_class.return_value = mock_submitter
+
+        return PipelineExecutor().execute_pipe(
+            pipe_in_plan=test_pipe_in_plan,
+            proc_run=test_proc_run,
+            user=test_user,
+            parameters={"test_param": 50},
+            auth={"username": "test", "password": "pass"},
+        )
+
+    @patch("workflow.execution.RemoteJobSubmitter")
+    def test_first_execution_is_created_as_usual(
+        self, mock_submitter_class, test_proc_run, test_pipe_in_plan, test_user, reusing_processor
+    ):
+        result = self._execute(mock_submitter_class, test_pipe_in_plan, test_proc_run, test_user)
+
+        execution = PipeExecution.objects.get(id=result["pipe_execution_id"])
+        assert execution.job_id == "222"
+        assert "_attempts" not in execution.parameters
+
+    @patch("workflow.execution.RemoteJobSubmitter")
+    def test_rerun_restarts_record_and_keeps_history(
+        self, mock_submitter_class, test_proc_run, test_pipe_in_plan, test_user, reusing_processor
+    ):
+        from django.utils import timezone
+        from processes.models import JobLog
+
+        earlier = {"job_id": "100", "status": "cancelled"}
+        submitted = timezone.now()
+        existing = PipeExecution.objects.create(
+            proc_run=test_proc_run,
+            pipe_in_plan=test_pipe_in_plan,
+            status="failed",
+            job_id="111",
+            parameters={"test_param": 1, "_attempts": [earlier]},
+            script_path="/scripts/111.sh",
+            submitted_at=submitted,
+            started_at=submitted,
+            completed_at=submitted,
+            error_message="exit 1",
+            stdout_log="old out",
+            stderr_log="old err",
+            logs_fetched_at=submitted,
+            syncer_active=True,
+        )
+
+        result = self._execute(mock_submitter_class, test_pipe_in_plan, test_proc_run, test_user)
+
+        assert result["pipe_execution_id"] == existing.id
+        assert PipeExecution.objects.count() == 1
+        execution = PipeExecution.objects.get(id=existing.id)
+        assert (execution.job_id, execution.status) == ("222", "submitted")
+        assert execution.script_path == "/scripts/222.sh"
+        assert execution.script_content == "#!/bin/bash\necho 50"
+        assert execution.parameters["test_param"] == 50
+        assert execution.parameters["_attempts"] == [
+            earlier,
+            {
+                "job_id": "111",
+                "status": "failed",
+                "submitted_at": submitted.isoformat(),
+                "started_at": submitted.isoformat(),
+                "completed_at": submitted.isoformat(),
+                "script_path": "/scripts/111.sh",
+                "error_message": "exit 1",
+            },
+        ]
+        assert execution.submitted_at > submitted
+        assert execution.started_at is None and execution.completed_at is None
+        assert execution.error_message is None
+        assert execution.stdout_log is None and execution.stderr_log is None and execution.logs_fetched_at is None
+        assert not execution.syncer_active
+        assert JobLog.objects.filter(job_id="222").exists()
+
+
 # API Endpoint Tests
 
 
@@ -597,6 +743,36 @@ class TestExecutionAPI:
         assert data["success"] is True
         assert data["dependencies_met"] is True
         assert data["missing_dependencies"] == []
+
+    @patch("workflow.execution.RemoteJobSubmitter")
+    def test_execute_duplicate_returns_409(
+        self,
+        mock_submitter_class,
+        logged_in_client,
+        test_proc_run,
+        test_pipe_in_plan,
+        registered_test_processor,
+    ):
+        existing = PipeExecution.objects.create(
+            proc_run=test_proc_run, pipe_in_plan=test_pipe_in_plan, status="submitted", job_id="111"
+        )
+        body = {
+            "pipe_in_plan_id": test_pipe_in_plan.id,
+            "proc_run_id": test_proc_run.id,
+            "parameters": {"test_param": 50},
+            "cluster": "czii",
+        }
+
+        with patch("workflow.views.execution_api.clusterio.get_auth_for_user", return_value=({"username": "u"}, None)):
+            response = logged_in_client.post("/workflow/v1/execution/execute/", body, content_type="application/json")
+
+        assert response.status_code == 409
+        data = response.json()
+        assert data["success"] is False
+        assert data["pipe_execution_id"] == existing.id
+        assert "already has an execution" in data["error"]
+        mock_submitter_class.assert_not_called()
+        assert PipeExecution.objects.count() == 1
 
     def _preview(self, client, **overrides):
         body = {
