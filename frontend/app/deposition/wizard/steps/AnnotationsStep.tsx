@@ -55,7 +55,7 @@ function toSessionRefs(dataset: Dataset): SessionRef[] {
   }));
 }
 
-export function AnnotationsStep({ dataset, reportSave, readOnly }: StepProps) {
+export function AnnotationsStep({ dataset, reportSave, readOnly, reportBlocking }: StepProps) {
   const queryClient = useQueryClient();
   const sessions = useMemo(() => toSessionRefs(dataset), [dataset]);
   const [activeKey, setActiveKey] = useState(sessions[0]?.key ?? '');
@@ -151,6 +151,15 @@ export function AnnotationsStep({ dataset, reportSave, readOnly }: StepProps) {
   const list = useMemo(() => bySession[active?.key ?? ''] ?? [], [bySession, active]);
   const activeAnn = list.find((a) => annId(a) === activeAnnId) ?? null;
 
+  // Block Next while any selected annotation (across sessions) is missing required metadata.
+  const incompleteCount = useMemo(
+    () => Object.values(bySession).flat().filter(annotationNeedsMetadata).length,
+    [bySession]
+  );
+  useEffect(() => {
+    reportBlocking?.(readOnly ? 0 : incompleteCount);
+  }, [incompleteCount, readOnly, reportBlocking]);
+
   const runsByKey = useMemo(() => scanRunsByKey(scan.data?.annotations ?? []), [scan.data]);
   const activeRuns = activeAnn ? (runsByKey.get(annId(activeAnn)) ?? []) : [];
   const activeCompatRuns = compatibleRuns(activeRuns, compat.data?.aretomo_runs);
@@ -219,8 +228,6 @@ export function AnnotationsStep({ dataset, reportSave, readOnly }: StepProps) {
   if (sessions.length === 0) {
     return <Alert severity="info">Add sessions with copick configs on Sources first.</Alert>;
   }
-
-  const needCount = list.filter(annotationNeedsMetadata).length;
 
   const staleIds = staleAnnotationIds(list, scan.data);
 
@@ -412,9 +419,10 @@ export function AnnotationsStep({ dataset, reportSave, readOnly }: StepProps) {
         </Alert>
       )}
 
-      {needCount > 0 && (
+      {incompleteCount > 0 && (
         <Alert severity="warning" sx={{ mt: 2 }}>
-          {needCount} selected annotation{needCount === 1 ? ' is' : 's are'} incomplete (name + ontology ID required).
+          {incompleteCount} selected annotation{incompleteCount === 1 ? ' is' : 's are'} incomplete across sessions
+          (name, ontology ID, method, and software required).
         </Alert>
       )}
     </Box>
