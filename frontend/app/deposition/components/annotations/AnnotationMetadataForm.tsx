@@ -218,7 +218,7 @@ export function AnnotationMetadataForm({
         <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary' }}>
           OBJECT{' '}
           <Box component="span" sx={{ letterSpacing: 0, textTransform: 'none', color: 'text.disabled' }}>
-            Name and ontology ID are required
+            Name, ontology ID, method and software are required
           </Box>
         </Typography>
         <ObjectOntologyField

@@ -56,7 +56,10 @@ export function normalizeScan(scan: ScanResult): ScannedAnnotation[] {
 }
 
 export function annotationNeedsMetadata(a: DepositionAnnotation): boolean {
-  return !!a.is_selected && (!a.object_name?.trim() || !a.object_id?.trim());
+  return (
+    !!a.is_selected &&
+    (!a.object_name?.trim() || !a.object_id?.trim() || !a.annotation_method?.trim() || !a.annotation_software?.trim())
+  );
 }
 
 export function stripIncompleteLinks(a: DepositionAnnotation): DepositionAnnotation {

@@ -278,9 +278,11 @@ function SyncChecklist({
       return selectionRow(item.label, selectedAnnotations, totalAnnotations, syncComplete);
     }
     const complete = item.total > 0 && item.done >= item.total;
+    let count = `${item.done.toLocaleString()} / ${item.total.toLocaleString()}`;
+    if (item.label === 'Symlink tiltseries' && syncComplete && item.done < item.total) count += ' · unavailable';
     return {
       label: item.label,
-      count: `${item.done.toLocaleString()} / ${item.total.toLocaleString()}`,
+      count,
       description: `${item.label}: ${item.done} of ${item.total}, ${complete ? 'complete' : 'incomplete'}`,
       complete,
     };
@@ -491,7 +493,12 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
         {/* Left: phase detail + actions */}
         <Stack spacing="16px" sx={{ minWidth: 0 }}>
           {focus === 1 && (
-            <Box role="region" aria-label="Sync details" tabIndex={0} sx={{ ...PHASE_CARD_SX, p: '20px' }}>
+            <Box
+              role="region"
+              aria-label="Sync details"
+              tabIndex={0}
+              sx={{ ...PHASE_CARD_SX, height: 'auto', minHeight: 'var(--submission-panel-height)', p: '20px' }}
+            >
               <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', mb: '20px' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                   {sync === 'done' ? 'Local sync complete' : 'Local sync on cluster'}
