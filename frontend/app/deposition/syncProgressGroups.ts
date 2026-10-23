@@ -3,7 +3,7 @@ import type { SyncChecklistItem } from './types';
 const SYNC_PROGRESS_GROUPS = [
   { label: 'Symlink tiltseries', categories: ['Tilt series', 'Alignment', 'CTF'] },
   { label: 'Symlink tomograms', categories: ['Tomograms'] },
-  { label: 'Deposit annotations', categories: [] },
+  { label: 'Deposit annotations', categories: ['Annotations'] },
   { label: 'Other items', categories: ['Masks', 'Metadata', 'Frames'] },
 ] as const;
 

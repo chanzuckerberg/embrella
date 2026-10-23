@@ -21,10 +21,13 @@ function setLogs(data: JobLogs | undefined) {
 const passed = { status: 'passed' as const, attempt: 'prep-1', warnings: [], blocking_issues: [] };
 const prepared: DatasetJob = { id: 1, state: 'prep_completed', prep_slurm_job_id: 'prep-1', validation: passed };
 
-function setup(job: DatasetJob | null, { readOnly = false } = {}) {
+function setup(
+  job: DatasetJob | null,
+  { readOnly = false, sessions = [] }: { readOnly?: boolean; sessions?: Dataset['sessions'] } = {}
+) {
   const submit = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
   const push = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
-  const dataset = { id: 1, title: 'DS', dataset_id: 2, status: 'draft', job } as Dataset;
+  const dataset = { id: 1, title: 'DS', dataset_id: 2, status: 'draft', job, sessions } as Dataset;
   mockFlow.mockReturnValue({ cancel, submit, push });
   const view = render(<SubmitStep dataset={dataset} readOnly={readOnly} reportSave={jest.fn()} />);
   return { submit, push, dataset, view };
@@ -148,6 +151,74 @@ it('renders live progress from the job payload', () => {
   expect(screen.getByRole('button', { name: /Sync on cluster/ })).toHaveTextContent('85% · ETA 0:05');
   expect(screen.getByText('Symlink tiltseries')).toBeInTheDocument();
   expect(screen.getByText('582 / 582')).toBeInTheDocument();
+});
+
+it('shows selected picks, segmentations and meshes across sessions between file groups', () => {
+  setup(
+    {
+      id: 1,
+      state: 'prep_running',
+      sync_progress: {
+        done: 3,
+        total: 4,
+        items: [
+          { label: 'Tilt series', done: 1, total: 1 },
+          { label: 'Tomograms', done: 1, total: 1 },
+          { label: 'Metadata', done: 1, total: 2 },
+        ],
+      },
+    },
+    {
+      sessions: [
+        {
+          id: 1,
+          msi_session: 1,
+          annotations: [
+            { copick_kind: 'picks', copick_ref: 'a:user/0', is_selected: true },
+            { copick_kind: 'segmentations', copick_ref: 'b:user/0', is_selected: true },
+            { copick_kind: 'picks', copick_ref: 'c:user/0', is_selected: false },
+          ],
+        },
+        {
+          id: 2,
+          msi_session: 2,
+          annotations: [{ copick_kind: 'meshes', copick_ref: 'd:user/0', is_selected: true }],
+        },
+      ],
+    }
+  );
+  const rows = within(screen.getByRole('list', { name: 'Sync progress by group' })).getAllByRole('listitem');
+  expect(rows.map((row) => row.textContent)).toEqual([
+    'Symlink tiltseries1 / 1',
+    'Symlink tomograms1 / 1',
+    'Deposit annotations3 annotations selected',
+    'Other items1 / 2',
+  ]);
+  expect(screen.getByText('3 / 4 objects')).toBeInTheDocument();
+});
+
+it('shows a selection count before file progress is available and hides it after deselection', () => {
+  const { dataset, view } = setup(
+    { id: 1, state: 'prep_running' },
+    {
+      sessions: [
+        { id: 1, msi_session: 1, annotations: [{ copick_kind: 'picks', copick_ref: 'a:user/0', is_selected: true }] },
+      ],
+    }
+  );
+  expect(screen.getByRole('listitem', { name: 'Deposit annotations: 1 annotation selected' })).toBeInTheDocument();
+  const deselected = {
+    ...dataset,
+    sessions: [
+      {
+        id: 1,
+        msi_session: 1,
+        annotations: [{ copick_kind: 'picks' as const, copick_ref: 'a:user/0', is_selected: false }],
+      },
+    ],
+  };
+  view.rerender(<SubmitStep dataset={deselected} readOnly={false} reportSave={jest.fn()} />);
+  expect(screen.queryByText('Deposit annotations')).not.toBeInTheDocument();
 });
 
 it('shows a clean validation pass as success, not a warning', () => {
