@@ -9,6 +9,7 @@ import time
 import uuid
 from datetime import datetime
 
+from django.db.models import Q
 from processes.models import PipeExecution, Review, ReviewTomogram, SyncerLog, SyncerProcess
 from processes.tasks.job_tasks import check_job_status
 from stores.models import FilePattern
@@ -496,14 +497,24 @@ class JobStatusSyncer:
         self.job_id = job_id
         self.cluster_id = cluster_id or get_default_cluster_id()
         self.auth = auth
-        self._pipe_execution = None
+        self._pipe_executions = []
+
+    def _executions_for_job(self):
+        """Every PipeExecution this SLURM job backs.
+
+        One job may back several run records. Hetjob components ("9238+0", "9238+1")
+        are one job to sacct, so they match on the base id.
+        """
+        base_job_id = self.job_id.split("+")[0]
+        return PipeExecution.objects.filter(Q(job_id=base_job_id) | Q(job_id__startswith=f"{base_job_id}+"))
 
     def setup(self):
-        """Load PipeExecution record and mark syncer as active."""
-        self._pipe_execution = PipeExecution.objects.filter(job_id=self.job_id).first()
-        if self._pipe_execution and not self._pipe_execution.syncer_active:
-            self._pipe_execution.syncer_active = True
-            self._pipe_execution.save(update_fields=["syncer_active"])
+        """Load the job's PipeExecution records and mark the syncer active on each."""
+        self._pipe_executions = list(self._executions_for_job())
+        for pipe_execution in self._pipe_executions:
+            if not pipe_execution.syncer_active:
+                pipe_execution.syncer_active = True
+                pipe_execution.save(update_fields=["syncer_active"])
 
     def get_job_info_from_sacct(self) -> dict | None:
         """
@@ -573,10 +584,11 @@ class JobStatusSyncer:
             return None
 
     def update_pipe_execution(self, job_info: dict):
-        """Update PipeExecution with accurate timing from sacct."""
-        if not self._pipe_execution:
-            return
+        """Update every PipeExecution of the job with accurate timing from sacct."""
+        for pipe_execution in self._pipe_executions:
+            self._update_one(pipe_execution, job_info)
 
+    def _update_one(self, pipe_execution, job_info: dict):
         from django.utils import timezone as dj_timezone
 
         # Map SLURM state to our status
@@ -586,18 +598,18 @@ class JobStatusSyncer:
         # Only update if status has changed or we have new timing info
         updated_fields = []
 
-        if self._pipe_execution.status != new_status:
-            self._pipe_execution.status = new_status
+        if pipe_execution.status != new_status:
+            pipe_execution.status = new_status
             updated_fields.append("status")
             log.info(f"Job {self.job_id} status updated to: {new_status}")
 
         # Update started_at if we have it and it's not set
-        if job_info.get("start_time") and not self._pipe_execution.started_at:
+        if job_info.get("start_time") and not pipe_execution.started_at:
             # Convert naive datetime to timezone-aware
             start_time = job_info["start_time"]
             if start_time.tzinfo is None:
                 start_time = dj_timezone.make_aware(start_time)
-            self._pipe_execution.started_at = start_time
+            pipe_execution.started_at = start_time
             updated_fields.append("started_at")
             log.info(f"Job {self.job_id} started_at set to: {start_time}")
 
@@ -607,17 +619,17 @@ class JobStatusSyncer:
                 end_time = job_info["end_time"]
                 if end_time.tzinfo is None:
                     end_time = dj_timezone.make_aware(end_time)
-                self._pipe_execution.completed_at = end_time
+                pipe_execution.completed_at = end_time
                 updated_fields.append("completed_at")
                 log.info(f"Job {self.job_id} completed_at set to: {end_time}")
 
             # Mark syncer as inactive since job has finished
-            if self._pipe_execution.syncer_active:
-                self._pipe_execution.syncer_active = False
+            if pipe_execution.syncer_active:
+                pipe_execution.syncer_active = False
                 updated_fields.append("syncer_active")
 
         if updated_fields:
-            self._pipe_execution.save(update_fields=updated_fields)
+            pipe_execution.save(update_fields=updated_fields)
 
     def is_job_terminal(self, job_info: dict) -> bool:
         """Check if job has reached a terminal state."""
