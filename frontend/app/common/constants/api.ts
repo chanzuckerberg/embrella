@@ -78,7 +78,6 @@ export enum API {
 
   // Session/Run Selection
   MSI_SESSIONS = '/tem/v1/sessions/',
-  MSI_SESSIONS_LIST = '/workflow/get_msi_session_list',
   MSI_SESSION_ID = '/workflow/get_msisession_id',
 
   // Mocked out:
