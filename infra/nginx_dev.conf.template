@@ -43,7 +43,7 @@ http {
 
         # Backend serves /static/ in dev (runserver does this when DEBUG=True),
         # so we just proxy it instead of bind-mounting collectstatic output.
-        location ~ ^/(admin|accounts|api|user|ping|docs|static|workflow|cryo_grids|processes|projects|people/v1|depositions/v1|copick|tem/v1|timeline/v1|get_grids_by_user|annotations)(/|$) {
+        location ~ ^/(admin|accounts|api|user|ping|docs|static|workflow|cryo_grids|processes|projects|people/v1|depositions/v1|copick|cdpp|tem/v1|timeline/v1|get_grids_by_user|annotations)(/|$) {
             # Using a variable forces nginx to use the resolver instead of caching at startup.
             set $upstream_backend backend;
             proxy_pass http://$upstream_backend:8000;
@@ -72,6 +72,27 @@ http {
             proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_cache_bypass $http_upgrade;
+        }
+
+        # ===== CDPP-WEB (pipeline DAG + run monitor; separate app on the embrella network) =====
+        location = /pipeline {
+            return 301 /pipeline/;
+        }
+
+        location /pipeline/ {
+            set $upstream_cdpp cdpp-web;
+            rewrite ^/pipeline/(.*)$ /$1 break;
+            proxy_pass http://$upstream_cdpp:80;
+            proxy_http_version 1.1;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # Live progress is a server-sent event stream: pass it through unbuffered and keep
+            # idle streams open.
+            proxy_buffering off;
+            proxy_cache off;
+            proxy_read_timeout 1h;
         }
 
         # ===== DEMO FILE SERVER (optional `caddy` service, `demo` profile) =====
