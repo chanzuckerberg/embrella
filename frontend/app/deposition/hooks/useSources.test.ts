@@ -1,4 +1,32 @@
-import { annotatedRefetchInterval } from './useSources';
+import { createElement, type ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { renderHook } from '@testing-library/react';
+
+import { annotatedRefetchInterval, useSelectedTomogramCount } from './useSources';
+import type { Dataset } from '../types';
+
+it('sums the counts of selected AreTomo and denoise sources', () => {
+  const client = new QueryClient();
+  client.setQueryData(['deposition', 'sources', 'tomo-count', 'session', 'run001'], 291);
+  client.setQueryData(['deposition', 'sources', 'denoise-count', 'session', 'run002'], 120);
+  const dataset = {
+    tomogram_subset_mode: 'all',
+    sessions: [
+      {
+        id: 1,
+        msi_session: 1,
+        msi_session_name: 'session',
+        aretomo_run_name: 'run001',
+        denoise_run_name: 'run002',
+      },
+    ],
+  } as Dataset;
+  const wrapper = ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client }, children);
+  const { result, unmount } = renderHook(() => useSelectedTomogramCount(dataset), { wrapper });
+  expect(result.current).toBe(411);
+  unmount();
+  client.clear();
+});
 
 describe('annotatedRefetchInterval', () => {
   it('polls (5s) while a completed response is not yet scanned', () => {
