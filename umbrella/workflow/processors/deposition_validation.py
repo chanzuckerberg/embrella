@@ -6,6 +6,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 MARKER = "DEPOSITION_VALIDATION="
@@ -17,6 +18,7 @@ ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def validate(config_path, dataset_id):
+    started = time.monotonic()
     # Default to unavailable; always emit a result marker.
     result = {
         "status": "unavailable",
@@ -88,6 +90,7 @@ def validate(config_path, dataset_id):
         result["status"] = "unavailable"
         result["warnings"] = []
         result["blocking_issues"] = [{"message": "Could not run pre-flight validation. Retry preparation."}]
+    result["duration_seconds"] = round(time.monotonic() - started)
     print(MARKER + json.dumps(result), flush=True)
     return result
 

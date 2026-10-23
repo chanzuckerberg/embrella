@@ -4,14 +4,14 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { SubmitStep } from './SubmitStep';
 import { useSubmitFlow } from '../../hooks/useSubmitFlow';
 import { useDatasetLogs } from '../../hooks/useDatasetLogs';
-import { useSelectedTomogramCount } from '../../hooks/useSources';
+import { useTomogramSelectionCounts } from '../../hooks/useSources';
 import type { Dataset, DatasetJob, JobLogs } from '../../types';
 
 jest.mock('../../hooks/useSubmitFlow', () => ({
   useSubmitFlow: jest.fn(),
 }));
 jest.mock('../../hooks/useDatasetLogs', () => ({ useDatasetLogs: jest.fn(() => ({ data: undefined })) }));
-jest.mock('../../hooks/useSources', () => ({ useSelectedTomogramCount: jest.fn() }));
+jest.mock('../../hooks/useSources', () => ({ useTomogramSelectionCounts: jest.fn() }));
 const mockFlow = useSubmitFlow as jest.Mock;
 const mockLogs = useDatasetLogs as jest.Mock;
 const cancel = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isSuccess: false, error: null };
@@ -37,7 +37,7 @@ function setup(
 
 beforeEach(() => {
   jest.clearAllMocks();
-  (useSelectedTomogramCount as jest.Mock).mockReturnValue(undefined);
+  (useTomogramSelectionCounts as jest.Mock).mockReturnValue(undefined);
   mockLogs.mockReturnValue({ data: undefined });
 });
 
@@ -104,6 +104,18 @@ it('shows a retry action and the error when sync failed', () => {
   expect(screen.getByRole('button', { name: /retry sync/i })).toBeInTheDocument();
 });
 
+it('retries preparation when the job fails after sync completes', () => {
+  const { submit } = setup({
+    id: 1,
+    state: 'failed',
+    error_message: 'Validation job stopped',
+    sync_progress: { done: 10, total: 10, completed_at: '2026-10-23T19:00:00Z' },
+  });
+  expect(screen.getByText('Validation job stopped')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry sync' }));
+  expect(submit.mutate).toHaveBeenCalledTimes(1);
+});
+
 it('shows success and no submit actions once pushed', () => {
   setup({ id: 1, state: 'completed', push_slurm_job_id: '99' });
   const banner = screen.getByRole('alert');
@@ -157,7 +169,7 @@ it('renders live progress from the job payload', () => {
 });
 
 it('shows selected picks, segmentations and meshes across sessions between file groups', () => {
-  (useSelectedTomogramCount as jest.Mock).mockReturnValue(291);
+  (useTomogramSelectionCounts as jest.Mock).mockReturnValue({ selected: 100, total: 291 });
   setup(
     {
       id: 1,
@@ -194,26 +206,26 @@ it('shows selected picks, segmentations and meshes across sessions between file 
   const rows = within(screen.getByRole('list', { name: 'Sync progress by group' })).getAllByRole('listitem');
   expect(rows.map((row) => row.textContent)).toEqual([
     'Symlink tiltseries1 / 1',
-    'Symlink tomograms291 tomograms selected',
-    'Deposit annotations3 annotations selected',
+    'Symlink tomograms100 / 291 selected',
+    'Deposit annotations3 / 4 selected',
     'Other items1 / 2',
   ]);
 });
 
 it('marks selected tomograms and annotations complete when sync finishes', () => {
-  (useSelectedTomogramCount as jest.Mock).mockReturnValue(291);
+  (useTomogramSelectionCounts as jest.Mock).mockReturnValue({ selected: 100, total: 291 });
   const { dataset, view } = setup(prepared, {
     sessions: [
       { id: 1, msi_session: 1, annotations: [{ copick_kind: 'picks', copick_ref: 'a:user/0', is_selected: true }] },
     ],
   });
   fireEvent.click(screen.getByRole('button', { name: /Sync on cluster/ }));
-  expect(screen.getByRole('listitem', { name: 'Deposit annotations: 1 / 1' })).toBeInTheDocument();
-  expect(screen.getByRole('listitem', { name: 'Symlink tomograms: 291 / 291' })).toBeInTheDocument();
-  (useSelectedTomogramCount as jest.Mock).mockReturnValue(0);
+  expect(screen.getByRole('listitem', { name: 'Deposit annotations: 1 / 1 selected, complete' })).toBeInTheDocument();
+  expect(screen.getByRole('listitem', { name: 'Symlink tomograms: 100 / 291 selected, complete' })).toBeInTheDocument();
+  (useTomogramSelectionCounts as jest.Mock).mockReturnValue({ selected: 0, total: 0 });
   view.rerender(<SubmitStep dataset={{ ...dataset, sessions: [] }} readOnly={false} reportSave={jest.fn()} />);
-  expect(screen.getByRole('listitem', { name: 'Deposit annotations: 0 annotations selected' })).toBeInTheDocument();
-  expect(screen.getByRole('listitem', { name: 'Symlink tomograms: 0 tomograms selected' })).toBeInTheDocument();
+  expect(screen.getByRole('listitem', { name: 'Deposit annotations: 0 / 0 selected, incomplete' })).toBeInTheDocument();
+  expect(screen.getByRole('listitem', { name: 'Symlink tomograms: 0 / 0 selected, incomplete' })).toBeInTheDocument();
 });
 
 it('shows a clean validation pass as success, not a warning', () => {
@@ -317,12 +329,21 @@ it('updates sync elapsed time, freezes on completion and resets on restart', () 
     expect(screen.getByText(/Elapsed: 2m 0s/)).toBeInTheDocument();
     act(() => jest.advanceTimersByTime(2000));
     expect(screen.getByText(/Elapsed: 2m 2s/)).toBeInTheDocument();
+    job.sync_progress = { done: 10, total: 10, completed_at: '2026-10-14T12:02:02Z' };
+    view.rerender(<SubmitStep {...props} />);
+    expect(screen.getByText('Validation running…')).toBeInTheDocument();
+    act(() => jest.advanceTimersByTime(60000));
+    expect(screen.getByText(/Completed in: 2m 2s/)).toBeInTheDocument();
     job.state = 'prep_completed';
-    job.prep_completed_at = '2026-10-14T12:02:02Z';
+    job.prep_completed_at = '2026-10-14T12:03:02Z';
+    job.validation = { ...passed, duration_seconds: 60 };
     view.rerender(<SubmitStep {...props} />);
     act(() => jest.advanceTimersByTime(60000));
     expect(screen.getByText(/Completed in: 2m 2s/)).toBeInTheDocument();
+    expect(screen.getByText('Passed · 1m 0s')).toBeInTheDocument();
     job.state = 'prep_running';
+    job.sync_progress = null;
+    job.validation = null;
     job.started_at = new Date(Date.now()).toISOString();
     job.prep_completed_at = null;
     view.rerender(<SubmitStep {...props} />);
@@ -528,8 +549,8 @@ it('renders grouped counts while keeping overall progress and ETA from the snaps
   });
   expect(screen.getAllByRole('listitem').map((row) => row.getAttribute('aria-label'))).toEqual([
     'Symlink tiltseries: 0 of 4, incomplete',
-    'Symlink tomograms: - tomograms selected',
-    'Deposit annotations: 0 annotations selected',
+    'Symlink tomograms: - / - selected, incomplete',
+    'Deposit annotations: 0 / 0 selected, incomplete',
     'Other items: 7 of 13, incomplete',
   ]);
   expect(screen.queryByText('Alignment')).not.toBeInTheDocument();

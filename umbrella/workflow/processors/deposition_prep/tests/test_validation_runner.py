@@ -66,6 +66,8 @@ def test_runner_scopes_config_and_reads_structured_report(tmp_path, monkeypatch,
     source.write_text(yaml.safe_dump(config))
     runner.os.utime(source, ns=(1_000_000_000, 1_000_000_000))
     monkeypatch.setenv("SLURM_JOB_ID", "42")
+    clock = iter([100, 112])
+    monkeypatch.setattr(runner.time, "monotonic", lambda: next(clock))
 
     def run(command, *, stdout, stderr, **kwargs):
         assert runner.Path(command[2]).stat().st_mtime_ns == source.stat().st_mtime_ns
@@ -82,6 +84,7 @@ def test_runner_scopes_config_and_reads_structured_report(tmp_path, monkeypatch,
     result = runner.validate(str(source), "2")
     assert result["status"] == status
     assert result["attempt"] == "42"
+    assert result["duration_seconds"] == 12
     assert bool(result["blocking_issues"]) == (status != "passed")
     if isinstance(report, dict) and status != "unavailable":
         for issue in report["issues"]:

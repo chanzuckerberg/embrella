@@ -2,15 +2,15 @@ import { createElement, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook } from '@testing-library/react';
 
-import { annotatedRefetchInterval, useSelectedTomogramCount } from './useSources';
+import { annotatedRefetchInterval, useTomogramSelectionCounts } from './useSources';
 import type { Dataset } from '../types';
 
-it('sums the counts of selected AreTomo and denoise sources', () => {
+it('sums selected and available counts across AreTomo and denoise sources', () => {
   const client = new QueryClient();
   client.setQueryData(['deposition', 'sources', 'tomo-count', 'session', 'run001'], 291);
   client.setQueryData(['deposition', 'sources', 'denoise-count', 'session', 'run002'], 120);
   const dataset = {
-    tomogram_subset_mode: 'all',
+    tomogram_subset_mode: 'custom',
     sessions: [
       {
         id: 1,
@@ -18,12 +18,13 @@ it('sums the counts of selected AreTomo and denoise sources', () => {
         msi_session_name: 'session',
         aretomo_run_name: 'run001',
         denoise_run_name: 'run002',
+        subset_selection: ['position1', 'position2'],
       },
     ],
   } as Dataset;
   const wrapper = ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client }, children);
-  const { result, unmount } = renderHook(() => useSelectedTomogramCount(dataset), { wrapper });
-  expect(result.current).toBe(411);
+  const { result, unmount } = renderHook(() => useTomogramSelectionCounts(dataset), { wrapper });
+  expect(result.current).toEqual({ selected: 4, total: 411 });
   unmount();
   client.clear();
 });

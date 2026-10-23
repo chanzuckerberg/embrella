@@ -95,6 +95,19 @@ def test_reporter_counts_real_staged_files_and_followed_link_bytes(tmp_path):
     assert reporter.prep_sample(root, inventory, True)["summary"] == {"objects": 1, "bytes": 3}
 
 
+def test_finished_sync_snapshot_excludes_validation_time():
+    raw = snapshot(complete=True, done=10)
+    public = progress.serialize_progress(raw)
+    assert public["completed_at"] == "1970-01-01T00:01:50+00:00"
+    job = SimpleNamespace(
+        sync_summary={"objects": 10, "bytes": 2048},
+        sync_progress=raw,
+        started_at=timezone.datetime.fromtimestamp(100, timezone.get_default_timezone()),
+        prep_completed_at=timezone.datetime.fromtimestamp(170, timezone.get_default_timezone()),
+    )
+    assert progress.serialize_summary(job)["duration"] == "10s"
+
+
 @pytest.mark.parametrize("estimated", ["", "~"])
 def test_upload_progress_reads_latest_aws_total(estimated):
     text = f"Completed 1.0 MiB/{estimated}4.0 MiB\rCompleted 2.0 MiB/{estimated}4.0 MiB (31.0 MiB/s)"
@@ -272,6 +285,7 @@ def test_syncer_preserves_final_progress_and_sync_summary(monkeypatch, phase):
     assert job.state == ("prep_completed" if phase == "prep" else "completed")
     public = DatasetJobSerializer(job).data
     if phase == "prep":
+        assert job.sync_progress["complete"] is True
         assert public["sync_summary"]["objects"] == 10
         assert public["sync_summary"]["size"] == "2.0 KiB"
         assert public["sync_summary"]["duration"]
