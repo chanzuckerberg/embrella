@@ -411,18 +411,17 @@ export function AnnotationsStep({ dataset, reportSave, readOnly, reportBlocking 
         </Alert>
       )}
 
+      {!readOnly && incompleteCount > 0 && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          {incompleteCount} selected annotation{incompleteCount === 1 ? ' is' : 's are'} incomplete across sessions.
+        </Alert>
+      )}
+
       {body}
 
       {staleIds.size > 0 && (
         <Alert severity="warning" sx={{ mt: 2 }}>
           {staleIds.size} annotation{staleIds.size === 1 ? '' : 's'} no longer in the scan - remove with trash.
-        </Alert>
-      )}
-
-      {incompleteCount > 0 && (
-        <Alert severity="warning" sx={{ mt: 2 }}>
-          {incompleteCount} selected annotation{incompleteCount === 1 ? ' is' : 's are'} incomplete across sessions
-          (name, ontology ID, method, and software required).
         </Alert>
       )}
     </Box>
