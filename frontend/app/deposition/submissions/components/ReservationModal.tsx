@@ -10,7 +10,6 @@ import {
   MenuItem,
   Radio,
   Select,
-  Snackbar,
   Tab,
   Tabs,
   TextField,
@@ -172,7 +171,7 @@ export function ReservationModal({
   initialMode?: Mode;
   lockedDeposition?: Deposition | null;
 }) {
-  const { data } = useSubmissions();
+  const { data } = useSubmissions('mine');
   const depositions = useMemo(() => data?.submissions ?? [], [data]);
 
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -181,7 +180,6 @@ export function ReservationModal({
   const [manualId, setManualId] = useState('');
   const [datasetChoice, setDatasetChoice] = useState<DatasetChoice>('new');
   const [existingDatasetId, setExistingDatasetId] = useState<string>('');
-  const [notice, setNotice] = useState(false);
 
   const selectedDeposition = useMemo(
     () => depositions.find((d) => String(d.id) === depositionId) ?? null,
@@ -207,13 +205,9 @@ export function ReservationModal({
     ? `Add a dataset to ${depositionLabel(lockedDeposition?.deposition_id)}`
     : 'Reserve or select IDs';
 
-  const willReserve = mode === 'new' || (mode === 'existing_deposition' && datasetChoice === 'new');
-
+  // BETA (pkhedle/beta-self-create): reserve for real via the stub service (RESERVATION_LAMBDA_URL
+  // is unset on local + staging, so get_reservation_service() returns StubReservationService).
   const handleContinue = () => {
-    if (willReserve) {
-      setNotice(true);
-      return;
-    }
     reserve.mutate({ mode, datasetChoice, depositionId, existingDatasetId });
   };
 
@@ -283,13 +277,6 @@ export function ReservationModal({
           <Callout intent="negative" sdsStyle="persistent" body="Could not reserve IDs. Please try again." />
         )}
       </BaseFormDialog>
-      <Snackbar
-        open={notice}
-        autoHideDuration={3000}
-        onClose={() => setNotice(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        message="Backend reservation will happen here - then you'll continue to the wizard."
-      />
     </>
   );
 }

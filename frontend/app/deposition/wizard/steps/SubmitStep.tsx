@@ -690,7 +690,16 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
               </Box>
               {uploadTotalEstimated && pushed === 'active' && (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: '16px' }}>
-                  Calculating total…
+                  Calculating total… Totals are estimates until the file list is complete.
+                </Typography>
+              )}
+              {uploadProgress?.objects && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: uploadTotalEstimated && pushed === 'active' ? '4px' : '16px' }}
+                >
+                  Unchanged files skipped by sync aren’t counted.
                 </Typography>
               )}
               {pushed === 'active' && !uploadProgress && (
