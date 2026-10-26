@@ -30,6 +30,7 @@ export interface SyncChecklistItem {
 }
 
 export interface SyncProgress {
+  completed_at?: string;
   done: number;
   total: number;
   eta?: string | null;
@@ -51,6 +52,7 @@ export interface ValidationWarning {
 }
 
 export interface JobValidation {
+  duration_seconds?: number;
   status: 'passed' | 'failed' | 'unavailable';
   attempt: string | null;
   blocking_issues: ValidationWarning[];

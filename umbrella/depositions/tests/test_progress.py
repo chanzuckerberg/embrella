@@ -78,7 +78,6 @@ def test_reporter_counts_real_staged_files_and_followed_link_bytes(tmp_path):
     source = tmp_path / "source"
     source.mkdir()
     (source / "TiltSeries_Metrics.csv").write_text("Tilt_Series\nPosition_1.mrc\n")
-    (source / "Position_1.mrc").write_bytes(b"mrc")
     config = tmp_path / "config.yaml"
     config.write_text(
         yaml.safe_dump(
@@ -91,8 +90,26 @@ def test_reporter_counts_real_staged_files_and_followed_link_bytes(tmp_path):
     root, inventory = reporter.prep_inventory(config, "2")
     root.mkdir()
     (root / "session_Position_1_TS.mrc").symlink_to(source / "Position_1.mrc")
+    tiltseries = next(
+        item for item in reporter.prep_sample(root, inventory, True)["items"] if item["label"] == "Tilt series"
+    )
+    assert tiltseries == {"label": "Tilt series", "done": 0, "total": 1}
+    (source / "Position_1.mrc").write_bytes(b"mrc")
     assert reporter.prep_sample(root, inventory, False)["done"] == 1
     assert reporter.prep_sample(root, inventory, True)["summary"] == {"objects": 1, "bytes": 3}
+
+
+def test_finished_sync_snapshot_excludes_validation_time():
+    raw = snapshot(complete=True, done=10)
+    public = progress.serialize_progress(raw)
+    assert public["completed_at"] == "1970-01-01T00:01:50+00:00"
+    job = SimpleNamespace(
+        sync_summary={"objects": 10, "bytes": 2048},
+        sync_progress=raw,
+        started_at=timezone.datetime.fromtimestamp(100, timezone.get_default_timezone()),
+        prep_completed_at=timezone.datetime.fromtimestamp(170, timezone.get_default_timezone()),
+    )
+    assert progress.serialize_summary(job)["duration"] == "10s"
 
 
 @pytest.mark.parametrize("estimated", ["", "~"])
@@ -272,6 +289,7 @@ def test_syncer_preserves_final_progress_and_sync_summary(monkeypatch, phase):
     assert job.state == ("prep_completed" if phase == "prep" else "completed")
     public = DatasetJobSerializer(job).data
     if phase == "prep":
+        assert job.sync_progress["complete"] is True
         assert public["sync_summary"]["objects"] == 10
         assert public["sync_summary"]["size"] == "2.0 KiB"
         assert public["sync_summary"]["duration"]

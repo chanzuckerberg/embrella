@@ -1,10 +1,10 @@
 import type { SyncChecklistItem } from './types';
 
 const SYNC_PROGRESS_GROUPS = [
-  { label: 'Symlink tiltseries', categories: ['Tilt series', 'Alignment', 'CTF'] },
+  { label: 'Symlink tiltseries', categories: ['Tilt series'] },
   { label: 'Symlink tomograms', categories: ['Tomograms'] },
   { label: 'Deposit annotations', categories: [] },
-  { label: 'Other items', categories: ['Masks', 'Metadata', 'Frames'] },
+  { label: 'Other items', categories: ['Alignment', 'CTF', 'Masks', 'Metadata', 'Frames'] },
 ] as const;
 
 // Combine category counts into the displayed rows.
@@ -17,5 +17,5 @@ export function groupSyncProgress(items: readonly SyncChecklistItem[]): SyncChec
     group.done += item.done;
     group.total += item.total;
   }
-  return groups.filter((group) => group.total > 0);
+  return groups;
 }

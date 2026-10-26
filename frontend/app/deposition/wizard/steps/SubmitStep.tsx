@@ -19,6 +19,7 @@ import type {
 import type { StepProps } from '../wizardTypes';
 import { useSubmitFlow } from '../../hooks/useSubmitFlow';
 import { useDatasetLogs } from '../../hooks/useDatasetLogs';
+import { useTomogramSelectionCounts } from '../../hooks/useSources';
 
 import { canUpload, isActiveJobPhase, submissionPhases, type PhaseStatus, type SubmitPhase } from '../../submitPhases';
 import { groupSyncProgress } from '../../syncProgressGroups';
@@ -46,9 +47,11 @@ const DEFAULT_SYNC_COMMAND = 'cryoetportalprep sync ./dataprep_config.yaml';
 
 function SyncTiming({ job }: { job: DatasetJob | null | undefined }) {
   const [now, setNow] = useState(() => Date.now());
-  const active = isActiveJobPhase(job?.state, 'prep');
+  const syncEnd = job?.sync_progress?.completed_at;
+  const active = isActiveJobPhase(job?.state, 'prep') && !syncEnd;
   const start = job?.started_at ? Date.parse(job.started_at) : NaN;
-  const end = job?.prep_completed_at ?? (job?.state === 'failed' && !job.push_slurm_job_id ? job.completed_at : null);
+  const end =
+    syncEnd ?? job?.prep_completed_at ?? (job?.state === 'failed' && !job.push_slurm_job_id ? job.completed_at : null);
 
   useEffect(() => {
     if (!active || !Number.isFinite(start)) return;
@@ -64,7 +67,7 @@ function SyncTiming({ job }: { job: DatasetJob | null | undefined }) {
   const minutes = Math.floor(seconds / 60);
   let label = 'Stopped after';
   if (active) label = 'Elapsed';
-  else if (job?.prep_completed_at) label = 'Completed in';
+  else if (syncEnd || job?.prep_completed_at) label = 'Completed in';
   return (
     <span title="Includes time waiting in the cluster queue">
       {' '}
@@ -94,9 +97,12 @@ function syncSub(status: PhaseStatus, progress?: SyncProgress | null, summary?: 
 }
 
 function validationSub(status: PhaseStatus, validation?: JobValidation | null): string {
-  if (status === 'warning' && validation) return `Passed · ${pluralWarnings(validation.warnings.length)}`;
-  if (status === 'done') return 'Passed';
-  if (status === 'error') return 'Issues found';
+  if (status === 'active') return 'Validation running…';
+  const seconds = validation?.duration_seconds;
+  const duration = seconds != null ? ` · ${Math.floor(seconds / 60)}m ${seconds % 60}s` : '';
+  if (status === 'warning' && validation) return `Passed · ${pluralWarnings(validation.warnings.length)}${duration}`;
+  if (status === 'done') return `Passed${duration}`;
+  if (status === 'error') return `Issues found${duration}`;
   return validation?.status === 'unavailable' ? 'Unavailable' : 'Not run';
 }
 
@@ -237,20 +243,62 @@ function CommandBox({ text }: { text: string }) {
   );
 }
 
-function SyncChecklist({ items }: { items: SyncChecklistItem[] }) {
+function selectionRow(label: string, selected: number | undefined, total: number | undefined, syncComplete: boolean) {
+  const n = selected?.toLocaleString() ?? '-';
+  const complete = syncComplete && selected != null && selected > 0;
+  const count = `${n} / ${total?.toLocaleString() ?? '-'} selected`;
+  return {
+    label,
+    count,
+    description: `${label}: ${count}, ${complete ? 'complete' : 'incomplete'}`,
+    complete,
+  };
+}
+
+function SyncChecklist({
+  items,
+  selectedAnnotations,
+  totalAnnotations,
+  selectedTomograms,
+  totalTomograms,
+  syncComplete,
+}: {
+  items: SyncChecklistItem[];
+  selectedAnnotations: number;
+  totalAnnotations: number;
+  selectedTomograms: number | undefined;
+  totalTomograms: number | undefined;
+  syncComplete: boolean;
+}) {
+  const rows = groupSyncProgress(items).map((item) => {
+    if (item.label === 'Symlink tomograms') {
+      return selectionRow(item.label, selectedTomograms, totalTomograms, syncComplete);
+    }
+    if (item.label === 'Deposit annotations') {
+      return selectionRow(item.label, selectedAnnotations, totalAnnotations, syncComplete);
+    }
+    const complete = item.total > 0 && item.done >= item.total;
+    let count = `${item.done.toLocaleString()} / ${item.total.toLocaleString()}`;
+    if (item.label === 'Symlink tiltseries' && syncComplete && item.done < item.total) count += ' · unavailable';
+    return {
+      label: item.label,
+      count,
+      description: `${item.label}: ${item.done} of ${item.total}, ${complete ? 'complete' : 'incomplete'}`,
+      complete,
+    };
+  });
   return (
     <Stack
       role="list"
       aria-label="Sync progress by group"
       sx={{ mt: '20px', border: '1px solid', borderColor: 'divider', borderRadius: '6px', overflow: 'hidden' }}
     >
-      {groupSyncProgress(items).map((it) => {
-        const complete = it.total > 0 && it.done === it.total;
+      {rows.map(({ label, count, description, complete }) => {
         return (
           <Box
-            key={it.label}
+            key={label}
             role="listitem"
-            aria-label={`${it.label}: ${it.done} of ${it.total}, ${complete ? 'complete' : 'incomplete'}`}
+            aria-label={description}
             sx={{
               display: 'flex',
               alignItems: 'center',
@@ -267,7 +315,7 @@ function SyncChecklist({ items }: { items: SyncChecklistItem[] }) {
               ) : (
                 <EmptyCircle color="primary.main" size={16} />
               )}
-              <Typography variant="body2">{it.label}</Typography>
+              <Typography variant="body2">{label}</Typography>
             </Box>
             <Typography
               variant="body2"
@@ -277,7 +325,7 @@ function SyncChecklist({ items }: { items: SyncChecklistItem[] }) {
                 whiteSpace: 'nowrap',
               }}
             >
-              {it.done.toLocaleString()} / {it.total.toLocaleString()}
+              {count}
             </Typography>
           </Box>
         );
@@ -347,6 +395,10 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
     }
   }, [readOnly, sync, submit.isPending, runSync]);
 
+  const annotations = (dataset.sessions ?? []).flatMap((session) => session.annotations ?? []);
+  const selectedAnnotations = annotations.filter((annotation) => annotation.is_selected).length;
+  const totalAnnotations = annotations.length;
+  const tomograms = useTomogramSelectionCounts(dataset);
   const progress = job?.sync_progress ?? null;
   const uploadProgress = job?.push_progress ?? null;
   const uploadTotalEstimated = uploadProgress?.estimated ?? uploadProgress?.objects?.estimated ?? false;
@@ -441,7 +493,12 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
         {/* Left: phase detail + actions */}
         <Stack spacing="16px" sx={{ minWidth: 0 }}>
           {focus === 1 && (
-            <Box role="region" aria-label="Sync details" tabIndex={0} sx={{ ...PHASE_CARD_SX, p: '20px' }}>
+            <Box
+              role="region"
+              aria-label="Sync details"
+              tabIndex={0}
+              sx={{ ...PHASE_CARD_SX, height: 'auto', minHeight: 'var(--submission-panel-height)', p: '20px' }}
+            >
               <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', mb: '20px' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                   {sync === 'done' ? 'Local sync complete' : 'Local sync on cluster'}
@@ -472,7 +529,6 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
                       {progress.eta && sync === 'active' ? ` · ETA ${progress.eta}` : ''}
                     </Typography>
                   </Box>
-                  {progress.items && progress.items.length > 0 && <SyncChecklist items={progress.items} />}
                 </>
               ) : (
                 <>
@@ -486,6 +542,14 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
                   </Typography>
                 </>
               )}
+              <SyncChecklist
+                items={progress?.items ?? []}
+                selectedAnnotations={selectedAnnotations}
+                totalAnnotations={totalAnnotations}
+                selectedTomograms={tomograms?.selected}
+                totalTomograms={tomograms?.total}
+                syncComplete={sync === 'done'}
+              />
             </Box>
           )}
 
@@ -520,7 +584,11 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
                   {blockingIssues.length > 0 && <WarningsList warnings={blockingIssues} blocking />}
                 </>
               ) : (
-                <Alert severity="info">Pre-flight validation has not run. Upload requires a passed check.</Alert>
+                <Alert severity="info">
+                  {validation === 'active'
+                    ? 'Pre-flight validation is running.'
+                    : 'Pre-flight validation has not run. Upload requires a passed check.'}
+                </Alert>
               )}
             </Box>
           )}
@@ -650,7 +718,7 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
               </Box>
             </Box>
           )}
-          {!readOnly && (sync === 'error' || pushed === 'error' || (submit.isError && !isActiveJobPhase(state))) && (
+          {!readOnly && (state === 'failed' || (submit.isError && !isActiveJobPhase(state))) && (
             <Box>
               {pushed === 'error' && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
