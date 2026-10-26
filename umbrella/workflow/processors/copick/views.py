@@ -12,7 +12,6 @@ import logging
 import os
 import shlex
 
-from django.conf import settings
 from django.contrib.auth.decorators import login_not_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
@@ -44,6 +43,14 @@ def _copick_default_cluster_id() -> str:
     return (software and software.default_cluster) or get_default_cluster_id()
 
 
+def _template_maps_dir() -> str:
+    """Template-map dir, resolved from the copick root - the same path the job script reads."""
+    from workflow.processors import get_processor
+
+    base = get_processor("copick").get_processing_base_path(cluster=_copick_default_cluster_id()).rstrip("/")
+    return f"{base}/template_maps"
+
+
 def _empty_scan() -> dict:
     return {"scanned": False, "picks": [], "segmentations": [], "meshes": [], "annotated_runs": []}
 
@@ -56,7 +63,7 @@ def _copick_root_url(session, run_name: str) -> str:
 
 
 def _copick_config_description(session, run_name: str) -> str:
-    """The run's config.json location, resolved per cluster — never a hardcoded path."""
+    """The run's config.json location, resolved per cluster."""
     try:
         return _copick_root_url(session, run_name) + "config.json"
     except Exception:
@@ -251,9 +258,9 @@ def get_dynamic_options(request, session_id: str = None) -> JsonResponse:
     # Add template maps (loaded from get_template_maps endpoint)
     # Note: Frontend will call get_template_maps separately for full metadata
 
-    template_maps_dir = settings.COPICK_TEMPLATE_MAPS_DIR
     options["template_map_name"] = []
     try:
+        template_maps_dir = _template_maps_dir()
         if os.path.exists(template_maps_dir):
             for filename in os.listdir(template_maps_dir):
                 if filename.endswith(".json"):
@@ -596,10 +603,9 @@ def get_template_maps(request) -> JsonResponse:
 
     template_maps = []
 
-    # Path to template maps metadata directory
-    template_maps_dir = settings.COPICK_TEMPLATE_MAPS_DIR
-
     try:
+        # Path to template maps metadata directory, resolved from the copick root.
+        template_maps_dir = _template_maps_dir()
         if os.path.exists(template_maps_dir):
             # Read all JSON files in the template maps directory
             for filename in os.listdir(template_maps_dir):
@@ -651,7 +657,7 @@ def get_copick_runs(request) -> JsonResponse:
     Merges two sources so the dropdown reflects everything selectable: (1) czii-copick ProcRuns in
     the DB (Embrella-managed, always available), and (2) copick config dirs physically on the
     cluster (created outside Embrella, over SSH - degrades to DB-only when SSH is off).
-    `description` is the run's resolved copick config.json URL (per cluster, not a hardcoded path).
+    `description` is the run's resolved copick config.json URL (per cluster).
 
     Args:
         request: Django HTTP request with a ?session_id= query parameter
