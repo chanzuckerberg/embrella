@@ -1470,7 +1470,7 @@ class CryoGridViewSet(viewsets.ModelViewSet):
         try:
             image = add_grid_image(grid, upload["file"], request.user, upload["notes"])
         except InvalidImageError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": exc.user_message}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(ImageSerializer(image).data, status=status.HTTP_201_CREATED)
 

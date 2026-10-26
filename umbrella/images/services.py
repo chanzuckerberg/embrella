@@ -41,7 +41,11 @@ UNREADABLE_ERRORS = (PILImage.UnidentifiedImageError, OSError, SyntaxError, Valu
 
 
 class InvalidImageError(Exception):
-    """Upload rejected. The message is safe to show users."""
+    """Upload rejected. ``user_message`` is safe to show users; nothing else is."""
+
+    def __init__(self, user_message: str):
+        super().__init__(user_message)
+        self.user_message = user_message
 
 
 def ingest(
