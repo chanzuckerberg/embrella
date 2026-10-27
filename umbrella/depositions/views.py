@@ -259,6 +259,22 @@ class DatasetViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
             return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
         return Response(DatasetJobSerializer(job, context=self.get_serializer_context()).data)
 
+    @action(detail=True, methods=["post"], url_path="ingestion/retry")
+    def ingestion_pr(self, request, pk=None):
+        from .services.ingestion import queue_ingestion_pr
+
+        dataset = self.get_object()
+        job = getattr(dataset, "job", None)
+        if job is None:
+            return Response({"detail": "Upload must complete first."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            job = queue_ingestion_pr(job)
+        except SubmissionValidationError as error:
+            return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            DatasetJobSerializer(job, context=self.get_serializer_context()).data, status=status.HTTP_202_ACCEPTED
+        )
+
     @action(detail=True, methods=["post"], url_path="cancel-upload")
     def cancel_upload(self, request, pk=None):
         from .services.submit import cancel_dataset_upload

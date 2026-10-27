@@ -115,6 +115,10 @@ export async function pushDataset(id: number): Promise<SubmitResponse> {
   return parse(await postResource(url(`${API.DEPOSITION_DATASETS}${id}/push/`), {}));
 }
 
+export async function createIngestionPR(id: number): Promise<DatasetJob> {
+  return parse(await postResource(url(`${API.DEPOSITION_DATASETS}${id}/ingestion/retry/`), {}));
+}
+
 export async function cancelDatasetUpload(id: number, jobId: string): Promise<{ detail: string }> {
   return parse(await postResource(url(`${API.DEPOSITION_DATASETS}${id}/cancel-upload/`), { job_id: jobId }));
 }

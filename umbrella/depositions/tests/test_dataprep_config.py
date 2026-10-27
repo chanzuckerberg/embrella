@@ -82,6 +82,25 @@ def test_builds_deployment_config_with_reserved_ids(dataset):
     assert metadata["dataset_title"] == dataset.title
 
 
+def test_deposition_metadata_is_emitted_only_for_the_defining_dataset(dataset):
+    deposition = dataset.deposition
+    deposition.metadata_config_dataset_id = dataset.dataset_id
+    deposition.description = "Deposition description"
+    deposition.deposition_publications = "10.1234/example"
+    deposition.authors_json = [{"full_name": "Ada", "is_primary": True, "is_corresponding": True}]
+    deposition.save()
+    metadata = _build(dataset)["datasets"]["dataset_202"]["deposition_metadata"]
+    assert metadata["deposition_identifier"] == 101
+    assert metadata["deposition_description"] == "Deposition description"
+    assert metadata["authors"][0]["name"] == "Ada"
+    assert metadata["cross_references"]["publications"] == "10.1234/example"
+    assert set(metadata["dates"]) == {"deposition_date", "release_date", "last_modified_date"}
+    other = Dataset.objects.create(deposition=deposition, title="Defining dataset", dataset_id=303)
+    deposition.metadata_config_dataset = other
+    deposition.save()
+    assert "deposition_metadata" not in _build(dataset)["datasets"]["dataset_202"]
+
+
 def test_includes_every_dataset_in_the_deposition(dataset, test_session_plan):
     other = Dataset.objects.create(deposition=dataset.deposition, title="Dataset 2", dataset_id=303)
     session = DepositionSession.objects.create(

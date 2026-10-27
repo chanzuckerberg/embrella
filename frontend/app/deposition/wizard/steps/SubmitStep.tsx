@@ -358,7 +358,7 @@ function WarningsList({ warnings, blocking }: { warnings: ValidationWarning[]; b
 }
 
 export function SubmitStep({ dataset, readOnly }: StepProps) {
-  const { submit, push, cancel: cancelUpload } = useSubmitFlow(dataset.id, dataset.deposition);
+  const { submit, push, cancel: cancelUpload, ingestion } = useSubmitFlow(dataset.id, dataset.deposition);
   const [cancelJobId, setCancelJobId] = useState<string | null>(null);
   const [selection, setSelection] = useState<{ datasetId: number; phase: 1 | 2 | 3 } | null>(null);
   const started = useRef(false);
@@ -418,6 +418,7 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
     actionError || (state === 'failed' ? job?.error_message || 'Submission failed. You can try again.' : null);
 
   const retryLabel = pushed === 'error' ? 'Restart preparation' : 'Retry sync';
+  const ingestionRetryable = job?.ingestion_state === 'failed' || job?.ingestion_retryable;
 
   const sessionCount = dataset.session_count ?? dataset.sessions?.length ?? 0;
   const datasetLabel = dataset.dataset_id ? `${dataset.title} (#${dataset.dataset_id})` : dataset.title;
@@ -717,6 +718,39 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
                 </Button>
               </Box>
             </Box>
+          )}
+          {job?.ingestion_branch && (
+            <Alert severity={job.ingestion_state === 'failed' ? 'warning' : 'info'}>
+              {job.ingestion_pr_url && (
+                <a href={job.ingestion_pr_url} target="_blank" rel="noopener noreferrer">
+                  Ingestion PR opened
+                </a>
+              )}
+              {job.ingestion_state === 'failed' && (
+                <>
+                  Upload succeeded, but the ingestion PR could not be created.
+                  {dataset.is_owner !== false && (
+                    <>
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {ingestion.error?.message || job.ingestion_error}
+                      </Typography>
+                    </>
+                  )}
+                </>
+              )}
+              {['not_started', 'opening_pr'].includes(job.ingestion_state ?? '') &&
+                'Preparing the Data Portal ingestion PR…'}
+              {dataset.is_owner !== false && ingestionRetryable && (
+                <Button
+                  sdsType="secondary"
+                  sdsStyle="outline"
+                  disabled={ingestion.isPending}
+                  onClick={() => ingestion.mutate()}
+                >
+                  {ingestion.isPending ? 'Retrying…' : 'Retry PR creation'}
+                </Button>
+              )}
+            </Alert>
           )}
           {!readOnly && (state === 'failed' || (submit.isError && !isActiveJobPhase(state))) && (
             <Box>

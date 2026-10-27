@@ -28,6 +28,13 @@ SSH_DISABLED = os.getenv("SSH_DISABLED") == "True"
 
 # Optional AWS profile for deposition upload jobs.
 DEPOSITION_AWS_PROFILE = os.getenv("DEPOSITION_AWS_PROFILE", "").strip()
+DEPOSITION_INGESTION_ENABLED = os.getenv("DEPOSITION_INGESTION_ENABLED", "False") == "True"
+DEPOSITION_INGESTION_GITHUB_APP_ID = os.getenv("DEPOSITION_INGESTION_GITHUB_APP_ID", "").strip()
+DEPOSITION_INGESTION_GITHUB_KEY_PATH = os.getenv("DEPOSITION_INGESTION_GITHUB_KEY_PATH", "").strip()
+DEPOSITION_INGESTION_GITHUB_REPOSITORY = os.getenv(
+    "DEPOSITION_INGESTION_GITHUB_REPOSITORY", "chanzuckerberg/cryoet-data-portal-backend"
+).strip()
+DEPOSITION_INGESTION_GITHUB_BASE_BRANCH = os.getenv("DEPOSITION_INGESTION_GITHUB_BASE_BRANCH", "main").strip()
 
 
 def _env_list(name):

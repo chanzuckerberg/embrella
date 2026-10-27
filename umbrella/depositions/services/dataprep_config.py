@@ -10,11 +10,12 @@ from pathlib import PurePosixPath
 from urllib.parse import urlsplit
 
 import yaml
+from django.utils import timezone
 from stores.paths import resolve_dir
 
 from depositions.models import TiltseriesMetadata
 from depositions.services.annotation_config import session_annotations
-from depositions.services.dataset_metadata import build_dataset_metadata
+from depositions.services.dataset_metadata import build_authors, build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
 
 logger = logging.getLogger(__name__)
@@ -124,6 +125,31 @@ def _dataset_block(dataset):
     return {"dataset_id": dataset.dataset_id, "metadata": metadata, "sessions": sessions}
 
 
+def _deposition_metadata(deposition):
+    metadata = {
+        "deposition_identifier": deposition.deposition_id,
+        "deposition_title": deposition.title,
+        "deposition_description": deposition.description,
+        "authors": build_authors(deposition.authors_json, using=deposition._state.db),
+        "dates": {
+            "deposition_date": deposition.created_at.date().isoformat(),
+            "last_modified_date": deposition.updated_at.date().isoformat(),
+            "release_date": (deposition.release_date or timezone.localdate()).isoformat(),
+        },
+        "deposition_types": ["dataset", "tomogram"],
+    }
+    if deposition.datasets.filter(sessions__annotations__is_selected=True).exists():
+        metadata["deposition_types"].append("annotation")
+    cross = {}
+    if deposition.deposition_publications:
+        cross["publications"] = deposition.deposition_publications
+    if deposition.related_database_entries:
+        cross["related_database_entries"] = deposition.related_database_entries
+    if cross:
+        metadata["cross_references"] = cross
+    return metadata
+
+
 def build_dataprep_config(deposition, *, output_dir, sync_destination=None, required_dataset_ids=None):
     if deposition.deposition_id is None:
         raise SubmissionValidationError("Reserve the deposition_id before preparing.")
@@ -146,6 +172,8 @@ def build_dataprep_config(deposition, *, output_dir, sync_destination=None, requ
             continue  # a draft/unready sibling has no tree to protect
         try:
             block = _dataset_block(dataset)
+            if dataset.dataset_id == deposition.metadata_config_dataset_id:
+                block["deposition_metadata"] = _deposition_metadata(deposition)
         except SubmissionValidationError:
             if is_required:
                 raise

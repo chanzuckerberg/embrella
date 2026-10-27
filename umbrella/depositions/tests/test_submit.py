@@ -30,6 +30,7 @@ def _raise_no_creds():
 def dataset(db, test_msi_session):
     deposition = Deposition.objects.create(
         title="Dep",
+        description="Deposition description",
         deposition_id=1,
         authors_json=[{"full_name": "Ada Lovelace", "is_primary": True, "is_corresponding": True}],
     )
@@ -110,6 +111,22 @@ class TestSubmitDatasetPrep:
         assert mocks["launched"] is None
         assert not DatasetJob.objects.filter(dataset=dataset).exists()
 
+    def test_defining_dataset_requires_deposition_description_and_authors(self, dataset, mocks):
+        dataset.is_authors_same_as_deposition = False
+        dataset.authors_json = dataset.deposition.authors_json
+        dataset.save(update_fields=["is_authors_same_as_deposition", "authors_json"])
+        dataset.deposition.description = " "
+        dataset.deposition.authors_json = []
+        dataset.deposition.save(update_fields=["description", "authors_json"])
+        with pytest.raises(SubmissionValidationError) as error:
+            submit.submit_dataset_prep(dataset)
+        assert "Deposition description is required" in str(error.value)
+        assert "Add at least one deposition author" in str(error.value)
+        assert mocks["launched"] is None
+        assert not DatasetJob.objects.filter(dataset=dataset).exists()
+        dataset.deposition.refresh_from_db()
+        assert dataset.deposition.metadata_config_dataset_id is None
+
     def test_happy_path(self, dataset, mocks, test_msi_session):
         job = submit.submit_dataset_prep(dataset)
         assert job.state == "prep_submitted"
@@ -127,6 +144,8 @@ class TestSubmitDatasetPrep:
         assert launched["params"]["config_path"] == f"{staging_dir}/dataprep_config.yaml"
         assert launched["auth"] is mocks["auth"]
         assert mocks["synced"] == (job.id, "prep", "cluster-a", "slurm-500")
+        dataset.deposition.refresh_from_db()
+        assert dataset.deposition.metadata_config_dataset_id == dataset.dataset_id
 
     def test_rejects_unreserved_ids(self, dataset, mocks):
         dataset.dataset_id = None  # checked on the passed object
@@ -511,6 +530,27 @@ def test_second_dataset_waits_for_first_prep_then_config_includes_both(dataset, 
     assert set(config["datasets"]) == {"dataset_2", "dataset_3"}
     assert config["datasets"]["dataset_2"]["sessions"]
     assert config["datasets"]["dataset_3"]["sessions"]
+    assert config["datasets"]["dataset_2"]["deposition_metadata"]["deposition_identifier"] == 1
+    assert "deposition_metadata" not in config["datasets"]["dataset_3"]
+
+
+@pytest.mark.django_db
+def test_existing_uploaded_deposition_keeps_id_only_reference(dataset, mocks):
+    sibling = Dataset.objects.create(deposition=dataset.deposition, title="Uploaded", dataset_id=3)
+    DatasetJob.objects.create(dataset=sibling, state="completed")
+    submit.submit_dataset_prep(dataset)
+    dataset.deposition.refresh_from_db()
+    assert dataset.deposition.metadata_config_dataset_id is None
+
+
+@pytest.mark.django_db
+def test_deleting_the_defining_dataset_releases_its_metadata_claim(dataset):
+    deposition = dataset.deposition
+    deposition.metadata_config_dataset = dataset
+    deposition.save(update_fields=["metadata_config_dataset"])
+    Dataset.objects.filter(pk=dataset.pk).delete()
+    deposition.refresh_from_db()
+    assert deposition.metadata_config_dataset_id is None
 
 
 @pytest.mark.django_db
