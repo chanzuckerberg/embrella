@@ -1,13 +1,23 @@
 """Deployment-config generation uses saved data without init, SSH, or SLURM."""
 
 from copy import deepcopy
+from types import SimpleNamespace
 
 import pytest
 import yaml
 from stores.models import PathType
 from tem.models import MsiSession
 
-from depositions.models import Dataset, Deposition, DepositionSession, TiltseriesMetadata, TomogramMetadata
+from depositions.models import (
+    Dataset,
+    Deposition,
+    DepositionAnnotation,
+    DepositionAnnotationMethodLink,
+    DepositionSession,
+    TiltseriesMetadata,
+    TomogramMetadata,
+)
+from depositions.services import annotation_config
 from depositions.services.dataprep_config import (
     build_dataprep_config,
     dataprep_config_yaml,
@@ -131,6 +141,44 @@ def test_cleared_tomogram_fields_do_not_restore_autofill(dataset):
     acquisition = _session(_build(dataset))["acquisition"]
     assert acquisition["aretomo_version"] == ""
     assert acquisition["binned_voxel_ratio"] is None
+
+
+def test_emits_per_flavor_tomogram_block(dataset):
+    session = dataset.sessions.get()
+    TomogramMetadata.objects.create(
+        session=session,
+        flavor="denoised",
+        voxel_spacing=4.995,
+        reconstruction_software="AreTomo3 2.1.0",
+        reconstruction_method="WBP",
+        ctf_corrected=True,
+        processing="denoised",
+        processing_software="DenoisET",
+        is_visualization_default=True,
+    )
+    TomogramMetadata.objects.create(
+        session=session,
+        flavor="filtered",
+        voxel_spacing=9.99,
+        processing="filtered",
+        processing_software="AreTomo3 2.1.0",
+        is_visualization_default=False,
+    )
+    tomograms = _session(_build(dataset))["tomograms"]
+    assert tomograms["denoised"]["voxel_spacing"] == 4.995
+    assert tomograms["filtered"]["voxel_spacing"] == 9.99
+    assert tomograms["denoised"]["processing_software"] == "DenoisET"
+    assert tomograms["denoised"]["is_visualization_default"] is True
+    assert tomograms["filtered"]["is_visualization_default"] is False
+    # `processing` is derived from the flavor by the tool, so it must not be emitted here.
+    assert "processing" not in tomograms["denoised"]
+    # Nullable ctf_corrected is only sent when set; the tool rejects a null.
+    assert tomograms["denoised"]["ctf_corrected"] is True
+    assert "ctf_corrected" not in tomograms["filtered"]
+
+
+def test_no_per_flavor_block_without_tomogram_rows(dataset):
+    assert "tomograms" not in _session(_build(dataset))
 
 
 @pytest.mark.parametrize("pixel_spacing", [None, 0, -1])
@@ -272,4 +320,58 @@ def test_invalid_configured_destination_is_rejected(dataset):
         overlay_path="/local/path"
     )
     with pytest.raises(SubmissionValidationError, match="S3 destination"):
+        _build(dataset)
+
+
+@pytest.mark.parametrize("kind,expected", [("picks", "picks"), ("segmentations", "segmentation_mask")])
+def test_selected_annotations_use_sync_contract_and_reviewed_authors(dataset, monkeypatch, kind, expected):
+    dataset.deposition.authors_json = [{"full_name": "Ada", "is_primary": True, "is_corresponding": True}]
+    dataset.deposition.save()
+    session = dataset.sessions.get()
+    session.selected_copick_runs = ["run003", "run004"]
+    session.save()
+    TomogramMetadata.objects.create(session=session, flavor="filtered", voxel_spacing=12, is_visualization_default=True)
+    selected = DepositionAnnotation.objects.create(
+        session=session,
+        copick_kind=kind,
+        copick_ref="ribosome:alice/0",
+        object_id="GO:0022626",
+        object_name="ribosome",
+        annotation_method="Manual annotation",
+        annotation_software="Copick",
+        method_type="manual",
+        ground_truth_status=True,
+    )
+    DepositionAnnotationMethodLink.objects.create(
+        annotation=selected, link_type="source_code", link="https://example.org/code"
+    )
+    monkeypatch.setattr(annotation_config, "cluster_id_for_run", lambda *a: "cluster-a")
+    monkeypatch.setattr(
+        annotation_config, "get_processor", lambda _: SimpleNamespace(get_processing_base_path=lambda **kw: "/copick")
+    )
+    annotations = _session(_build(dataset))["annotations"]
+    assert len(annotations) == 1
+    entry = annotations[0]
+    assert entry["kind"] == expected and entry["copick_ref"] == "ribosome:alice/0"
+    assert entry["copick_config"] == ["/copick/24nov10/run003/config.json", "/copick/24nov10/run004/config.json"]
+    assert entry["voxel_spacing"] == 12
+    assert entry["authors"] == [{"name": "Ada", "primary_author_status": True, "corresponding_author_status": True}]
+    assert entry["method_links"] == [{"link_type": "source_code", "link": "https://example.org/code"}]
+
+    selected.is_selected = False
+    selected.save(update_fields=["is_selected"])
+    assert "annotations" not in _session(_build(dataset))
+
+
+@pytest.mark.parametrize("problem,match", [("mesh", "mesh"), ("spacing", "voxel spacing")])
+def test_annotation_export_rejects_unsupported_or_incomplete_selections(dataset, problem, match):
+    session = dataset.sessions.get()
+    session.selected_copick_runs = ["run003"]
+    session.save()
+    if problem != "spacing":
+        TomogramMetadata.objects.create(session=session, flavor="filtered", voxel_spacing=12)
+    DepositionAnnotation.objects.create(
+        session=session, copick_kind="meshes" if problem == "mesh" else "picks", copick_ref="ribosome:alice/0"
+    )
+    with pytest.raises(SubmissionValidationError, match=match):
         _build(dataset)

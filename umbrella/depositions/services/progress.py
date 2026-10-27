@@ -3,6 +3,7 @@
 import json
 import logging
 import math
+from datetime import datetime, timezone
 
 from django.db.models import Q
 from workflow.processors import get_processor
@@ -46,6 +47,8 @@ def collect(job, phase, cluster_id, slurm_job_id, auth):
         if phase == "push" and "estimated" in raw:
             sample["estimated"] = raw["estimated"] is True
         if phase == "prep":
+            if raw.get("complete") is True:
+                sample["complete"] = True
             sample["items"] = [
                 {"label": item["label"], "done": _count(item["done"]), "total": _count(item["total"])}
                 for item in raw.get("items", [])
@@ -97,6 +100,8 @@ def serialize_progress(raw):
         return None
     done, total = raw["done"], raw["total"]
     result = {"done": done, "total": total, "eta": None}
+    if raw.get("complete") is True:
+        result["completed_at"] = datetime.fromtimestamp(raw["updated_at"], timezone.utc).isoformat()
     if "estimated" in raw:
         result["estimated"] = raw["estimated"]
     if "items" in raw:
@@ -115,7 +120,12 @@ def serialize_summary(job):
     if not job.sync_summary:
         return None
     result = {"objects": job.sync_summary["objects"], "size": format_bytes(job.sync_summary["bytes"])}
-    end = job.prep_completed_at or job.completed_at
+    raw = job.sync_progress or {}
+    end = (
+        datetime.fromtimestamp(raw["updated_at"], timezone.utc)
+        if raw.get("complete") is True
+        else job.prep_completed_at or job.completed_at
+    )
     if end and job.started_at:
         result["duration"] = format_duration((end - job.started_at).total_seconds())
     return result

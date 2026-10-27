@@ -23,6 +23,7 @@ export interface PersonUpdate {
 }
 
 const url = (path: string): string => `${DJANGO_URL}${path}`;
+const normalizeRun = (run: string): string => (run.startsWith('run') ? run : `run${run}`);
 
 async function parse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -133,8 +134,8 @@ export async function autoFillSession(id: number): Promise<DepositionSession> {
 }
 
 export async function listMsiSessions(): Promise<string[]> {
-  const data = await parse<{ session_names?: string[] }>(await fetchResource(url(API.MSI_SESSIONS_LIST)));
-  return data.session_names ?? [];
+  const data = await parse<{ sessions: { name: string }[] }>(await fetchResource(url(API.MSI_SESSIONS)));
+  return data.sessions.map((session) => session.name);
 }
 
 export async function getMsiSessionId(sessionName: string): Promise<number> {
@@ -247,9 +248,20 @@ export async function rescanCopick(sessionName: string, runs: string[]): Promise
   }
 }
 
+// Denoise count from registered review volumes.
+export async function getDenoisedTomogramCount(sessionName: string, runNumber: string): Promise<number> {
+  const run = normalizeRun(runNumber);
+  const data = await parse<{ runs: { runId: string; reconstructionType: string; numTomograms: number }[] }>(
+    await fetchResource(url(API.TEM_SESSION.replace(':sessionId', encodeURIComponent(sessionName))))
+  );
+  const selected = data.runs.find((item) => item.runId === run && item.reconstructionType === 'Denoised');
+  if (!selected) throw new Error('Selected denoised run count unavailable');
+  return selected.numTomograms;
+}
+
 /* Total tomograms for a session + AreTomo run, from the metadata summary (num_tomograms). */
 export async function getTomogramCount(sessionName: string, runNumber: string): Promise<number> {
-  const run = runNumber.startsWith('run') ? runNumber : `run${runNumber}`;
+  const run = normalizeRun(runNumber);
   const q = `?session_name=${encodeURIComponent(sessionName)}&run_number=${encodeURIComponent(run)}`;
   const res = await fetchResource(url(`${API.METADATA_SUMMARY}${q}`));
   if (!res.ok) throw new Error(`tomogram count unavailable (${res.status})`);
