@@ -143,6 +143,44 @@ def test_cleared_tomogram_fields_do_not_restore_autofill(dataset):
     assert acquisition["binned_voxel_ratio"] is None
 
 
+def test_emits_per_flavor_tomogram_block(dataset):
+    session = dataset.sessions.get()
+    TomogramMetadata.objects.create(
+        session=session,
+        flavor="denoised",
+        voxel_spacing=4.995,
+        reconstruction_software="AreTomo3 2.1.0",
+        reconstruction_method="WBP",
+        ctf_corrected=True,
+        processing="denoised",
+        processing_software="DenoisET",
+        is_visualization_default=True,
+    )
+    TomogramMetadata.objects.create(
+        session=session,
+        flavor="filtered",
+        voxel_spacing=9.99,
+        processing="filtered",
+        processing_software="AreTomo3 2.1.0",
+        is_visualization_default=False,
+    )
+    tomograms = _session(_build(dataset))["tomograms"]
+    assert tomograms["denoised"]["voxel_spacing"] == 4.995
+    assert tomograms["filtered"]["voxel_spacing"] == 9.99
+    assert tomograms["denoised"]["processing_software"] == "DenoisET"
+    assert tomograms["denoised"]["is_visualization_default"] is True
+    assert tomograms["filtered"]["is_visualization_default"] is False
+    # `processing` is derived from the flavor by the tool, so it must not be emitted here.
+    assert "processing" not in tomograms["denoised"]
+    # Nullable ctf_corrected is only sent when set; the tool rejects a null.
+    assert tomograms["denoised"]["ctf_corrected"] is True
+    assert "ctf_corrected" not in tomograms["filtered"]
+
+
+def test_no_per_flavor_block_without_tomogram_rows(dataset):
+    assert "tomograms" not in _session(_build(dataset))
+
+
 @pytest.mark.parametrize("pixel_spacing", [None, 0, -1])
 def test_rejects_invalid_spacing_when_deriving_voxel_ratio(dataset, pixel_spacing):
     session = dataset.sessions.get()
