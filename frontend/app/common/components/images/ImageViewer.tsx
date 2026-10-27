@@ -18,6 +18,9 @@ const FOREGROUND_SHADE = 100;
 // Matches SDS `sdsSize="s"` icons beside it
 const ICON_PX = 16;
 
+// Notes cap before scrolling; dvh tracks mobile browser chrome
+const NOTES_MAX_HEIGHT = '25dvh';
+
 interface ImageViewerProps {
   images: ImageAsset[];
   index: number | null; // null = closed
@@ -49,7 +52,10 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ images, index, onIndex
       onClose={onClose}
       onKeyDown={handleKeyDown}
       aria-labelledby={titleId}
-      PaperProps={{ sx: { bgcolor: (theme) => gray800({ theme }), color: (theme) => gray100({ theme }) } }}
+      PaperProps={{
+        // Dark scheme makes native scrollbars match the viewer
+        sx: { colorScheme: 'dark', bgcolor: (theme) => gray800({ theme }), color: (theme) => gray100({ theme }) },
+      }}
     >
       {/* Keyed by image so each one opens unzoomed */}
       <TransformWrapper key={image.id} maxScale={MAX_ZOOM} centerOnInit>
@@ -86,28 +92,51 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ images, index, onIndex
               <ViewerButton label="Close" icon={<ViewerIcon sdsIcon="XMark" />} onClick={onClose} />
             </Box>
 
-            <Box sx={{ position: 'relative', flex: 1, minHeight: 0 }}>
-              <TransformComponent
-                wrapperStyle={{ width: '100%', height: '100%' }}
-                contentStyle={{ width: '100%', height: '100%' }}
+            {/* Image + notes centered as one group, so notes hug the image on narrow screens */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: 1, minHeight: 0 }}>
+              {/* Box takes the image's shape; shrinks (letterboxing sideways) when height runs out */}
+              <Box
+                sx={{
+                  position: 'relative',
+                  width: '100%',
+                  aspectRatio: `${image.width} / ${image.height}`,
+                  flexShrink: 1,
+                  minHeight: 0,
+                }}
               >
-                <Box
-                  component="img"
-                  src={imageSrc(image, ImageRendition.PREVIEW)}
-                  alt={image.original_name}
-                  sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                />
-              </TransformComponent>
+                <TransformComponent
+                  wrapperStyle={{ width: '100%', height: '100%' }}
+                  contentStyle={{ width: '100%', height: '100%' }}
+                >
+                  <Box
+                    component="img"
+                    src={imageSrc(image, ImageRendition.PREVIEW)}
+                    alt={image.original_name}
+                    sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                </TransformComponent>
 
-              {hasPrevious && <StepButton side="left" onClick={() => onIndexChange(index - 1)} />}
-              {hasNext && <StepButton side="right" onClick={() => onIndexChange(index + 1)} />}
+                {hasPrevious && <StepButton side="left" onClick={() => onIndexChange(index - 1)} />}
+                {hasNext && <StepButton side="right" onClick={() => onIndexChange(index + 1)} />}
+              </Box>
+
+              {image.notes && (
+                // Long notes scroll instead of squeezing the image
+                <Typography
+                  variant="body2"
+                  sx={{
+                    px: 2,
+                    py: 1.5,
+                    whiteSpace: 'pre-wrap',
+                    flexShrink: 0,
+                    maxHeight: NOTES_MAX_HEIGHT,
+                    overflowY: 'auto',
+                  }}
+                >
+                  {image.notes}
+                </Typography>
+              )}
             </Box>
-
-            {image.notes && (
-              <Typography variant="body2" sx={{ px: 2, py: 1.5, whiteSpace: 'pre-wrap' }}>
-                {image.notes}
-              </Typography>
-            )}
           </Box>
         )}
       </TransformWrapper>
