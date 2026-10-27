@@ -23,7 +23,6 @@ export const STATUS_META: Record<DatasetStatus, { label: string; color: ChipColo
 };
 
 export const TYPE_META: Record<string, ChipColor> = {
-  'Tomos only': 'secondary',
   Dataset: 'info',
   'Annotations only': 'warning',
 };
