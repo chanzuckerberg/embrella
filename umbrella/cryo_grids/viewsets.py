@@ -73,13 +73,21 @@ from cryo_grids.serializers import (
     CryoGridSerializer,
     FreezingSessionSerializer,
     GridDetailsSerializer,
+    GridImageOrderSerializer,
     GridInBoxSerializer,
     LabelSerializer,
     PuckSerializer,
     SampleSerializer,
     SpecimenSerializer,
 )
-from cryo_grids.services import add_grid_image, grid_images, remove_grid_image, update_grids
+from cryo_grids.services import (
+    StaleImageOrderError,
+    add_grid_image,
+    grid_images,
+    remove_grid_image,
+    reorder_grid_images,
+    update_grids,
+)
 from cryo_grids.viewset_helpers import (
     add_selected_status,
     apply_grid_box_filters,
@@ -1490,6 +1498,30 @@ class CryoGridViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Image not found on this grid."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        summary="Reorder grid images",
+        description="Send every image id of the grid, first shown first. 409 if they don't match the grid's images.",
+        request=GridImageOrderSerializer,
+        responses={status.HTTP_200_OK: ImageSerializer(many=True)},
+    )
+    @action(
+        detail=False,
+        methods=["put"],
+        url_path=r"(?P<grid_id>[0-9]+)/images/order",
+        permission_classes=[IsAuthenticated, ImagesEnabled],
+    )
+    def reorder_images(self, request, grid_id=None):
+        """URL: /cryo_grids/v1/grids/{grid_id}/images/order/"""
+        grid = get_object_or_404(CryoGrid, id=grid_id)
+        serializer = GridImageOrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            images = reorder_grid_images(grid, serializer.validated_data["image_ids"])
+        except StaleImageOrderError:
+            return Response({"detail": "Images changed; reload and try again."}, status=status.HTTP_409_CONFLICT)
+
+        return Response(ImageSerializer(images, many=True).data)
 
     @action(detail=False, methods=["get"])
     def filterlist(self, request):

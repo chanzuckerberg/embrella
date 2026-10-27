@@ -4,6 +4,7 @@ import {
   fetchResource,
   patchResource,
   postFormDataWithProgress,
+  putResource,
 } from '@app/common/queries/fetchResource';
 import { ImageAsset, ImageRendition } from '@app/common/types/images';
 
@@ -58,16 +59,31 @@ export async function deleteGridImage(gridId: number, imageId: string): Promise<
   }
 }
 
-/** DRF errors arrive as {"detail": "..."}; nginx's 413 is an HTML page. */
+/** Save a grid's image order. ``imageIds`` must be all of its images, else the server answers 409. */
+export async function reorderGridImages(gridId: number, imageIds: string[]): Promise<ImageAsset[]> {
+  const path = API.GRID_IMAGES_ORDER.replace('grid_id', String(gridId));
+  const response = await putResource(`${DJANGO_URL}${path}`, { image_ids: imageIds });
+  if (!response.ok) {
+    throw new Error(errorMessage(response.status, await response.text()));
+  }
+
+  return response.json();
+}
+
+/**
+ * DRF errors arrive as {"detail": "..."} or, from validation, {"field": ["..."]};
+ * nginx's 413 is an HTML page.
+ */
 function errorMessage(status: number, body: string): string {
   if (status === HTTP_PAYLOAD_TOO_LARGE) {
     return 'File is too large.';
   }
 
   try {
-    const detail = (JSON.parse(body) as { detail?: unknown }).detail;
-    if (typeof detail === 'string') {
-      return detail;
+    const parsed = JSON.parse(body) as Record<string, unknown>;
+    const message = parsed.detail ?? Object.values(parsed).flat()[0];
+    if (typeof message === 'string') {
+      return message;
     }
   } catch {
     /* not JSON */

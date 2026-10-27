@@ -16,6 +16,7 @@ interface ImageCarouselProps {
   onOpen: (index: number) => void;
   onNotesChange: (image: ImageAsset, notes: string) => Promise<unknown>;
   onDelete: (image: ImageAsset) => void;
+  onReorder: (imageIds: string[]) => void;
 }
 
 /**
@@ -24,7 +25,7 @@ interface ImageCarouselProps {
  *   ┌──────────── preview (swipe / ‹ › ) ────────────┐   click → fullscreen viewer
  *   └─────────────────────────────────────────────────┘
  *   name · size · who · when                 ⬇  🗑
- *   [▣][▣][▣]   thumbs
+ *   [▣][▣][▣]   thumbs (drag to reorder)
  *   Notes: [ … ]  saves on blur
  */
 export const ImageCarousel: React.FC<ImageCarouselProps> = ({
@@ -34,6 +35,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
   onOpen,
   onNotesChange,
   onDelete,
+  onReorder,
 }) => {
   const [emblaRef, emblaApi] = useEmblaCarousel();
 
@@ -130,7 +132,9 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
         </Tooltip>
       </Box>
 
-      {images.length > 1 && <ImageThumbStrip images={images} selectedIndex={selectedIndex} onSelect={onSelect} />}
+      {images.length > 1 && (
+        <ImageThumbStrip images={images} selectedIndex={selectedIndex} onSelect={onSelect} onReorder={onReorder} />
+      )}
 
       {/* Keyed by image so switching images resets the draft */}
       <NotesField key={image.id} image={image} onSave={(notes) => onNotesChange(image, notes)} />

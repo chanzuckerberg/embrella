@@ -18,7 +18,7 @@ function redirectToLogin(): never {
 
 /** Shared core for state-changing requests: attaches CSRF token + credentials. */
 async function mutateResource(
-  method: 'POST' | 'PATCH' | 'DELETE',
+  method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   requestURL: string,
   body?: Record<string, unknown>
 ): Promise<Response> {
@@ -112,6 +112,10 @@ export function postFormDataWithProgress(
 
     xhr.send(body);
   });
+}
+
+export function putResource(requestURL: string, body: Record<string, unknown>): Promise<Response> {
+  return mutateResource('PUT', requestURL, body);
 }
 
 export function patchResource(requestURL: string, body: Record<string, unknown>): Promise<Response> {

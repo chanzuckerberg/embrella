@@ -94,6 +94,7 @@ export enum API {
   GRID_TIMELINE = '/timeline/v1/grids/grid_id/',
   GRID_IMAGES = '/cryo_grids/v1/grids/grid_id/images/',
   GRID_IMAGE = '/cryo_grids/v1/grids/grid_id/images/image_id/',
+  GRID_IMAGES_ORDER = '/cryo_grids/v1/grids/grid_id/images/order/',
   IMAGE = '/images/v1/images/image_id/',
 
   // Grid Logging

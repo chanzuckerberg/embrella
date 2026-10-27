@@ -21,6 +21,10 @@ class DuplicateGridError(Exception):
     """Raised when a grid duplication request cannot be satisfied."""
 
 
+class StaleImageOrderError(Exception):
+    """Reorder ids don't match the grid's images, e.g. an upload landed mid-drag."""
+
+
 def update_grids(grids, *, reason: ChangeReason, **fields) -> int:
     """
     Bulk-update grids and write one history row each, tagged with ``reason``.
@@ -66,6 +70,22 @@ def remove_grid_image(grid: CryoGrid, image_id) -> None:
     """Delete one of ``grid``'s images. Raises GridImage.DoesNotExist if it isn't the grid's."""
     link = GridImage.objects.select_related("image").get(grid=grid, image_id=image_id)
     image_services.delete(link.image)
+
+
+@transaction.atomic
+def reorder_grid_images(grid: CryoGrid, image_ids: list) -> list[Image]:
+    """Put ``grid``'s images in ``image_ids`` order. Raises StaleImageOrderError unless ids match exactly."""
+    links = {link.image_id: link for link in GridImage.objects.select_for_update().filter(grid=grid)}
+    if len(image_ids) != len(links) or set(image_ids) != set(links):
+        raise StaleImageOrderError
+
+    for order, image_id in enumerate(image_ids):
+        links[image_id].order = order
+
+    # No history rows: the timeline doesn't show reorders
+    GridImage.objects.bulk_update(links.values(), ["order"])
+
+    return grid_images(grid)
 
 
 def sync_image_project(grid: CryoGrid) -> None:

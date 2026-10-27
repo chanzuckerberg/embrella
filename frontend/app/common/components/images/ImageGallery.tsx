@@ -17,6 +17,7 @@ interface ImageGalleryProps {
   onDismissUpload: (key: string) => void;
   onNotesChange: (image: ImageAsset, notes: string) => Promise<unknown>;
   onDelete: (image: ImageAsset) => Promise<void>;
+  onReorder: (imageIds: string[]) => void;
   paste: PasteMode;
   initialIndex?: number;
   onSelectedChange?: (imageId: string) => void;
@@ -34,6 +35,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   onDismissUpload,
   onNotesChange,
   onDelete,
+  onReorder,
   paste,
   initialIndex = 0,
   onSelectedChange,
@@ -61,6 +63,12 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   useEffect(() => {
     if (shownId) onSelectedChange?.(shownId);
   }, [shownId, onSelectedChange]);
+
+  // Selection follows the shown image to its new position
+  const reorder = (imageIds: string[]) => {
+    if (shownId) setSelectedIndex(imageIds.indexOf(shownId));
+    onReorder(imageIds);
+  };
 
   const closeDelete = () => {
     setPendingDelete(null);
@@ -91,6 +99,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
           onOpen={setViewerIndex}
           onNotesChange={onNotesChange}
           onDelete={setPendingDelete}
+          onReorder={reorder}
         />
       )}
 

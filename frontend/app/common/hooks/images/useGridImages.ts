@@ -1,6 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { deleteGridImage, listGridImages, updateImageNotes, uploadGridImage } from '@app/common/queries/imagesApi';
+import {
+  deleteGridImage,
+  listGridImages,
+  reorderGridImages,
+  updateImageNotes,
+  uploadGridImage,
+} from '@app/common/queries/imagesApi';
 import { ImageAsset, UploadItem, UploadStatus } from '@app/common/types/images';
 
 export const gridImagesKey = (gridId: number | null) => ['grid-images', gridId] as const;
@@ -105,5 +111,30 @@ export function useDeleteGridImage(gridId: number | null) {
   return useMutation({
     mutationFn: (imageId: string) => deleteGridImage(gridId as number, imageId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: gridImagesKey(gridId) }),
+  });
+}
+
+/**
+ * Saves a new image order. The cached list reorders at once so the dropped thumb stays put;
+ * on failure, e.g. 409 after an upload landed mid-drag, it rolls back and refetches.
+ */
+export function useReorderGridImages(gridId: number | null) {
+  const queryClient = useQueryClient();
+  const key = gridImagesKey(gridId);
+
+  return useMutation({
+    mutationFn: (imageIds: string[]) => reorderGridImages(gridId as number, imageIds),
+    onMutate: async (imageIds) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<ImageAsset[]>(key);
+
+      const byId = new Map(previous?.map((image) => [image.id, image]));
+      const reordered = imageIds.map((id) => byId.get(id)).filter((image) => image !== undefined);
+      queryClient.setQueryData<ImageAsset[]>(key, reordered);
+
+      return { previous };
+    },
+    onError: (_error, _imageIds, context) => queryClient.setQueryData(key, context?.previous),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
   });
 }

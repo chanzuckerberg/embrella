@@ -10,7 +10,7 @@ import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/detail
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/details/useGridLoggingGridBoxDetail';
 import { PuckList } from '@app/common/types/gridLogging';
 import { FEATURE_FLAG, FeatureFlagsContext } from '@app/common/context/FeatureFlagsProvider';
-import { useGridImages } from '@app/common/hooks/images/useGridImages';
+import { useGridImages, useReorderGridImages } from '@app/common/hooks/images/useGridImages';
 import { ImageThumbStrip } from '@app/common/components/images';
 import { useGridForm } from '@app/components/GridsLogging/Grid/useGridForm';
 import { TrashGridDialog } from '@app/components/GridsLogging/Grid/TrashGridDialog';
@@ -55,6 +55,7 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
   const tabIndex = (name: GridTab) => visibleTabs.indexOf(name);
 
   const { data: images = [] } = useGridImages(open && imagesEnabled ? gridId : null);
+  const reorderImages = useReorderGridImages(gridId);
 
   const { gridDetails, isSuccess, refetch } = useGridDetails(open ? gridId : null);
 
@@ -247,6 +248,7 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
                     setImageId(images[index].id);
                     setTab('images');
                   }}
+                  onReorder={reorderImages.mutate}
                 />
               )}
             </Box>

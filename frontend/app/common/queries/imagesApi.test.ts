@@ -1,11 +1,12 @@
-import { postFormDataWithProgress } from '@app/common/queries/fetchResource';
+import { postFormDataWithProgress, putResource } from '@app/common/queries/fetchResource';
 import { ImageRendition } from '@app/common/types/images';
 import { testImage } from '@app/common/components/images/testImages';
-import { imageSrc, uploadGridImage } from './imagesApi';
+import { imageSrc, reorderGridImages, uploadGridImage } from './imagesApi';
 
-jest.mock('@app/common/queries/fetchResource', () => ({ postFormDataWithProgress: jest.fn() }));
+jest.mock('@app/common/queries/fetchResource', () => ({ postFormDataWithProgress: jest.fn(), putResource: jest.fn() }));
 
 const mockPost = postFormDataWithProgress as jest.Mock;
+const mockPut = putResource as jest.Mock;
 const file = new File(['x'], 'shot.png', { type: 'image/png' });
 
 describe('uploadGridImage', () => {
@@ -32,6 +33,15 @@ describe('uploadGridImage', () => {
     mockPost.mockResolvedValue({ ok: false, status: 413, body: '<html>Request Entity Too Large</html>' });
 
     await expect(uploadGridImage(7, file, jest.fn())).rejects.toThrow('File is too large.');
+  });
+});
+
+describe('reorderGridImages', () => {
+  it("surfaces the server's field error", async () => {
+    const body = JSON.stringify({ image_ids: ["Can't reorder more than 100 images on one grid."] });
+    mockPut.mockResolvedValue({ ok: false, status: 400, text: () => Promise.resolve(body) });
+
+    await expect(reorderGridImages(7, ['a'])).rejects.toThrow("Can't reorder more than 100 images on one grid.");
   });
 });
 

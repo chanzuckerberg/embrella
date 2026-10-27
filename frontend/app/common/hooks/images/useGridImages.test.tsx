@@ -1,14 +1,15 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { uploadGridImage } from '@app/common/queries/imagesApi';
-import { UploadStatus } from '@app/common/types/images';
+import { reorderGridImages, uploadGridImage } from '@app/common/queries/imagesApi';
+import { ImageAsset, UploadStatus } from '@app/common/types/images';
 import { pngFile, testImage } from '@app/common/components/images/testImages';
-import { gridImagesKey, useGridImageUploads } from './useGridImages';
+import { gridImagesKey, useGridImageUploads, useReorderGridImages } from './useGridImages';
 
-jest.mock('@app/common/queries/imagesApi', () => ({ uploadGridImage: jest.fn() }));
+jest.mock('@app/common/queries/imagesApi', () => ({ uploadGridImage: jest.fn(), reorderGridImages: jest.fn() }));
 
 const mockUpload = uploadGridImage as jest.Mock;
+const mockReorder = reorderGridImages as jest.Mock;
 const GRID_ID = 7;
 
 function setup() {
@@ -79,5 +80,44 @@ describe('useGridImageUploads', () => {
       status: UploadStatus.FAILED,
       error: 'File is larger than 100 MB.',
     });
+  });
+});
+
+describe('useReorderGridImages', () => {
+  const images = [testImage({ id: 'a' }), testImage({ id: 'b' })];
+
+  function setupReorder() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(gridImagesKey(GRID_ID), images);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const hook = renderHook(() => useReorderGridImages(GRID_ID), { wrapper });
+    const cachedIds = () => client.getQueryData<ImageAsset[]>(gridImagesKey(GRID_ID))?.map((image) => image.id);
+    return { ...hook, cachedIds };
+  }
+
+  afterEach(() => mockReorder.mockReset());
+
+  it('reorders the cached list before the server answers', async () => {
+    let resolve: () => void = () => {};
+    mockReorder.mockReturnValue(new Promise<void>((done) => (resolve = done)));
+    const { result, cachedIds } = setupReorder();
+
+    act(() => result.current.mutate(['b', 'a']));
+
+    await waitFor(() => expect(cachedIds()).toEqual(['b', 'a']));
+    expect(mockReorder).toHaveBeenCalledWith(GRID_ID, ['b', 'a']);
+    await act(async () => resolve());
+  });
+
+  it('rolls back when saving fails', async () => {
+    mockReorder.mockRejectedValue(new Error('Images changed; reload and try again.'));
+    const { result, cachedIds } = setupReorder();
+
+    act(() => result.current.mutate(['b', 'a']));
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(cachedIds()).toEqual(['a', 'b']);
   });
 });

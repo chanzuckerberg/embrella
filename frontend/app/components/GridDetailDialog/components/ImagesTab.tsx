@@ -7,6 +7,7 @@ import {
   useDeleteGridImage,
   useGridImageUploads,
   useGridImages,
+  useReorderGridImages,
   useUpdateImageNotes,
 } from '@app/common/hooks/images/useGridImages';
 
@@ -22,6 +23,7 @@ export const ImagesTab: React.FC<ImagesTabProps> = ({ gridId, imageId, onImageCh
   const { uploads, add, reject, dismiss } = useGridImageUploads(gridId);
   const updateNotes = useUpdateImageNotes(gridId);
   const deleteImage = useDeleteGridImage(gridId);
+  const reorderImages = useReorderGridImages(gridId);
 
   if (isLoading) {
     return (
@@ -47,6 +49,12 @@ export const ImagesTab: React.FC<ImagesTabProps> = ({ gridId, imageId, onImageCh
         </Alert>
       )}
 
+      {reorderImages.isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Order not saved: {reorderImages.error.message}
+        </Alert>
+      )}
+
       <ImageGallery
         images={images}
         uploads={uploads}
@@ -55,6 +63,7 @@ export const ImagesTab: React.FC<ImagesTabProps> = ({ gridId, imageId, onImageCh
         onDismissUpload={dismiss}
         onNotesChange={(image, notes) => updateNotes.mutateAsync({ imageId: image.id, notes })}
         onDelete={(image) => deleteImage.mutateAsync(image.id)}
+        onReorder={reorderImages.mutate}
         paste={PasteMode.DOCUMENT}
         initialIndex={Math.max(
           images.findIndex((image) => image.id === imageId),

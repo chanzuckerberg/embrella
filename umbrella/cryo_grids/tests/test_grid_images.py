@@ -9,6 +9,7 @@ from projects.models import Project
 from cryo_grids import services
 from cryo_grids.history import ChangeReason
 from cryo_grids.models import CryoGrid, GridImage
+from cryo_grids.serializers import MAX_GRID_IMAGES
 
 MISSING_IMAGE_ID = "00000000-0000-0000-0000-000000000000"
 
@@ -34,6 +35,10 @@ def project(db):
 
 def images_url(grid) -> str:
     return f"/cryo_grids/v1/grids/{grid.id}/images/"
+
+
+def put_order(client, grid, image_ids):
+    return client.put(f"{images_url(grid)}order/", {"image_ids": image_ids}, content_type="application/json")
 
 
 def post_image(client, grid, file, notes=""):
@@ -129,6 +134,59 @@ class TestGridImagesApi:
         logged_in_client.logout()
 
         assert client.get(image["urls"]["preview"]).status_code != 200
+
+
+@pytest.mark.django_db
+class TestGridImageOrder:
+    @pytest.fixture
+    def image_ids(self, logged_in_client, test_grid, images_on):
+        names = ["a.png", "b.png", "c.png"]
+        return [post_image(logged_in_client, test_grid, png_upload(name=name)).json()["id"] for name in names]
+
+    def test_reorder_persists(self, logged_in_client, test_grid, image_ids):
+        reordered = [image_ids[2], image_ids[0], image_ids[1]]
+
+        response = put_order(logged_in_client, test_grid, reordered)
+
+        assert response.status_code == 200
+        assert [image["id"] for image in response.json()] == reordered
+        listed = logged_in_client.get(images_url(test_grid)).json()
+        assert [image["id"] for image in listed] == reordered
+
+    def test_reorder_writes_no_history(self, logged_in_client, test_grid, image_ids):
+        before = GridImage.history.count()
+
+        put_order(logged_in_client, test_grid, image_ids[::-1])
+
+        assert GridImage.history.count() == before
+
+    @pytest.mark.parametrize(
+        "pick",
+        [
+            pytest.param(lambda ids: ids[:-1], id="missing"),
+            pytest.param(lambda ids: [*ids, MISSING_IMAGE_ID], id="extra"),
+            pytest.param(lambda ids: [*ids[:-1], MISSING_IMAGE_ID], id="foreign"),
+            pytest.param(lambda ids: [ids[0], *ids[:-1]], id="duplicate"),
+        ],
+    )
+    def test_stale_ids_are_409(self, logged_in_client, test_grid, image_ids, pick):
+        response = put_order(logged_in_client, test_grid, pick(image_ids))
+
+        assert response.status_code == 409
+        listed = logged_in_client.get(images_url(test_grid)).json()
+        assert [image["id"] for image in listed] == image_ids
+
+    def test_oversized_order_is_400(self, logged_in_client, test_grid, image_ids):
+        response = put_order(logged_in_client, test_grid, [MISSING_IMAGE_ID] * (MAX_GRID_IMAGES + 1))
+
+        assert response.status_code == 400
+        assert response.json() == {"image_ids": [f"Can't reorder more than {MAX_GRID_IMAGES} images on one grid."]}
+
+    def test_reorder_needs_the_flag(self, logged_in_client, test_grid, image_ids, images_on):
+        images_on.enabled = False
+        images_on.save()
+
+        assert put_order(logged_in_client, test_grid, image_ids[::-1]).status_code == 403
 
 
 @pytest.mark.django_db

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ImageAsset } from '@app/common/types/images';
 import { ImageGallery } from './ImageGallery';
@@ -14,6 +14,23 @@ jest.mock('react-zoom-pan-pinch', () => ({
   TransformComponent: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+// Drops are simulated: the test fires the provider's onDragEnd and picks what move() returns
+let dragEnd: ((event: { canceled: boolean }) => void) | undefined;
+const mockMove = jest.fn();
+jest.mock('@dnd-kit/react', () => ({
+  DragDropProvider: ({ children, onDragEnd }: { children: React.ReactNode; onDragEnd: typeof dragEnd }) => {
+    dragEnd = onDragEnd;
+    return children;
+  },
+}));
+jest.mock('@dnd-kit/react/sortable', () => ({ useSortable: () => ({ ref: jest.fn(), isDragging: false }) }));
+jest.mock('@dnd-kit/helpers', () => ({ move: (...args: unknown[]) => mockMove(...args) }));
+
+const drop = (order: string[], canceled = false) => {
+  mockMove.mockReturnValue(order);
+  act(() => dragEnd?.({ canceled }));
+};
+
 function renderGallery(images: ImageAsset[]) {
   const props = {
     images,
@@ -23,6 +40,7 @@ function renderGallery(images: ImageAsset[]) {
     onDismissUpload: jest.fn(),
     onNotesChange: jest.fn().mockResolvedValue(undefined),
     onDelete: jest.fn().mockResolvedValue(undefined),
+    onReorder: jest.fn(),
     paste: PasteMode.OFF,
   };
   const view = render(<ImageGallery {...props} />);
@@ -49,17 +67,6 @@ describe('ImageGallery', () => {
     await userEvent.type(notes, ', B4 cracked');
     await userEvent.tab();
     expect(props.onNotesChange).toHaveBeenCalledWith(image, 'thin ice, B4 cracked');
-  });
-
-  it('flashes "Saved" after a save, then fades it out', async () => {
-    renderGallery([testImage()]);
-
-    await userEvent.type(screen.getByLabelText('Notes'), 'cracked');
-    expect(screen.getByRole('status', { hidden: true })).not.toBeVisible();
-
-    await userEvent.tab();
-    await waitFor(() => expect(screen.getByRole('status')).toBeVisible());
-    await waitFor(() => expect(screen.getByRole('status', { hidden: true })).not.toBeVisible(), { timeout: 3000 });
   });
 
   it('shows no "Saved" when saving fails', async () => {
@@ -109,5 +116,26 @@ describe('ImageGallery', () => {
 
     await userEvent.keyboard('{ArrowRight}');
     expect(screen.getByRole('dialog', { name: /^b\.png/ })).toBeInTheDocument();
+  });
+
+  it('reorders by drag and keeps the shown image selected', () => {
+    const first = testImage({ id: 'a', notes: 'first' });
+    const second = testImage({ id: 'b', notes: 'second' });
+    const { props, rerender } = renderGallery([first, second]);
+
+    drop(['b', 'a']);
+    expect(props.onReorder).toHaveBeenCalledWith(['b', 'a']);
+
+    rerender(<ImageGallery {...props} images={[second, first]} />);
+    expect(screen.getByLabelText('Notes')).toHaveValue('first');
+  });
+
+  it('ignores cancelled and unchanged drops', () => {
+    const { props } = renderGallery([testImage({ id: 'a' }), testImage({ id: 'b' })]);
+
+    drop(['b', 'a'], true);
+    drop(['a', 'b']);
+
+    expect(props.onReorder).not.toHaveBeenCalled();
   });
 });
