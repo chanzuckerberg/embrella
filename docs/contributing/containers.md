@@ -73,6 +73,9 @@ The services read these. Defaults come from `.env` / `.env.<stage>` at repo root
 | `EMBRELLA_BUILD_STATIC`    | entrypoint                         | `1` → collectstatic + zensical build. Set only on prod/staging web.                                                             |
 | `EMBRELLA_MIGRATE`         | entrypoint                         | `1` → run DB migrations. Set only on the one-shot `migrate` service; backend + worker wait on it.                             |
 | `SLURM_KEYFILE`            | clusterio.py                       | In-container path. Dev overrides to `/run/secrets/slurm_key`.                                                                 |
+| `EMBRELLA_MEDIA_DIR`       | settings.py                        | In-container upload dir (`MEDIA_ROOT`), `/srv/media` via compose. Required unless DEBUG.                                      |
+| `EMBRELLA_MEDIA_HOST_DIR`  | compose.*.yaml                     | Host dir bound to `/srv/media` on backend + nginx. Required on prod/staging; dev defaults to `.scratch/media`.              |
+| `MEDIA_ACCEL_PREFIX`       | settings.py                        | `/protected-media/` on prod/staging: nginx serves uploads via X-Accel-Redirect. Unset → Django streams.                       |
 | `DEBUGPY_LISTEN`           | manage.py                          | `1` opens a debugpy listener on `DEBUGPY_PORT`.                                                                               |
 | `IMAGE_TAG`                | compose.yaml                       | Image tag for both backend + frontend (default `latest`).                                                                     |
 
@@ -121,6 +124,8 @@ just devup
 just dbbackupdev                          # dump the dev compose db → ./.scratch/
 just loaddevdb <snapshot.sql>             # restore a snapshot into the dev db
 just dbbackupv2 prod                      # on-demand dump of a prod/staging container db
+just mediabackupv2 prod                   # mirror prod/staging uploaded images → /srv/mediabackups/
+just fetchmedia prod                      # host: mirror prod/staging images → .scratch/media
 just loadcontainerdb prod <snapshot.sql>  # restore into a prod/staging container db
 ```
 

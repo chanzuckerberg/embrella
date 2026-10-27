@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { parseAsStringLiteral, useQueryState } from 'nuqs';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { parseAsString, parseAsStringLiteral, useQueryState } from 'nuqs';
 import { Box, CircularProgress, IconButton, Snackbar, Alert, Tab, Tabs, Typography } from '@mui/material';
 import LinkIcon from '@mui/icons-material/Link';
 import { Dialog, DialogContent, DialogTitle } from '@czi-sds/components';
@@ -9,11 +9,15 @@ import { useGridDetails } from '@app/common/hooks/useGridLogging/details/useGrid
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/details/useGridLoggingPuckSlots';
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/details/useGridLoggingGridBoxDetail';
 import { PuckList } from '@app/common/types/gridLogging';
+import { FEATURE_FLAG, FeatureFlagsContext } from '@app/common/context/FeatureFlagsProvider';
+import { useGridImages, useReorderGridImages } from '@app/common/hooks/images/useGridImages';
+import { ImageThumbStrip } from '@app/common/components/images';
 import { useGridForm } from '@app/components/GridsLogging/Grid/useGridForm';
 import { TrashGridDialog } from '@app/components/GridsLogging/Grid/TrashGridDialog';
 import { TabPanel } from './utils';
 import { DetailsTab } from './components/DetailsTab';
 import { HistoryTab } from './components/HistoryTab';
+import { ImagesTab } from './components/ImagesTab';
 import { LocationSection } from './components/LocationSection';
 
 // lots of overhead for MoveGrid
@@ -24,9 +28,8 @@ const MoveGrid = React.lazy(() =>
 );
 
 // Tab is in the URL (?gridTab=history) so links open straight to it; Details is the default
-const GRID_TABS = ['details', 'history'] as const;
-const DETAILS_TAB = 0;
-const HISTORY_TAB = 1;
+const GRID_TABS = ['details', 'images', 'history'] as const;
+type GridTab = (typeof GRID_TABS)[number];
 const TAB_QUERY_OPTIONS = { history: 'replace' as const, shallow: true, clearOnDefault: true };
 
 interface GridDetailDialogProps {
@@ -41,8 +44,18 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
     'gridTab',
     parseAsStringLiteral(GRID_TABS).withDefault('details').withOptions(TAB_QUERY_OPTIONS)
   );
-  const activeTab = GRID_TABS.indexOf(tab);
+  // Shown image's id (?gridImage=<uuid>) so links open on it; ids survive uploads and deletes, indexes don't
+  const [imageId, setImageId] = useQueryState('gridImage', parseAsString.withOptions(TAB_QUERY_OPTIONS));
   const [copySnackbarOpen, setCopySnackbarOpen] = useState(false);
+
+  // Images tab only with the `images` flag; an ?gridTab=images link falls back to Details without it
+  const imagesEnabled = useContext(FeatureFlagsContext).includes(FEATURE_FLAG.IMAGES);
+  const visibleTabs = GRID_TABS.filter((name) => name !== 'images' || imagesEnabled);
+  const activeTab = Math.max(visibleTabs.indexOf(tab), 0);
+  const tabIndex = (name: GridTab) => visibleTabs.indexOf(name);
+
+  const { data: images = [] } = useGridImages(open && imagesEnabled ? gridId : null);
+  const reorderImages = useReorderGridImages(gridId);
 
   const { gridDetails, isSuccess, refetch } = useGridDetails(open ? gridId : null);
 
@@ -66,13 +79,15 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
   useEffect(() => {
     if (prevGridId.current !== gridId) {
       setTab(null);
+      setImageId(null);
     }
     prevGridId.current = gridId;
-  }, [gridId, setTab]);
+  }, [gridId, setTab, setImageId]);
 
-  // Closing drops the tab from the URL
+  // Closing drops the tab and image from the URL
   const handleClose = () => {
     setTab(null);
+    setImageId(null);
     onClose();
   };
 
@@ -167,14 +182,19 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Tabs
                 value={activeTab}
-                onChange={(_, v: number) => setTab(GRID_TABS[v])}
+                onChange={(_, v: number) => {
+                  // Tabbing out forgets the image
+                  setTab(visibleTabs[v]);
+                  setImageId(null);
+                }}
                 sx={{ borderBottom: 1, borderColor: 'divider' }}
               >
                 <Tab label="Details" />
+                {imagesEnabled && <Tab label={images.length ? `Images (${images.length})` : 'Images'} />}
                 <Tab label="History" />
               </Tabs>
 
-              <TabPanel value={activeTab} index={DETAILS_TAB}>
+              <TabPanel value={activeTab} index={tabIndex('details')}>
                 <DetailsTab
                   formData={form.formData}
                   isEditMode={form.isEditMode}
@@ -199,7 +219,13 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
                 />
               </TabPanel>
 
-              <TabPanel value={activeTab} index={HISTORY_TAB}>
+              {imagesEnabled && (
+                <TabPanel value={activeTab} index={tabIndex('images')}>
+                  <ImagesTab key={gridId} gridId={gridId} imageId={imageId} onImageChange={setImageId} />
+                </TabPanel>
+              )}
+
+              <TabPanel value={activeTab} index={tabIndex('history')}>
                 <HistoryTab gridId={gridId} />
               </TabPanel>
 
@@ -211,6 +237,18 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
                   slotsData={slotsData}
                   gridBoxData={gridBoxData}
                   clippedValue={form.clippedValue}
+                />
+              )}
+
+              {/* Quick look at the grid's images; trashed grids keep theirs */}
+              {imagesEnabled && images.length > 0 && visibleTabs[activeTab] !== 'images' && (
+                <ImageThumbStrip
+                  images={images}
+                  onSelect={(index) => {
+                    setImageId(images[index].id);
+                    setTab('images');
+                  }}
+                  onReorder={reorderImages.mutate}
                 />
               )}
             </Box>

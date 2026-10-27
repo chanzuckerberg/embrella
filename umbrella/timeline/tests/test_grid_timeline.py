@@ -11,10 +11,14 @@ from cryo_grids.models import (
     Puck,
     Site,
 )
+from cryo_grids.services import add_grid_image, remove_grid_image
 from django.utils import timezone
+from images.tests.uploads import png_upload
 from processes.models import ProcRun
 
 from timeline.types import EntryKind, Subject
+
+IMAGE_KINDS = {EntryKind.IMAGE_ADDED, EntryKind.IMAGE_REMOVED}
 
 
 def timeline(client, grid_id):
@@ -226,3 +230,30 @@ class TestMsiSessionsAndProcRuns:
 
         assert (Subject.MSI_SESSION, test_msi_session.id) in subjects
         assert (Subject.PROC_RUN, run.id) in subjects
+
+
+@pytest.mark.django_db
+class TestImageEntries:
+    @pytest.fixture(autouse=True)
+    def media_root(self, settings, tmp_path):
+        settings.MEDIA_ROOT = tmp_path
+
+    def test_added_and_removed(self, logged_in_client, test_user, test_grid):
+        image = add_grid_image(test_grid, png_upload(name="atlas.png"), test_user)
+        remove_grid_image(test_grid, image.id)
+
+        removed, added = [e for e in timeline(logged_in_client, test_grid.id) if e["kind"] in IMAGE_KINDS]
+        assert added["kind"] == EntryKind.IMAGE_ADDED
+        assert added["summary"] == "Image atlas.png added"
+        assert removed["kind"] == EntryKind.IMAGE_REMOVED
+        assert removed["summary"] == "Image atlas.png removed"
+        assert removed["detail"] == {"image_id": str(image.id), "name": "atlas.png"}
+
+    def test_reorder_is_not_an_entry(self, logged_in_client, test_user, test_grid):
+        image = add_grid_image(test_grid, png_upload(), test_user)
+        link = image.grid_link
+        link.order = 5
+        link.save()
+
+        assert kinds(timeline(logged_in_client, test_grid.id)).count(EntryKind.IMAGE_ADDED) == 1
+        assert EntryKind.IMAGE_REMOVED not in kinds(timeline(logged_in_client, test_grid.id))
