@@ -5,12 +5,14 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { Box, Chip, Tooltip, Typography } from '@mui/material';
 import type { SvgIconComponent } from '@mui/icons-material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import BiotechIcon from '@mui/icons-material/Biotech';
 import ContentCutIcon from '@mui/icons-material/ContentCut';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DriveFileMoveOutlinedIcon from '@mui/icons-material/DriveFileMoveOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import HideImageOutlinedIcon from '@mui/icons-material/HideImageOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import LabelOffOutlinedIcon from '@mui/icons-material/LabelOffOutlined';
 import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
@@ -28,6 +30,7 @@ import {
 import { TimelineEntry, TimelineKind, TimelineSubject } from '@app/common/types/timeline';
 import { FORMAT_PATTERN, formatDate, formatTimeAgo } from '@app/common/utils/format';
 import { LABEL_GROUP_TITLE, TimelineLabel, groupLabels } from './groupLabels';
+import { groupImages } from './groupImages';
 
 const KIND_ICON: Record<TimelineKind, SvgIconComponent> = {
   [TimelineKind.CREATED]: AddCircleOutlineIcon,
@@ -39,6 +42,8 @@ const KIND_ICON: Record<TimelineKind, SvgIconComponent> = {
   [TimelineKind.UNCLIPPED]: ContentCutIcon,
   [TimelineKind.LABEL_ADDED]: LabelOutlinedIcon,
   [TimelineKind.LABEL_REMOVED]: LabelOffOutlinedIcon,
+  [TimelineKind.IMAGE_ADDED]: AddPhotoAlternateOutlinedIcon,
+  [TimelineKind.IMAGE_REMOVED]: HideImageOutlinedIcon,
   [TimelineKind.DELETED]: DeleteForeverIcon,
 };
 
@@ -88,6 +93,14 @@ const dayLabel = (at: string): string => {
   return format(date, FORMAT_PATTERN.MMM_D_YYYY);
 };
 
+// Collapse batched changes into one row each. Each pass merges only its own kinds, so order doesn't matter
+const collapseBatches = (entries: TimelineEntry[]): TimelineEntry[] => {
+  let out = groupLabels(entries);
+  out = groupImages(out);
+
+  return out;
+};
+
 interface TimelineProps {
   entries: TimelineEntry[];
   emptyText?: string;
@@ -97,10 +110,10 @@ interface TimelineProps {
 
 /**
  * Vertical history, newest first. One dot per entry: icon by kind (or subject), label color for label entries.
- * Batches of label changes collapse into one row (see groupLabels).
+ * Batches of label or image changes collapse into one row (see collapseBatches).
  */
 export const Timeline: React.FC<TimelineProps> = ({ entries: raw, emptyText = 'No history yet.', maxVisible }) => {
-  const entries = groupLabels(raw);
+  const entries = collapseBatches(raw);
 
   if (entries.length === 0) {
     return (

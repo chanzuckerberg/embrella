@@ -16,17 +16,17 @@ const baseConfig = createJestConfig({
     '^@testing/(.*)$': '<rootDir>/testing/$1',
     '^@configs/(.*)$': '<rootDir>/configs/$1',
     '^@hooks/(.*)$': '<rootDir>/hooks/$1',
-    // Avoid loading the full icons barrel; see testing/iconsMaterialProxy.js
-    '^@mui/icons-material$': '<rootDir>/testing/iconsMaterialProxy.js',
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 });
 
 // next/jest overrides transformIgnorePatterns — patch after resolution to allow nuqs (ESM-only)
-export default async () => {
+const jestConfig = async () => {
   const config = await baseConfig();
   config.transformIgnorePatterns = config.transformIgnorePatterns.map((pattern) =>
     pattern.includes('node_modules') ? pattern.replace('node_modules/', 'node_modules/(?!nuqs)/') : pattern
   );
   return config;
 };
+
+export default jestConfig;
