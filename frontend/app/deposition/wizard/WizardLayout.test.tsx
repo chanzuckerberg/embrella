@@ -47,7 +47,6 @@ const DATASET = {
   is_authors_same_as_deposition: false,
   authors_json: [{ author_id: 7, is_primary: true, is_corresponding: true, author_list_order: 0 }],
 } as Dataset;
-const TOMOS_ONLY = { ...DATASET, type: 'Tomos only' } as Dataset;
 
 function renderWizard(dataset: Dataset = DATASET) {
   mockServerDataset = dataset;
@@ -160,17 +159,19 @@ describe('WizardLayout', () => {
     expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
   });
 
-  it.each([
-    { dataset: DATASET, lastMetadataStep: 5 },
-    { dataset: TOMOS_ONLY, lastMetadataStep: 4 },
-  ])(
-    'labels the transition into Finalize, including skipped annotations ($lastMetadataStep)',
-    async ({ dataset, lastMetadataStep }) => {
-      renderWizard(dataset);
-      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Step ${lastMetadataStep}:`) }));
-      expect(await screen.findByRole('button', { name: 'Next: prepare & validate' })).toBeEnabled();
-    }
-  );
+  it('starts preparation when leaving Annotations for Finalize', async () => {
+    (submitDataset as jest.Mock).mockImplementation(async () => {
+      mockServerDataset = { ...mockServerDataset, status: 'syncing', job: { id: 1, state: 'prep_submitted' } };
+      return { state: 'prep_submitted', dataset_status: 'syncing' };
+    });
+    renderWizard();
+    fireEvent.click(screen.getByRole('button', { name: /Step 5: Annotations/ }));
+    expect(await screen.findByRole('button', { name: 'Next: prepare & validate' })).toBeEnabled();
+    expect(submitDataset).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Next: prepare & validate' }));
+    await waitFor(() => expect(submitDataset).toHaveBeenCalledTimes(1));
+    expect(submitDataset).toHaveBeenCalledWith(DATASET.id);
+  });
 
   it('shows the server lock message and holds navigation when a stale draft cannot save', async () => {
     mockIsDirty = true;
@@ -197,11 +198,6 @@ describe('WizardLayout', () => {
 
     await waitFor(() => expect(mockSaveNow).toHaveBeenCalled());
     expect(mockPush).not.toHaveBeenCalled();
-  });
-
-  it('skips Annotations for a tomograms-only dataset', () => {
-    renderWizard(TOMOS_ONLY);
-    expect(screen.getByRole('button', { name: /Step 5: Annotations \(skipped\)/ })).toBeDisabled();
   });
 
   it('shows a read-only notice when the user is not the deposition owner', () => {

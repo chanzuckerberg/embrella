@@ -4,6 +4,8 @@
 #   podman network create embrella
 #   # Obtain the SLURM SSH key from an admin (vault) and place it on the host,
 #   # then point .env.production's SLURM_KEYFILE at that host path.
+#   # Create the image upload dir and set .env.production's EMBRELLA_MEDIA_HOST_DIR to it,
+#   # e.g. mkdir -p /srv/embrella-media. Back it up with `just mediabackupv2 prod`.
 #
 # Then (--env-file so ${VAR} interpolation resolves; deployv2 copies the chosen
 # env file to .env.production on the host):
@@ -33,8 +35,11 @@ services:
     environment:
       DJANGO_ENV: production
       SLURM_KEYFILE: /run/secrets/slurm_key
+      # nginx streams uploaded files once Django has checked the request
+      MEDIA_ACCEL_PREFIX: /protected-media/
     volumes:
       - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
+      - ${EMBRELLA_MEDIA_HOST_DIR:?set EMBRELLA_MEDIA_HOST_DIR}:/srv/media:z
 
   worker:
     user: '0:0'
@@ -70,3 +75,4 @@ services:
       - '${NGINX_HOST_PORT:-80}:80'
     volumes:
       - ./nginx_production.conf.template:/etc/nginx/templates/nginx.conf.template:ro,z
+      - ${EMBRELLA_MEDIA_HOST_DIR:?set EMBRELLA_MEDIA_HOST_DIR}:/srv/media:ro,z

@@ -16,6 +16,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import pymysql
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # Build paths inside the project like this: BASE_DIR / 'subdir'.
 ENVIRONMENT = os.getenv("DJANGO_ENV", "development")
@@ -71,6 +72,21 @@ STATIC_URL = "/static/"
 
 DOCUMENTATION_ROOT = Path(BASE_DIR).resolve().parent / "docs_build"
 
+# Uploaded files (images). Required outside dev so uploads never land on a
+# container's ephemeral filesystem, e.g. EMBRELLA_MEDIA_DIR=/srv/media.
+MEDIA_ROOT = os.environ.get("EMBRELLA_MEDIA_DIR") or (BASE_DIR / "media" if DEBUG else "")
+if not MEDIA_ROOT:
+    raise ImproperlyConfigured("Set EMBRELLA_MEDIA_DIR to the mounted media directory.")
+
+# nginx internal location that serves MEDIA_ROOT, e.g. "/protected-media/".
+# Unset (dev runserver) → Django streams files itself.
+MEDIA_ACCEL_PREFIX = os.environ.get("MEDIA_ACCEL_PREFIX", "")
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+
 pymysql.install_as_MySQLdb()
 
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
@@ -105,6 +121,7 @@ INSTALLED_APPS = [
     "stores",
     "processes",
     "timeline",
+    "images",
     "accounts",
     "people",
     "django.contrib.admin",

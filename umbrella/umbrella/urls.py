@@ -134,6 +134,7 @@ urlpatterns = (
         path("copick/", include("workflow.processors.copick.api_urls")),
         path("people/", include("people.urls")),
         path("timeline/", include("timeline.urls")),
+        path("images/", include("images.urls")),
     ]
     + api_patterns  # API endpoints
 )
