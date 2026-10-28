@@ -33,7 +33,7 @@ export function DatasetRow({ dataset, isOwner = false }: { dataset: Dataset; isO
   const meta = STATUS_META[dataset.status];
   // Only the deposition's owner can edit; everyone else gets a read-only View.
   const action = isOwner && dataset.status === 'draft' ? 'Resume' : 'View';
-  const typeLabel = dataset.type ?? 'Tomos only';
+  const typeLabel = dataset.type ?? 'Dataset';
   const typeColor = TYPE_META[typeLabel] ?? 'default';
 
   const subtitle = dataset.dataset_id && dataset.title ? dataset.title : '';
