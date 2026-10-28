@@ -210,13 +210,9 @@ def test_prep_inventory_matches_cli_mdoc_support(tmp_path, mdoc_suffix):
         )
     )
     _, inventory = reporter.prep_inventory(config, "2")
-    if mdoc_suffix == ".mdoc":
-        assert inventory["session_Position_1.mdoc"] == "Metadata"
-        assert inventory["session_Position_1/session_frame_1.tif"] == "Frames"
-    else:
-        # Add this suffix only after the CLI stages it (deposition_prep.commands.sync).
-        assert "session_Position_1.mdoc" not in inventory
-        assert "Frames" not in inventory.values()
+    # Mirrors deposition_prep's find_source_mdoc.
+    assert inventory["session_Position_1.mdoc"] == "Metadata"
+    assert inventory["session_Position_1/session_frame_1.tif"] == "Frames"
 
 
 # Expected staged names mirror deposition_prep SYMLINK_TYPES; the mapping is confirmed against the CLI source, not here.
