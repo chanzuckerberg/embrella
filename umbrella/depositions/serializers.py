@@ -516,7 +516,7 @@ class SubmissionDatasetSerializer(serializers.ModelSerializer):
         has_annotations = any(a.is_selected for s in obj.sessions.all() for a in s.annotations.all())
         if has_annotations and not has_tomograms:
             return "Annotations only"
-        return "Dataset" if has_annotations else "Tomos only"
+        return "Dataset"
 
 
 class SubmissionDepositionSerializer(serializers.ModelSerializer):

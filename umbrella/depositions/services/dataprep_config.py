@@ -60,8 +60,9 @@ def _session_config(session, authors):
         config["annotations"] = annotations
     for config_field, model_field in ACQUISITION_FIELDS.items():
         config["acquisition"][config_field] = getattr(metadata, model_field)
+    by_flavor = {tomo.flavor: tomo for tomo in session.tomogram_metadata.all()}
     # Autofill maps these acquisition values onto the filtered reconstruction.
-    filtered = next((tomo for tomo in session.tomogram_metadata.all() if tomo.flavor == "filtered"), None)
+    filtered = by_flavor.get("filtered")
     if filtered is not None:
         config["acquisition"]["aretomo_version"] = filtered.reconstruction_software
         if filtered.voxel_spacing is None:
@@ -72,6 +73,24 @@ def _session_config(session, authors):
             config["acquisition"]["binned_voxel_ratio"] = filtered.voxel_spacing / metadata.pixel_spacing
     config["tilt_axis_angle"] = metadata.tilt_axis
     config["total_dose"] = metadata.total_flux
+
+    # Per-flavor overrides; the tool falls back to `acquisition` for anything absent.
+    tomograms = {}
+    for flavor, tomo in by_flavor.items():
+        entry = {"is_visualization_default": tomo.is_visualization_default}
+        # ctf_corrected is nullable; the tool rejects a null, so only send a real bool.
+        if tomo.ctf_corrected is not None:
+            entry["ctf_corrected"] = tomo.ctf_corrected
+        if tomo.voxel_spacing is not None:
+            entry["voxel_spacing"] = tomo.voxel_spacing
+        # processing is omitted: the tool derives it from the flavor.
+        for field in ("reconstruction_software", "reconstruction_method", "processing_software"):
+            value = getattr(tomo, field)
+            if value:
+                entry[field] = value
+        tomograms[flavor] = entry
+    if tomograms:
+        config["tomograms"] = tomograms
     return config
 
 

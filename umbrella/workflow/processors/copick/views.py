@@ -43,6 +43,14 @@ def _copick_default_cluster_id() -> str:
     return (software and software.default_cluster) or get_default_cluster_id()
 
 
+def _template_maps_dir() -> str:
+    """Template-map dir, resolved from the copick root - the same path the job script reads."""
+    from workflow.processors import get_processor
+
+    base = get_processor("copick").get_processing_base_path(cluster=_copick_default_cluster_id()).rstrip("/")
+    return f"{base}/template_maps"
+
+
 def _empty_scan() -> dict:
     return {"scanned": False, "picks": [], "segmentations": [], "meshes": [], "annotated_runs": []}
 
@@ -52,6 +60,14 @@ def _copick_root_url(session, run_name: str) -> str:
     cluster_id = cluster_id_for_run(session.name, run_name, default=_copick_default_cluster_id())
     cluster = Cluster.objects.get(cluster_id=cluster_id)
     return resolve_review_path("copick_url", cluster=cluster, msi_session=session, copick_run=run_name)
+
+
+def _copick_config_description(session, run_name: str) -> str:
+    """The run's config.json location, resolved per cluster."""
+    try:
+        return _copick_root_url(session, run_name) + "config.json"
+    except Exception:
+        return ""
 
 
 def _read_scan_json(root_url: str) -> dict:
@@ -242,9 +258,9 @@ def get_dynamic_options(request, session_id: str = None) -> JsonResponse:
     # Add template maps (loaded from get_template_maps endpoint)
     # Note: Frontend will call get_template_maps separately for full metadata
 
-    template_maps_dir = "/hpc/projects/group.czii/krios1.processing/copick/template_maps"
     options["template_map_name"] = []
     try:
+        template_maps_dir = _template_maps_dir()
         if os.path.exists(template_maps_dir):
             for filename in os.listdir(template_maps_dir):
                 if filename.endswith(".json"):
@@ -587,10 +603,9 @@ def get_template_maps(request) -> JsonResponse:
 
     template_maps = []
 
-    # Path to template maps metadata directory
-    template_maps_dir = "/hpc/projects/group.czii/krios1.processing/copick/template_maps"
-
     try:
+        # Path to template maps metadata directory, resolved from the copick root.
+        template_maps_dir = _template_maps_dir()
         if os.path.exists(template_maps_dir):
             # Read all JSON files in the template maps directory
             for filename in os.listdir(template_maps_dir):
@@ -642,7 +657,7 @@ def get_copick_runs(request) -> JsonResponse:
     Merges two sources so the dropdown reflects everything selectable: (1) czii-copick ProcRuns in
     the DB (Embrella-managed, always available), and (2) copick config dirs physically on the
     cluster (created outside Embrella, over SSH - degrades to DB-only when SSH is off).
-    `description` is the run's copick config.json path on the cluster.
+    `description` is the run's resolved copick config.json URL (per cluster).
 
     Args:
         request: Django HTTP request with a ?session_id= query parameter
@@ -655,7 +670,7 @@ def get_copick_runs(request) -> JsonResponse:
                 {
                     "name": "run001",
                     "label": "run001",
-                    "description": "/hpc/projects/group.czii/krios1.processing/copick/<session>/run001/config.json"
+                    "description": "https://<cluster>/.../copick/<session>/run001/config.json"
                 },
                 ...
             ]
@@ -673,15 +688,18 @@ def get_copick_runs(request) -> JsonResponse:
             }
         )
 
+    session_obj = MsiSession.objects.filter(name=session_id).first()
     run_names: set[str] = set()
 
     # 1) Embrella-managed copick projects (DB ProcRuns) — always available.
-    try:
-        plan = ProcPlan.objects.get(name=COPICK_PLAN_NAME)
-        session_obj = MsiSession.objects.get(name=session_id)
-        run_names |= set(ProcRun.objects.filter(proc_plan=plan, msi_session=session_obj).values_list("name", flat=True))
-    except (ProcPlan.DoesNotExist, MsiSession.DoesNotExist):
-        pass
+    if session_obj:
+        try:
+            plan = ProcPlan.objects.get(name=COPICK_PLAN_NAME)
+            run_names |= set(
+                ProcRun.objects.filter(proc_plan=plan, msi_session=session_obj).values_list("name", flat=True)
+            )
+        except ProcPlan.DoesNotExist:
+            pass
 
     # 2) Configs physically on the cluster (may have been created outside Embrella, so no ProcRun)
     run_names |= _list_cluster_copick_runs(session_id)
@@ -690,7 +708,7 @@ def get_copick_runs(request) -> JsonResponse:
         {
             "name": name,
             "label": name,
-            "description": f"/hpc/projects/group.czii/krios1.processing/copick/{session_id}/{name}/config.json",
+            "description": _copick_config_description(session_obj, name) if session_obj else "",
         }
         for name in sorted(run_names)
     ]

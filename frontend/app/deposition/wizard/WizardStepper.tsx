@@ -6,10 +6,9 @@ import { alpha, Box, Typography, type SxProps, type Theme } from '@mui/material'
 
 import type { StepDef } from './wizardTypes';
 
-type StepState = 'current' | 'done' | 'todo' | 'skipped';
+type StepState = 'current' | 'done' | 'todo';
 
-function stepState(num: number, current: number, isSkipped: boolean): StepState {
-  if (isSkipped) return 'skipped';
+function stepState(num: number, current: number): StepState {
   if (num === current) return 'current';
   if (num < current) return 'done';
   return 'todo';
@@ -24,37 +23,32 @@ const CIRCLE_SX: Record<StepState, SxProps<Theme>> = {
   },
   done: { bgcolor: 'primary.main', color: 'primary.contrastText', borderColor: 'primary.main' },
   todo: { bgcolor: 'background.paper', color: 'text.secondary', borderColor: 'divider' },
-  skipped: { bgcolor: 'action.disabledBackground', color: 'text.disabled', borderColor: 'divider' },
 };
 
 const LABEL_COLOR: Record<StepState, string> = {
   current: 'text.primary',
   done: 'text.secondary',
   todo: 'text.secondary',
-  skipped: 'text.disabled',
 };
 
 export function WizardStepper({
   steps,
   current,
   onSelect,
-  skipped = [],
   disabled = false,
   blockForward = false,
 }: {
   steps: StepDef[];
   current: number;
   onSelect: (num: number) => void;
-  skipped?: number[];
   disabled?: boolean;
   blockForward?: boolean;
 }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
       {steps.map((s, i) => {
-        const isSkipped = skipped.includes(s.num);
-        const isDisabled = disabled || isSkipped || (blockForward && s.num > current);
-        const state = stepState(s.num, current, isSkipped);
+        const isDisabled = disabled || (blockForward && s.num > current);
+        const state = stepState(s.num, current);
         return (
           <Fragment key={s.num}>
             {i > 0 && (
@@ -83,9 +77,9 @@ export function WizardStepper({
               <Box
                 component="button"
                 type="button"
-                onClick={() => !isSkipped && onSelect(s.num)}
+                onClick={() => onSelect(s.num)}
                 disabled={isDisabled}
-                aria-label={`Step ${s.num}: ${s.title}${isSkipped ? ' (skipped)' : ''}`}
+                aria-label={`Step ${s.num}: ${s.title}`}
                 aria-current={state === 'current' ? 'step' : undefined}
                 sx={{
                   width: { xs: 32, sm: 40 },

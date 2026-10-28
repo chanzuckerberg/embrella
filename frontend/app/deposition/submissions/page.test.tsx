@@ -13,7 +13,7 @@ const DATASETS = [
     dataset_id: 100,
     title: 'A',
     status: 'pushed',
-    type: 'Tomos only',
+    type: 'Dataset',
     session_names: [],
     session_count: 0,
     updated_at: '2026-07-01T00:00:00Z',
@@ -47,7 +47,7 @@ const ORDER_DATASETS = [
     dataset_id: 100,
     title: 'Alpha',
     status: 'pushed',
-    type: 'Tomos only',
+    type: 'Dataset',
     session_names: [],
     session_count: 0,
     updated_at: '2026-07-01T00:00:00Z',
@@ -57,7 +57,7 @@ const ORDER_DATASETS = [
     dataset_id: 102,
     title: 'Gamma',
     status: 'draft',
-    type: 'Tomos only',
+    type: 'Dataset',
     session_names: [],
     session_count: 0,
     updated_at: '2026-07-05T00:00:00Z',
@@ -67,7 +67,7 @@ const ORDER_DATASETS = [
     dataset_id: 101,
     title: 'Beta',
     status: 'pushed',
-    type: 'Tomos only',
+    type: 'Dataset',
     session_names: [],
     session_count: 0,
     updated_at: '2026-07-03T00:00:00Z',
@@ -103,10 +103,9 @@ describe('SubmissionsPage', () => {
       isError: false,
     });
     render(<SubmissionsPage />);
-    expect(screen.getByText('Tomos only')).toBeInTheDocument();
     expect(screen.getByText('Annotations only')).toBeInTheDocument();
-    // "Dataset" appears as both the column header and the type chip → expect ≥ 2
-    expect(screen.getAllByText('Dataset').length).toBeGreaterThanOrEqual(2);
+    // Column header and two dataset type chips.
+    expect(screen.getAllByText('Dataset')).toHaveLength(3);
     expect(screen.getByText(/Deposition cdp-10001/)).toBeInTheDocument();
   });
 

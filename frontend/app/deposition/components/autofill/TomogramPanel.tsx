@@ -4,7 +4,7 @@ import { Box, Checkbox, FormControlLabel, Typography } from '@mui/material';
 
 import type { TomogramFlavor, TomogramMetadata } from '../../types';
 import { TOMOGRAM_FLAVORS } from '../../types';
-import { isIssue, perFlavorTomogramFields, SHARED_TOMOGRAM_FIELDS } from './fields';
+import { isIssue, perFlavorTomogramFields } from './fields';
 import { FieldGrid, NothingToFix } from './FieldGrid';
 import type { FieldValue } from './MetadataRow';
 
@@ -25,7 +25,6 @@ export function TomogramPanel({
   columns,
   runName,
   showOnlyIssues,
-  onShared,
   onFlavor,
 }: {
   tomograms: Record<TomogramFlavor, TomogramMetadata>;
@@ -34,50 +33,17 @@ export function TomogramPanel({
   columns: 1 | 2;
   runName: string;
   showOnlyIssues: boolean;
-  onShared: (key: string, value: FieldValue) => void;
   onFlavor: (flavor: TomogramFlavor, key: string, value: FieldValue) => void;
 }) {
-  // Invariant: denoised is the source of truth for the shared reconstruction fields; edits go through
-  // onShared, which the card fans out to BOTH flavors (they must stay identical).
-  const shared = tomograms.denoised;
-
-  const sharedVisible = SHARED_TOMOGRAM_FIELDS.filter((f) => !showOnlyIssues || isIssue(f, shared as never));
   const flavorFields = (flavor: TomogramFlavor) =>
     perFlavorTomogramFields(flavor).filter((f) => !showOnlyIssues || isIssue(f, tomograms[flavor] as never));
 
-  if (showOnlyIssues && sharedVisible.length === 0 && TOMOGRAM_FLAVORS.every((f) => flavorFields(f).length === 0)) {
+  if (showOnlyIssues && TOMOGRAM_FLAVORS.every((f) => flavorFields(f).length === 0)) {
     return <NothingToFix />;
   }
 
   return (
     <Box sx={{ mt: 0.5 }}>
-      {sharedVisible.length > 0 && (
-        <>
-          <Typography
-            variant="overline"
-            sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary', display: 'block', mb: 1 }}
-          >
-            RECONSTRUCTION
-            <Box
-              component="span"
-              sx={{ ml: 1, textTransform: 'none', letterSpacing: 0, color: 'text.disabled', fontWeight: 400 }}
-            >
-              applies to every tomogram in this session
-            </Box>
-          </Typography>
-          <Box sx={{ mb: 3 }}>
-            <FieldGrid
-              fields={sharedVisible}
-              meta={shared as Record<string, FieldValue>}
-              columns={columns}
-              readOnly={readOnly}
-              loading={loading}
-              onChange={onShared}
-            />
-          </Box>
-        </>
-      )}
-
       {TOMOGRAM_FLAVORS.map((flavor) => {
         const fields = flavorFields(flavor);
         if (fields.length === 0) return null;

@@ -27,6 +27,10 @@ if [[ -n "$slurm_keyfile" && ! -f "$slurm_keyfile" ]]; then
   exit 1
 fi
 
+# 2b. Uploaded images are bind-mounted from a host folder; podman won't create a missing one.
+media_dir="$(grep -E '^EMBRELLA_MEDIA_HOST_DIR=' .env | tail -1 | cut -d= -f2- | tr -d '"' || true)"
+mkdir -p "${media_dir:-.scratch/media}"
+
 # 3. ~/.gitconfig is bind-mounted read-only for in-container commits.
 echo "Checking for ~/.gitconfig..."
 if [[ ! -f "$HOME/.gitconfig" ]]; then
