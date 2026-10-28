@@ -168,6 +168,10 @@ const SlideButton: React.FC<{ side: 'left' | 'right'; disabled: boolean; onClick
 const SAVED_HOLD_MS = 1000;
 const SAVED_FADE_MS = { enter: 150, exit: 600 };
 
+// Collapsed notes height keeps thumbs steady; focus expands up to the max, then scrolls
+const NOTES_ROWS = 4;
+const NOTES_EXPANDED_MAX_ROWS = 12;
+
 const NotesField: React.FC<{ image: ImageAsset; onSave: (notes: string) => Promise<unknown> }> = ({
   image,
   onSave,
@@ -175,6 +179,10 @@ const NotesField: React.FC<{ image: ImageAsset; onSave: (notes: string) => Promi
   const [draft, setDraft] = useState(image.notes);
   const [showSaved, setShowSaved] = useState(false);
   const latestDraft = useRef(image.notes);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  // Collapsed height held while focused; undefined = collapsed
+  const [reservedPx, setReservedPx] = useState<number>();
+  const isExpanded = reservedPx !== undefined;
 
   // Flash "Saved", then let it fade out on its own
   useEffect(() => {
@@ -197,28 +205,54 @@ const NotesField: React.FC<{ image: ImageAsset; onSave: (notes: string) => Promi
     }
   };
 
+  /**
+   * Focus floats the field
+   *
+   *   [▣][▣][▣]            [▣][▣][▣]
+   *   ┌ Notes ─┐   focus   ┌ Notes ─┐
+   *   │ 4 rows │    →      │ grows  │  ← overlays content below
+   *   └────────┘           │ to fit │
+   *   below…               └────────┘
+   */
   return (
-    <TextField
-      label="Notes"
-      placeholder="e.g. square B4 cracked, ice looks thin"
-      multiline
-      minRows={2}
-      fullWidth
-      size="small"
-      value={draft}
-      onChange={(event) => {
-        setDraft(event.target.value);
-        latestDraft.current = event.target.value;
-        setShowSaved(false);
-      }}
-      onBlur={save}
-      // Helper line always renders, so "Saved" fading in and out never shifts the layout
-      helperText={
-        <Fade in={showSaved} timeout={SAVED_FADE_MS}>
-          <span role="status">Saved</span>
-        </Fade>
-      }
-      sx={{ mt: 1.5 }}
-    />
+    <Box ref={wrapperRef} sx={{ position: 'relative', mt: 1.5, minHeight: reservedPx }}>
+      <TextField
+        label="Notes"
+        placeholder="e.g. square B4 cracked, ice looks thin"
+        multiline
+        minRows={NOTES_ROWS}
+        maxRows={isExpanded ? NOTES_EXPANDED_MAX_ROWS : NOTES_ROWS}
+        fullWidth
+        onFocus={() => setReservedPx(wrapperRef.current?.offsetHeight)}
+        size="small"
+        value={draft}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          latestDraft.current = event.target.value;
+          setShowSaved(false);
+        }}
+        onBlur={() => {
+          setReservedPx(undefined);
+          save();
+        }}
+        // Helper line always renders, so "Saved" fading in and out never shifts the layout
+        helperText={
+          <Fade in={showSaved} timeout={SAVED_FADE_MS}>
+            <span role="status">Saved</span>
+          </Fade>
+        }
+        sx={
+          isExpanded
+            ? {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                zIndex: 1,
+                '& .MuiInputBase-root': { bgcolor: 'background.paper', boxShadow: 2 },
+              }
+            : undefined
+        }
+      />
+    </Box>
   );
 };
