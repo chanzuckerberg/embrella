@@ -1,0 +1,68 @@
+{
+  "schema": "cdpp.plan/v1",
+  "config": null,
+  "output_dir": "/hpc/projects/group.czii/krios1.processing/cdpp/24nov10/run001",
+  "fingerprint": "3b35712a704435b905f83e9c9936ba0ded7cb9eb61a9ef4dcd94320c5487b949",
+  "trees": {
+    "miss_alignment": {
+      "fingerprint": "89962c67608da433d63f103768e4958a5ccc01ce614f9b45bc6ab887f3fb7427",
+      "dir": null,
+      "roots": {
+        "miss_alignment": "miss_alignment",
+        "warp": "warp",
+        "warp_reconstruct_global": "warp_reconstruct_global",
+        "warp_reconstruct_local": "warp_reconstruct_local",
+        "aretomo_recon_from_warp_global": "aretomo_recon_from_warp_global",
+        "aretomo_recon_from_warp_local": "aretomo_recon_from_warp_local"
+      },
+      "steps": [
+        "warp_metadata_create",
+        "miss_alignment_train",
+        "miss_alignment_inference",
+        "warp_reconstruct_global",
+        "warp_reconstruct_local",
+        "aretomo_recon_from_warp_global",
+        "aretomo_recon_from_warp_local"
+      ]
+    },
+    "isonet2": {
+      "fingerprint": "921d6136f65fd9fda7417e56eaf903329908bd6807bb19823ad985a0208216d5",
+      "dir": null,
+      "roots": {
+        "isonet2": "."
+      },
+      "steps": [
+        "isonet2_denoise_train",
+        "isonet2_denoise_predict",
+        "isonet2_make_mask",
+        "isonet2_train",
+        "isonet2_predict_global",
+        "isonet2_predict_local"
+      ]
+    },
+    "copick": {
+      "fingerprint": "332d7edc893e77c6fa0c080ec83dd4c8deb5cc4212a5221e2b61e0767aa44bca",
+      "dir": null,
+      "roots": {
+        "copick": "."
+      },
+      "steps": [
+        "copick_init",
+        "membrain_seg",
+        "copick_gpu",
+        "octopi_segment",
+        "sample_slab"
+      ]
+    },
+    "aretomo3": {
+      "fingerprint": "28454fdc4578c9df39d8f2b9ce52cba45b98467f761a758d165206b4106637f2",
+      "dir": null,
+      "roots": {
+        "aretomo3_published": "."
+      },
+      "steps": [
+        "publish_aretomo3"
+      ]
+    }
+  }
+}

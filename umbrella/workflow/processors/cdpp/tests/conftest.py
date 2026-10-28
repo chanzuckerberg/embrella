@@ -11,6 +11,8 @@ from workflow.context import RunContext
 
 FIXTURES = Path(__file__).parent / "fixtures"
 PLAN = json.loads((FIXTURES / "plan.json").read_text())
+# The same run planned with --publish-aretomo3 aretomo_recon_from_warp_global: an extra aretomo3 tree.
+PUBLISH_PLAN = json.loads((FIXTURES / "plan_publish.json").read_text())
 PROGRESS = (FIXTURES / "progress.json").read_text()
 
 ROOT = "/hpc/projects/group.czii/krios1.processing"
@@ -21,8 +23,9 @@ CDPP_DIR = f"{ROOT}/cdpp/{SESSION}/run001"
 class FakeCluster:
     """Answers the processor's SSH commands: the --plan-only call and run-directory listings."""
 
-    def __init__(self, plan=PLAN, dirs=None, err=""):
+    def __init__(self, plan=PLAN, dirs=None, err="", publish_plan=PUBLISH_PLAN):
         self.plan = plan
+        self.publish_plan = publish_plan
         self.dirs = dirs or {}  # tool -> run dir names on disk
         self.err = err
         self.commands = []
@@ -35,7 +38,8 @@ class FakeCluster:
     def _exec(self, command, timeout=None):
         self.commands.append(command)
         if "--plan-only" in command:
-            out = f"Loading mamba\nCDPP_PLAN_BEGIN\n{json.dumps(self.plan)}\nCDPP_PLAN_END\n" if self.plan else ""
+            plan = self.publish_plan if "--publish-aretomo3" in command else self.plan
+            out = f"Loading mamba\nCDPP_PLAN_BEGIN\n{json.dumps(plan)}\nCDPP_PLAN_END\n" if plan else ""
         else:
             # ls -1d <processing base>/<session>/run* 2>/dev/null
             session_dir = command.split()[2].rsplit("/run*", 1)[0]

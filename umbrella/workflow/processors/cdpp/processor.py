@@ -10,8 +10,14 @@ fingerprints (``config from-aretomo3 --plan-only``, read-only over SSH): a tree 
 fingerprint matches an earlier run's reuses that runNNN, so its steps resume; any other
 tree gets a fresh runNNN. The cdpp run itself holds the config, the Nextflow state and
 the driver log.
+
+With ``publish_aretomo3`` the pipeline also lays the refined global reconstruction out as an
+AreTomo3 run (the ``aretomo3`` tree, an Embrella AreTomo3 run). A follow-up job, held until the
+cdpp job succeeds, makes Embrella's zarr volumes and thumbnails for it, and the AreTomo3 syncer
+turns them into review tomograms.
 """
 
+import dataclasses
 import json
 import logging
 import os
@@ -21,10 +27,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from django.utils import timezone
 from jinja2 import Environment, FileSystemLoader
-from processes.models import PipeExecution, PipeInPlan, ProcPlan, ProcRun
+from processes.models import JobLog, PipeExecution, PipeInPlan, ProcPlan, ProcRun
 from stores.paths import resolve_dir
 
 from common import clusterio
+from workflow.agent import RemoteJobSubmitter
 from workflow.context import RunContext
 from workflow.processors.base import BaseProcessor
 
@@ -43,7 +50,14 @@ TREE_PLANS = {
     "deepdewedge": "czii-deepdewedge",
     "icecream": "czii-icecream",
     "copick": "czii-copick",
+    # Only with publish_aretomo3: the refined reconstruction as an AreTomo3 run.
+    "aretomo3": "czii-live",
 }
+
+# publish_aretomo3: the round-trip variant the pipeline publishes, and the tree it publishes into.
+PUBLISH_VARIANT = "aretomo_recon_from_warp_global"
+PUBLISH_TREE = "aretomo3"
+_SUBMITTED_JOB = re.compile(r"Submitted batch job (\d+)")
 
 # Shown in a preview, where nothing has been reserved yet.
 RESERVED_PLACEHOLDER = "<reserved at submission>"
@@ -60,6 +74,11 @@ def parse_overrides(text: Optional[str]) -> List[str]:
         if entry and not entry.startswith("#"):
             entries.append(entry)
     return entries
+
+
+def publishes_aretomo3(params: Dict[str, Any]) -> bool:
+    """The publish_aretomo3 launch option (a JSON boolean, or its string form)."""
+    return str(params.get("publish_aretomo3")).strip().lower() in ("true", "1", "yes", "on")
 
 
 def _between(text: str, begin: str, end: str) -> Optional[str]:
@@ -123,6 +142,8 @@ class CdppProcessor(BaseProcessor):
             ("--preset", params["preset"]),
             ("--refined-pixel-size", str(params["refined_pixel_size"])),
         ]
+        if publishes_aretomo3(params):
+            args.append(("--publish-aretomo3", PUBLISH_VARIANT))
         args += [("--set", entry) for entry in parse_overrides(params.get("config_overrides"))]
         return args
 
@@ -306,7 +327,10 @@ class CdppProcessor(BaseProcessor):
 
         for name, tree in trees.items():
             try:
-                self._record_tree(name, tree, cdpp, own, run_context, job_id)
+                if name == PUBLISH_TREE:
+                    self._record_published_run(tree, cdpp, own, run_context, job_id)
+                else:
+                    self._record_tree(name, tree, cdpp, own, run_context, job_id)
             except Exception as e:
                 logger.error(f"cdpp job {job_id}: could not record the {name} tree run {tree.get('run')}: {e}")
 
@@ -316,9 +340,22 @@ class CdppProcessor(BaseProcessor):
             job_id=job_id,
         )
 
-    def _record_tree(self, name, tree, cdpp, own: PipeExecution, run_context: RunContext, job_id: str) -> None:
-        """Create the tree run's execution for this job, or restart a reused run's in place."""
+    def _record_tree(
+        self,
+        name,
+        tree,
+        cdpp,
+        own: PipeExecution,
+        run_context: RunContext,
+        job_id: str,
+        script_path: Optional[str] = None,
+        script_content: Optional[str] = None,
+    ) -> None:
+        """Create the tree run's execution for job_id, or restart a reused run's in place (script: the cdpp job's)."""
         from workflow.execution import PipelineExecutor
+
+        if script_content is None:
+            script_path, script_content = own.script_path, own.script_content
 
         plan, step = self._tree_plan(name)
         proc_run = (
@@ -335,7 +372,7 @@ class CdppProcessor(BaseProcessor):
         }
         existing = PipeExecution.objects.filter(proc_run=proc_run, pipe_in_plan=step).first()
         if existing:
-            PipelineExecutor()._restart_execution(existing, job_id, parameters, own.script_path, own.script_content)
+            PipelineExecutor()._restart_execution(existing, job_id, parameters, script_path, script_content)
             return
 
         PipeExecution.objects.create(
@@ -344,11 +381,90 @@ class CdppProcessor(BaseProcessor):
             status="submitted",
             job_id=job_id,
             parameters=parameters,
-            script_path=own.script_path,
-            script_content=own.script_content,
+            script_path=script_path,
+            script_content=script_content,
             submitted_at=timezone.now(),
         )
         logger.info(f"cdpp job {job_id}: recorded {name} tree run {proc_run.name}")
+
+    # The published AreTomo3 run
+
+    def _record_published_run(self, tree, cdpp, own: PipeExecution, run_context: RunContext, job_id: str) -> None:
+        """
+        Submit the published run's zarr/thumbnail conversion after the cdpp job; record the run on that job.
+
+        The run's execution follows the conversion job (the AreTomo3 syncer finds its run through
+        the execution of the job it watches), so the run counts as done once it can be reviewed.
+        """
+        try:
+            conversion_id, script_path, script = self._submit_conversion(tree, run_context, job_id)
+        except Exception as e:
+            logger.error(f"cdpp job {job_id}: the published AreTomo3 run {tree['run']} will not be converted: {e}")
+            self._record_tree(PUBLISH_TREE, tree, {**cdpp, "conversion_error": str(e)}, own, run_context, job_id)
+            return
+
+        cdpp = {**cdpp, "cdpp_job_id": job_id, "conversion_job_id": conversion_id}
+        self._record_tree(PUBLISH_TREE, tree, cdpp, own, run_context, conversion_id, script_path, script)
+        JobLog.objects.get_or_create(
+            job_id=conversion_id,
+            defaults={"user": run_context.user, "job_name": self._conversion_job_name(tree, run_context)},
+        )
+
+        try:
+            from processes.tasks import start_job_status_syncer
+
+            start_job_status_syncer(job_id=conversion_id, cluster_id=run_context.cluster_id)
+        except Exception as e:
+            logger.warning(f"Error starting the job status syncer for conversion job {conversion_id}: {e}")
+
+        from workflow.processors import get_processor
+
+        self._start_syncer_task(
+            syncer_class_path="workflow.processors.aretomo3.syncer.AretomoSyncer",
+            run_context=dataclasses.replace(run_context, run_number=tree["run"]),
+            job_id=conversion_id,
+            base_path=get_processor("aretomo3").get_processing_base_path(cluster=run_context.cluster_id),
+        )
+
+    def _conversion_job_name(self, tree, run_context: RunContext) -> str:
+        return f"aretomo3_{run_context.msi_session.name}_{tree['run']}_cdpp_convert"
+
+    def render_conversion_script(self, tree, run_context: RunContext, cdpp_job_id: str) -> str:
+        template_dir = os.path.join(os.path.dirname(__file__), "templates")
+        template = Environment(loader=FileSystemLoader(template_dir)).get_template("cdpp_publish_convert.sh.j2")
+        return template.render(
+            job_name=self._conversion_job_name(tree, run_context),
+            cdpp_job_id=cdpp_job_id,
+            run_dir=shlex.quote(tree["dir"]),
+            software_root=shlex.quote(self.get_software_root(cluster=run_context.cluster_id)),
+            cluster=run_context.cluster_id,
+        )
+
+    def _submit_conversion(self, tree, run_context: RunContext, cdpp_job_id: str) -> Tuple[str, str, str]:
+        """sbatch the conversion as the launching user, held until the cdpp job succeeds. Returns (job id, path, script)."""
+        auth, error = clusterio.get_auth_for_user(run_context.user, run_context.cluster_id)
+        if error:
+            raise ValueError(error.get("error") or str(error))
+
+        script = self.render_conversion_script(tree, run_context, cdpp_job_id)
+        submitter = RemoteJobSubmitter(
+            cluster_id=run_context.cluster_id,
+            auth=auth,
+            remote_script_dir=self.get_script_directory(cluster=run_context.cluster_id),
+        )
+        try:
+            submitter.connect()
+            output, stderr = submitter.run_script(
+                script_content=script, job_name=self._conversion_job_name(tree, run_context)
+            )
+        finally:
+            submitter.close()
+
+        match = _SUBMITTED_JOB.search(output or "")
+        if not match:
+            raise ValueError(f"sbatch printed no job id: {(stderr or output or '').strip()[-300:]}")
+        logger.info(f"cdpp job {cdpp_job_id}: conversion of the published AreTomo3 run {tree['run']} is job {match[1]}")
+        return match[1], submitter.last_script_path, script
 
     def on_job_complete(self, run_context: RunContext, success: bool) -> None:
         logger.info(f"cdpp job for {run_context.msi_session.name}/{run_context.run_number} complete: success={success}")
