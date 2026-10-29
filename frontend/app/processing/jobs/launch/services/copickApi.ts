@@ -5,7 +5,6 @@
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { fetchResource } from '@app/common/queries/fetchResource';
 import { buildQueryString } from '@app/common/services/workflowApi';
-import { calculateNextRunName } from '../utils/runNumbers';
 
 /**
  * Get available template maps for Copick objects
@@ -63,12 +62,11 @@ async function fetchCopickPlanRuns(sessionId: string, planType: string): Promise
   }
 
   const sessionData = data.sessions?.[0];
-  const runNumbers = sessionData?.run_numbers || [];
 
   return {
     success: true,
-    run_numbers: runNumbers,
-    next_run_name: calculateNextRunName(runNumbers),
+    run_numbers: sessionData?.run_numbers || [],
+    next_run_name: sessionData?.next_run_name,
   };
 }
 
