@@ -11,7 +11,7 @@ import re
 from typing import Iterable, Optional
 
 from django.db import transaction
-from processes.models import ProcRun
+from processes.models import ProcRun, ProcSoftware
 from tem.models import MsiSession
 
 RUN_NAME_RE = re.compile(r"run(\d+)")
@@ -63,10 +63,32 @@ def reserve_run(msi_session, proc_plan, existing_dirs: Iterable[str] = ()) -> Pr
         return ProcRun.objects.create(name=name, proc_plan=proc_plan, msi_session=msi_session)
 
 
-# TODO(cdpp/c9-cdpp-registry): CdppProcessor._reserve_tree still calls the old SSH form
-# list_run_dirs(base, session.name, cluster_id=...); switch it to
-# list_run_dirs(step.pipe.software, session).
-def list_run_dirs(software, msi_session) -> list[str]:
-    """Run names of `msi_session` under any plan using `software` (they share its directory)."""
-    runs = ProcRun.objects.filter(msi_session=msi_session, proc_plan__pipeinplan__pipe__software=software)
+# TODO(#1376 cdpp/c6-cdpp-processor): CdppProcessor._reserve_tree still calls the old SSH
+# form list_run_dirs(base, session.name, cluster_id=...); switch it to
+# list_run_dirs(plan_softwares(plan), session).
+def list_run_dirs(softwares, msi_session) -> list[str]:
+    """Run names of `msi_session` under any plan using one of `softwares` (they share directories)."""
+    runs = ProcRun.objects.filter(msi_session=msi_session, proc_plan__pipeinplan__pipe__software__in=softwares)
     return list(runs.values_list("name", flat=True).distinct())
+
+
+def plan_softwares(proc_plan) -> list:
+    """Every software the plan chains: a run name must be free under each one's directory."""
+    return list(ProcSoftware.objects.filter(pipe__pipeinplan__plan=proc_plan).distinct())
+
+
+def software_run_names(softwares, session_names: Iterable[str]) -> dict[str, list[str]]:
+    """
+    Run names per session under any plan using one of `softwares`; list_run_dirs for many sessions.
+
+    Returns:
+        e.g. {"24nov10": ["run001", "run002"]}
+    """
+    runs = ProcRun.objects.filter(
+        msi_session__name__in=list(session_names), proc_plan__pipeinplan__pipe__software__in=softwares
+    )
+    names: dict[str, list[str]] = {}
+    for session_name, run_name in runs.values_list("msi_session__name", "name").distinct():
+        names.setdefault(session_name, []).append(run_name)
+
+    return names
