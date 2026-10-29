@@ -1,11 +1,8 @@
-"""Run-name allocation: DB ProcRuns and on-disk run directories both count as taken."""
-
-from unittest.mock import Mock
+"""Run-name allocation: the session's recorded ProcRuns are the names taken."""
 
 import pytest
-from processes.models import ProcPlan, ProcRun
+from processes.models import Pipe, PipeInPlan, ProcPlan, ProcRun, ProcSoftware
 from tem.models import MsiSession
-from workflow import run_numbers
 from workflow.run_numbers import list_run_dirs, next_run_name, next_run_name_from, reserve_run
 
 
@@ -43,8 +40,7 @@ def test_counts_only_this_session_and_plan(test_proc_plan, test_msi_session, tes
 
 
 @pytest.mark.django_db
-def test_disk_directories_are_taken(test_proc_plan, test_msi_session):
-    # A run dir created outside Embrella must not be reused.
+def test_existing_dirs_are_taken(test_proc_plan, test_msi_session):
     _runs(test_proc_plan, test_msi_session, "run001")
 
     assert next_run_name(test_msi_session, test_proc_plan, existing_dirs=["run005", "notes"]) == "run006"
@@ -59,18 +55,26 @@ def test_reserve_run_creates_distinct_runs(test_proc_plan, test_msi_session):
     assert ProcRun.objects.filter(msi_session=test_msi_session, proc_plan=test_proc_plan).count() == 2
 
 
-def test_list_run_dirs_over_ssh(monkeypatch):
-    ssh = Mock()
-    stdout = Mock()
-    stdout.read.return_value = b"/proc/aretomo3/24nov10/run001\n/proc/aretomo3/24nov10/run002_old/\n"
-    ssh.exec_command.return_value = (Mock(), stdout, Mock())
-    connect = Mock(return_value=ssh)
-    monkeypatch.setattr(run_numbers.clusterio, "get_cluster_ssh_connection", connect)
+def _plan(name, software):
+    plan = ProcPlan.objects.create(name=name)
+    pipe = Pipe.objects.create(name="vol001", software=software)
+    PipeInPlan.objects.create(name="vol001", plan=plan, pipe=pipe)
+    return plan
 
-    assert list_run_dirs("/proc/aretomo3/", "24nov10", cluster_id="czii") == ["run001", "run002_old"]
-    connect.assert_called_once_with(cluster_id="czii")
-    assert ssh.exec_command.call_args.args[0] == "ls -1d /proc/aretomo3/24nov10/run* 2>/dev/null"
-    ssh.close.assert_called_once_with()
+
+@pytest.mark.django_db
+def test_list_run_dirs_by_software(test_msi_session, test_session_plan):
+    # Plans sharing a software share its directory; other software and sessions don't count.
+    aretomo3 = ProcSoftware.objects.create(name="aretomo3-x", processor_class="aretomo3")
+    denoise = ProcSoftware.objects.create(name="denoise-x", processor_class="denoiset")
+    live, cdpp, other = _plan("live", aretomo3), _plan("cdpp-tree", aretomo3), _plan("denoise", denoise)
+    other_session = MsiSession.objects.create(name="24nov11", session_plan=test_session_plan)
+    _runs(live, test_msi_session, "run001")
+    _runs(cdpp, test_msi_session, "run002")
+    _runs(other, test_msi_session, "run009")
+    _runs(live, other_session, "run020")
+
+    assert sorted(list_run_dirs(aretomo3, test_msi_session)) == ["run001", "run002"]
 
 
 @pytest.mark.django_db

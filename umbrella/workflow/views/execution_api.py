@@ -1514,8 +1514,7 @@ Used to determine the next available run number when submitting jobs.
 
 Run numbers are returned without the 'run' prefix, most recent first.
 `next_run_name` is one past the highest `runNNN` recorded in the database for the
-session. Run directories on disk are not listed here (that would be an SSH round trip
-per session); the server-side allocator checks them when it reserves a run.
+session's plan. The server-side allocator also counts the session's other plans of the same software.
 """,
     parameters=[
         OpenApiParameter(
