@@ -1514,7 +1514,8 @@ Used to determine the next available run number when submitting jobs.
 
 Run numbers are returned without the 'run' prefix, most recent first.
 `next_run_name` is one past the highest `runNNN` the session has under any plan
-sharing a software with this plan, since those runs share a directory.
+sharing a software with this plan, since those runs share a directory. A `session_name`
+with no runs of this plan is still listed, with empty `run_numbers`.
 """,
     parameters=[
         OpenApiParameter(
@@ -1600,6 +1601,12 @@ def get_plan_runs(request):
                 stripped_run_number = run_number.replace("run", "")
                 grouped_sessions[name].append((stripped_run_number, created_at))
                 run_names[name].append(run_number)
+
+        # A filtered session with no runs of this plan still gets a next_run_name (e.g. run001)
+        new_session = session_name_filter and session_name_filter not in grouped_sessions
+        if new_session and MsiSession.objects.filter(name=session_name_filter).exists():
+            grouped_sessions[session_name_filter] = []
+            run_names[session_name_filter] = []
 
         # Plans sharing any of this plan's software share a run directory, so their names are taken too
         software_runs = software_run_names(plan_softwares(plan), grouped_sessions)

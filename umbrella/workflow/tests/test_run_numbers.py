@@ -117,3 +117,36 @@ def test_plan_runs_counts_every_chained_software(logged_in_client, test_msi_sess
     _runs(standalone, test_msi_session, "run004")
 
     assert sorted(list_run_dirs(plan_softwares(chained), test_msi_session)) == ["run001", "run004"]
+
+
+@pytest.mark.django_db
+def test_plan_runs_session_without_runs(logged_in_client, test_msi_session):
+    ProcPlan.objects.get_or_create(name="czii-live")
+    params = {"plan_type": "aretomo3", "session_name": test_msi_session.name}
+
+    (session,) = logged_in_client.get("/workflow/v1/execution/plan_runs/", params).json()["sessions"]
+
+    assert session == {"name": test_msi_session.name, "run_numbers": [], "next_run_name": "run001"}
+
+
+@pytest.mark.django_db
+def test_plan_runs_session_without_runs_counts_siblings(logged_in_client, test_msi_session):
+    # First chained run in a session where standalone denoise already reached run004.
+    aretomo3 = ProcSoftware.objects.create(name="aretomo3-x", processor_class="aretomo3")
+    denoise = ProcSoftware.objects.create(name="denoise-x", processor_class="denoiset")
+    _plan("czii-live", aretomo3, denoise)
+    _runs(_plan("standalone-denoise", denoise), test_msi_session, "run004")
+    params = {"plan_type": "aretomo3", "session_name": test_msi_session.name}
+
+    (session,) = logged_in_client.get("/workflow/v1/execution/plan_runs/", params).json()["sessions"]
+
+    assert session["run_numbers"] == []
+    assert session["next_run_name"] == "run005"
+
+
+@pytest.mark.django_db
+def test_plan_runs_unknown_session_is_empty(logged_in_client):
+    ProcPlan.objects.get_or_create(name="czii-live")
+    params = {"plan_type": "aretomo3", "session_name": "no-such-session"}
+
+    assert logged_in_client.get("/workflow/v1/execution/plan_runs/", params).json()["sessions"] == []
