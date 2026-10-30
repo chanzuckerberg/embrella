@@ -9,9 +9,10 @@ import { Box, Typography } from '@mui/material';
 import { FEATURE_FLAG, FeatureFlagsContext } from '@app/common/context/FeatureFlagsProvider';
 import { UserContext } from '@app/common/context/UserProvider';
 import { DJANGO_URL } from '@app/common/constants/api';
+import { CDPP_WEB_PATH } from '@app/common/constants/constants';
 
 // Main navigation structure
-type NavSection = 'home' | 'samples' | 'sessions' | 'processing' | 'deposition' | 'viewer';
+type NavSection = 'home' | 'samples' | 'sessions' | 'processing' | 'deposition' | 'viewer' | 'pipelines';
 
 interface NavItem {
   label: string;
@@ -32,6 +33,7 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   { label: 'Processing', href: '/processing/jobs/monitor', section: 'processing' },
   { label: 'Deposition', href: '/deposition/submissions', section: 'deposition', featureFlag: FEATURE_FLAG.DEPOSITION },
   { label: 'Viewer', href: '/viewer/copick-web/', section: 'viewer', featureFlag: FEATURE_FLAG.COPICK_WEB },
+  { label: 'Pipelines', href: CDPP_WEB_PATH, section: 'pipelines', featureFlag: FEATURE_FLAG.CDPP_WEB },
 ];
 
 // Processing section uses dropdowns instead of flat sub-nav items
@@ -74,6 +76,7 @@ const SUB_NAV_ITEMS: Record<NavSection, SubNavItem[]> = {
   processing: [], // Will be populated dynamically
   deposition: [],
   viewer: [],
+  pipelines: [],
 };
 
 const StyledNav = styled.nav`

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useContext } from 'react';
 import { Box, TextField, InputAdornment } from '@mui/material';
 import { Search as SearchIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { Button } from '@czi-sds/components';
@@ -13,6 +13,8 @@ import { Job } from '../../monitor/types';
 import { HISTORICAL_JOB_COLUMN_DEFS } from '../constants/columns';
 import { HISTORICAL_JOB_FILTER_CONFIGS } from '../constants/filters';
 import { JobLogsModal } from '../../monitor/components/JobLogsModal';
+import { CdppWebLink } from '../../monitor/components/CdppWebLink';
+import { FEATURE_FLAG, FeatureFlagsContext } from '@app/common/context/FeatureFlagsProvider';
 import { API } from '@app/common/constants/api';
 
 export const HistoricalJobsView: React.FC = () => {
@@ -21,6 +23,7 @@ export const HistoricalJobsView: React.FC = () => {
   const [logsModalOpen, setLogsModalOpen] = useState(false);
   const [jobIdSearch, setJobIdSearch] = useState<string>('');
   const [jobNameSearch, setJobNameSearch] = useState<string>('');
+  const isCdppWebEnabled = useContext(FeatureFlagsContext).includes(FEATURE_FLAG.CDPP_WEB);
 
   // Debounced search values (for API calls)
   const [debouncedJobIdSearch, setDebouncedJobIdSearch] = useState<string>('');
@@ -71,9 +74,12 @@ export const HistoricalJobsView: React.FC = () => {
 
   const renderActionsCell = useCallback(
     ({ row }: { row: { original: Job } }) => (
-      <Button sdsType="secondary" sdsStyle="outline" size="small" onClick={() => handleJobClick(row.original)}>
-        View
-      </Button>
+      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+        <Button sdsType="secondary" sdsStyle="outline" size="small" onClick={() => handleJobClick(row.original)}>
+          View
+        </Button>
+        <CdppWebLink job={row.original} />
+      </Box>
     ),
     [handleJobClick]
   );
@@ -85,11 +91,12 @@ export const HistoricalJobsView: React.FC = () => {
         return { ...col, cell: renderJobNameCell };
       }
       if (col.id === 'actions') {
-        return { ...col, cell: renderActionsCell };
+        // Room for the cdpp-web link next to the View button.
+        return { ...col, cell: renderActionsCell, size: isCdppWebEnabled ? 120 : col.size };
       }
       return col;
     });
-  }, [renderJobNameCell, renderActionsCell]);
+  }, [renderJobNameCell, renderActionsCell, isCdppWebEnabled]);
 
   return (
     <TableStateProvider
