@@ -19,11 +19,10 @@ CDPP_DIR = f"{ROOT}/cdpp/{SESSION}/run001"
 
 
 class FakeCluster:
-    """Answers the processor's SSH commands: the --plan-only call and run-directory listings."""
+    """Answers the processor's --plan-only SSH call."""
 
-    def __init__(self, plan=PLAN, dirs=None, err=""):
+    def __init__(self, plan=PLAN, err=""):
         self.plan = plan
-        self.dirs = dirs or {}  # tool -> run dir names on disk
         self.err = err
         self.commands = []
 
@@ -34,13 +33,9 @@ class FakeCluster:
 
     def _exec(self, command, timeout=None):
         self.commands.append(command)
-        if "--plan-only" in command:
-            out = f"Loading mamba\nCDPP_PLAN_BEGIN\n{json.dumps(self.plan)}\nCDPP_PLAN_END\n" if self.plan else ""
-        else:
-            # ls -1d <processing base>/<session>/run* 2>/dev/null
-            session_dir = command.split()[2].rsplit("/run*", 1)[0]
-            tool = session_dir.split("/")[-2]
-            out = "\n".join(f"{session_dir}/{name}" for name in self.dirs.get(tool, []))
+        out = ""
+        if "--plan-only" in command and self.plan:
+            out = f"Loading mamba\nCDPP_PLAN_BEGIN\n{json.dumps(self.plan)}\nCDPP_PLAN_END\n"
         return Mock(), _stream(out), _stream(self.err)
 
     @property

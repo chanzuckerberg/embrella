@@ -26,9 +26,13 @@ from django.db.models import (
     When,
 )
 from django.db.models.functions import Coalesce, Lower, StrIndex, Substr, Trim
+from django.shortcuts import get_object_or_404
 from django.utils.timezone import now as tz_now
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema, inline_serializer
+from images.permissions import ImagesEnabled
+from images.serializers import ImageSerializer, ImageUploadSerializer
+from images.services import InvalidImageError
 from projects.models import Project
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
@@ -53,6 +57,7 @@ from cryo_grids.models import (
     Cane,
     CryoGrid,
     CryoGridBox,
+    GridImage,
     GridLabel,
     Label,
     PlungeFreezingDevice,
@@ -68,13 +73,21 @@ from cryo_grids.serializers import (
     CryoGridSerializer,
     FreezingSessionSerializer,
     GridDetailsSerializer,
+    GridImageOrderSerializer,
     GridInBoxSerializer,
     LabelSerializer,
     PuckSerializer,
     SampleSerializer,
     SpecimenSerializer,
 )
-from cryo_grids.services import update_grids
+from cryo_grids.services import (
+    StaleImageOrderError,
+    add_grid_image,
+    grid_images,
+    remove_grid_image,
+    reorder_grid_images,
+    update_grids,
+)
 from cryo_grids.viewset_helpers import (
     add_selected_status,
     apply_grid_box_filters,
@@ -85,6 +98,9 @@ from cryo_grids.viewset_helpers import (
     natural_name_ordering,
     parse_selected_filters,
 )
+
+# Matches Image ids in URLs, e.g. 0b7c…-…; other strings 404 instead of erroring
+UUID_PATTERN = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
 
 class PuckViewSet(viewsets.ModelViewSet):
@@ -1437,6 +1453,75 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    @extend_schema(
+        summary="List or upload grid images",
+        description="GET lists the grid's images in order. POST uploads one: PNG, JPEG, WebP or single-page TIFF.",
+        request={"multipart/form-data": ImageUploadSerializer},
+        responses={status.HTTP_200_OK: ImageSerializer(many=True), status.HTTP_201_CREATED: ImageSerializer},
+    )
+    @action(
+        detail=False,
+        methods=["get", "post"],
+        url_path=r"(?P<grid_id>[0-9]+)/images",
+        permission_classes=[IsAuthenticated, ImagesEnabled],
+    )
+    def images(self, request, grid_id=None):
+        """URL: /cryo_grids/v1/grids/{grid_id}/images/ (trashed grids keep their images)"""
+        grid = get_object_or_404(CryoGrid, id=grid_id)
+        if request.method == "GET":
+            return Response(ImageSerializer(grid_images(grid), many=True).data)
+
+        serializer = ImageUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        upload = serializer.validated_data
+        try:
+            image = add_grid_image(grid, upload["file"], request.user, upload["notes"])
+        except InvalidImageError as exc:
+            return Response({"detail": exc.user_message}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(ImageSerializer(image).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(summary="Delete a grid image", responses={status.HTTP_204_NO_CONTENT: None})
+    @action(
+        detail=False,
+        methods=["delete"],
+        url_path=rf"(?P<grid_id>[0-9]+)/images/(?P<image_id>{UUID_PATTERN})",
+        permission_classes=[IsAuthenticated, ImagesEnabled],
+    )
+    def delete_image(self, request, grid_id=None, image_id=None):
+        """URL: /cryo_grids/v1/grids/{grid_id}/images/{image_id}/"""
+        grid = get_object_or_404(CryoGrid, id=grid_id)
+        try:
+            remove_grid_image(grid, image_id)
+        except GridImage.DoesNotExist:
+            return Response({"detail": "Image not found on this grid."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        summary="Reorder grid images",
+        description="Send every image id of the grid, first shown first. 409 if they don't match the grid's images.",
+        request=GridImageOrderSerializer,
+        responses={status.HTTP_200_OK: ImageSerializer(many=True)},
+    )
+    @action(
+        detail=False,
+        methods=["put"],
+        url_path=r"(?P<grid_id>[0-9]+)/images/order",
+        permission_classes=[IsAuthenticated, ImagesEnabled],
+    )
+    def reorder_images(self, request, grid_id=None):
+        """URL: /cryo_grids/v1/grids/{grid_id}/images/order/"""
+        grid = get_object_or_404(CryoGrid, id=grid_id)
+        serializer = GridImageOrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            images = reorder_grid_images(grid, serializer.validated_data["image_ids"])
+        except StaleImageOrderError:
+            return Response({"detail": "Images changed; reload and try again."}, status=status.HTTP_409_CONFLICT)
+
+        return Response(ImageSerializer(images, many=True).data)
 
     @action(detail=False, methods=["get"])
     def filterlist(self, request):

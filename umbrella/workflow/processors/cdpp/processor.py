@@ -207,7 +207,7 @@ class CdppProcessor(BaseProcessor):
 
     def _reserve_tree(self, name: str, fingerprint: str, run_context: RunContext) -> Dict[str, Any]:
         from workflow.processors import get_processor
-        from workflow.run_numbers import list_run_dirs, reserve_run
+        from workflow.run_numbers import list_run_dirs, plan_softwares, reserve_run
 
         plan, step = self._tree_plan(name)
         session = run_context.msi_session
@@ -218,7 +218,7 @@ class CdppProcessor(BaseProcessor):
         run = self._run_with_fingerprint(plan, session, fingerprint)
         reused = run is not None
         if not reused:
-            existing_dirs = list_run_dirs(base, session.name, cluster_id=run_context.cluster_id)
+            existing_dirs = list_run_dirs(plan_softwares(plan), session)
             run = reserve_run(session, plan, existing_dirs=existing_dirs)
 
         logger.info(f"cdpp {name} tree for {session.name}: {'reusing' if reused else 'reserved'} {run.name}")

@@ -5,14 +5,24 @@ HTTP-handling code.
 """
 
 from django.db import transaction
+from django.db.models import Max
+from images import services as image_services
+from images.models import Image
 from simple_history.utils import bulk_update_with_history
 
 from cryo_grids.history import ChangeReason
-from cryo_grids.models import CryoGrid, CryoGridBox, GridLabel
+from cryo_grids.models import CryoGrid, CryoGridBox, GridImage, GridLabel
+
+# Grid field mirrored onto its images' Image.project
+PROJECT_FIELD = "intended_project"
 
 
 class DuplicateGridError(Exception):
     """Raised when a grid duplication request cannot be satisfied."""
+
+
+class StaleImageOrderError(Exception):
+    """Reorder ids don't match the grid's images, e.g. an upload landed mid-drag."""
 
 
 def update_grids(grids, *, reason: ChangeReason, **fields) -> int:
@@ -27,7 +37,64 @@ def update_grids(grids, *, reason: ChangeReason, **fields) -> int:
         for name, value in fields.items():
             setattr(grid, name, value)
 
-    return bulk_update_with_history(objs, CryoGrid, fields=list(fields), default_change_reason=reason)
+    updated = bulk_update_with_history(objs, CryoGrid, fields=list(fields), default_change_reason=reason)
+
+    # Bulk updates skip post_save, so images wouldn't follow a project change
+    if PROJECT_FIELD in fields:
+        image_services.set_project(_image_ids(grid__in=objs), fields[PROJECT_FIELD])
+
+    return updated
+
+
+def grid_images(grid: CryoGrid) -> list[Image]:
+    """``grid``'s images in display order."""
+    links = GridImage.objects.filter(grid=grid).select_related("image__uploaded_by")
+    return [link.image for link in links]
+
+
+def add_grid_image(grid: CryoGrid, upload, user, notes: str = "") -> Image:
+    """Store ``upload`` as the grid's last image. Raises images.services.InvalidImageError."""
+    last = GridImage.objects.filter(grid=grid).aggregate(last=Max("order"))["last"]
+    order = 0 if last is None else last + 1
+
+    return image_services.ingest(
+        upload,
+        user,
+        project=grid.intended_project,
+        notes=notes,
+        link=lambda image: GridImage.objects.create(grid=grid, image=image, order=order),
+    )
+
+
+def remove_grid_image(grid: CryoGrid, image_id) -> None:
+    """Delete one of ``grid``'s images. Raises GridImage.DoesNotExist if it isn't the grid's."""
+    link = GridImage.objects.select_related("image").get(grid=grid, image_id=image_id)
+    image_services.delete(link.image)
+
+
+@transaction.atomic
+def reorder_grid_images(grid: CryoGrid, image_ids: list) -> list[Image]:
+    """Put ``grid``'s images in ``image_ids`` order. Raises StaleImageOrderError unless ids match exactly."""
+    links = {link.image_id: link for link in GridImage.objects.select_for_update().filter(grid=grid)}
+    if len(image_ids) != len(links) or set(image_ids) != set(links):
+        raise StaleImageOrderError
+
+    for order, image_id in enumerate(image_ids):
+        links[image_id].order = order
+
+    # No history rows: the timeline doesn't show reorders
+    GridImage.objects.bulk_update(links.values(), ["order"])
+
+    return grid_images(grid)
+
+
+def sync_image_project(grid: CryoGrid) -> None:
+    """Point ``grid``'s images at its current project."""
+    image_services.set_project(_image_ids(grid=grid), grid.intended_project)
+
+
+def _image_ids(**grid_filter):
+    return GridImage.objects.filter(**grid_filter).values("image_id")
 
 
 def get_available_positions(box: CryoGridBox) -> list[int]:

@@ -13,6 +13,8 @@ x-backend-env: &backend-env
   USE_MYSQL: 'True'
   MYSQL_HOST: db
   MYSQL_PORT: '3306'
+  # In-container upload dir (MEDIA_ROOT). Each overlay binds a host dir here.
+  EMBRELLA_MEDIA_DIR: /srv/media
 
 services:
   # One-shot: runs DB migrations
@@ -33,6 +35,7 @@ services:
     networks: [internal]
     volumes:
       - backend_static:/app/umbrella/staticfiles
+      - media:/srv/media
     restart: unless-stopped
 
   worker:
@@ -70,6 +73,7 @@ services:
     networks: [internal, embrella]
     volumes:
       - backend_static:/srv/staticfiles:ro
+      - media:/srv/media:ro
     environment:
       # The nginx image's entrypoint runs envsubst
       #   LOCAL_RESOLVERS: engine DNS (Docker or Podman) read from /etc/resolv.conf.
@@ -92,3 +96,4 @@ networks:
 volumes:
   db_data:
   backend_static:
+  media:

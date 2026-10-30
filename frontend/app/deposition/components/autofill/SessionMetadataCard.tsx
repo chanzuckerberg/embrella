@@ -167,12 +167,8 @@ export function SessionMetadataCard({
   const yamlTitle = session.aretomoRun ? `${sessionLabel} · ${session.aretomoRun}` : sessionLabel;
 
   const applyYaml = (text: string) => {
-    const { tiltseries, shared, perFlavor } = yamlToSession(text);
+    const { tiltseries, perFlavor } = yamlToSession(text);
     for (const [k, v] of Object.entries(tiltseries)) onFieldChange('tiltseries', k, v);
-    for (const [k, v] of Object.entries(shared)) {
-      onFieldChange('denoised', k, v);
-      onFieldChange('filtered', k, v);
-    }
     for (const flavor of TOMOGRAM_FLAVORS) {
       for (const [k, v] of Object.entries(perFlavor[flavor])) onFieldChange(flavor, k, v);
     }
@@ -379,10 +375,6 @@ export function SessionMetadataCard({
                   columns={showYaml ? 1 : 2}
                   runName={session.aretomoRun}
                   showOnlyIssues={showOnlyIssues}
-                  onShared={(key, v) => {
-                    onFieldChange('denoised', key, v);
-                    onFieldChange('filtered', key, v);
-                  }}
                   onFlavor={(flavor, key, v) => {
                     onFieldChange(flavor, key, v);
                     if (key === 'is_visualization_default' && v === true) {

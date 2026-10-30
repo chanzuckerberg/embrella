@@ -36,6 +36,14 @@ def _tree_run(plan_name, session, name, fingerprint=None, job_id="100"):
     return run
 
 
+def _sibling_run(plan_name, session, name):
+    """A run of another plan chaining the same software as `plan_name`."""
+    pipe = PipeInPlan.objects.filter(plan__name=plan_name).first().pipe
+    sibling = ProcPlan.objects.create(name=f"{plan_name}-sibling")
+    PipeInPlan.objects.create(name=pipe.name, plan=sibling, step=1, pipe=pipe)
+    return ProcRun.objects.create(name=name, proc_plan=sibling, msi_session=session)
+
+
 # Parameters
 
 
@@ -80,7 +88,7 @@ def test_reserve_reuses_matching_trees_and_allocates_the_rest(fake_cluster, cdpp
     _tree_run("czii-miss-alignment", test_msi_session, "run001", fingerprint="older-parameters")
     _tree_run("czii-miss-alignment", test_msi_session, "run002", fingerprint=FINGERPRINTS["miss_alignment"])
     _tree_run("czii-isonet2", test_msi_session, "run001", fingerprint="older-parameters")
-    fake_cluster.dirs = {"isonet2": ["run004"]}  # created outside Embrella
+    _sibling_run("czii-isonet2", test_msi_session, "run004")  # shares isonet2's directory
 
     reservation = CdppProcessor().reserve_runs(cdpp_context, PARAMS)
 
