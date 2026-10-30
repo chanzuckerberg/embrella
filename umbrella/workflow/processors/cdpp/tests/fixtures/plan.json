@@ -1,0 +1,58 @@
+{
+  "schema": "cdpp.plan/v1",
+  "config": null,
+  "output_dir": "/hpc/projects/group.czii/krios1.processing/cdpp/24nov10/run001",
+  "fingerprint": "4ee69eb1e166229e11c9165e0fc6e9e0514664a8eeaa9c918aa6d8423c5ba19b",
+  "trees": {
+    "miss_alignment": {
+      "fingerprint": "89962c67608da433d63f103768e4958a5ccc01ce614f9b45bc6ab887f3fb7427",
+      "dir": null,
+      "roots": {
+        "miss_alignment": "miss_alignment",
+        "warp": "warp",
+        "warp_reconstruct_global": "warp_reconstruct_global",
+        "warp_reconstruct_local": "warp_reconstruct_local",
+        "aretomo_recon_from_warp_global": "aretomo_recon_from_warp_global",
+        "aretomo_recon_from_warp_local": "aretomo_recon_from_warp_local"
+      },
+      "steps": [
+        "warp_metadata_create",
+        "miss_alignment_train",
+        "miss_alignment_inference",
+        "warp_reconstruct_global",
+        "warp_reconstruct_local",
+        "aretomo_recon_from_warp_global",
+        "aretomo_recon_from_warp_local"
+      ]
+    },
+    "isonet2": {
+      "fingerprint": "7dbdaeb53dc78e381863d19e706332bfa1b1fb8894fa30c9fc1aad4431631003",
+      "dir": null,
+      "roots": {
+        "isonet2": "."
+      },
+      "steps": [
+        "isonet2_denoise_train",
+        "isonet2_denoise_predict",
+        "isonet2_make_mask",
+        "isonet2_train",
+        "isonet2_predict_global",
+        "isonet2_predict_local"
+      ]
+    },
+    "copick": {
+      "fingerprint": "51b1ea3c80778a9057468721eb3477f014ffb30d99940dc9d43a4833e9ba97f2",
+      "dir": null,
+      "roots": {
+        "copick": "."
+      },
+      "steps": [
+        "copick_init",
+        "membrain_seg",
+        "copick_gpu",
+        "octopi_segment",
+        "sample_slab"
+      ]
+    }
+  }
+}
