@@ -83,6 +83,12 @@ export interface DatasetJob {
   push_progress?: SyncProgress | null;
   sync_summary?: SyncSummary | null;
   validation?: JobValidation | null;
+  ingestion_state?: 'not_started' | 'opening_pr' | 'pr_opened' | 'failed';
+  ingestion_pr_url?: string;
+  ingestion_error?: string;
+  ingestion_retryable?: boolean;
+  ingestion_branch?: string;
+  last_validated_hash?: string;
 }
 
 export interface SubmitResponse {

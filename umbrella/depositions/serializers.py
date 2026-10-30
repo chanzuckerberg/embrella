@@ -10,6 +10,7 @@ Save model — shallow-nested autosave per wizard step:
 
 from cryo_grids.models import Sample
 from django.db.models import prefetch_related_objects
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import (
@@ -117,6 +118,23 @@ class DatasetJobSerializer(serializers.ModelSerializer):
     sync_summary = serializers.SerializerMethodField()
     push_progress = serializers.SerializerMethodField()
     validation = serializers.SerializerMethodField()
+    ingestion_error = serializers.SerializerMethodField()
+    ingestion_retryable = serializers.SerializerMethodField()
+
+    def get_ingestion_retryable(self, obj):
+        from depositions.services.ingestion import TASK_LEASE
+
+        return obj.state == "completed" and (
+            obj.ingestion_state == "failed"
+            or (
+                bool(obj.ingestion_attempt)
+                and obj.ingestion_state in ("not_started", "opening_pr")
+                and obj.updated_at <= timezone.now() - TASK_LEASE
+            )
+        )
+
+    def get_ingestion_error(self, obj):
+        return obj.ingestion_error if _is_owner(self, obj.dataset) else ""
 
     def get_validation(self, obj):
         result = obj.validation
@@ -147,7 +165,7 @@ class DatasetJobSerializer(serializers.ModelSerializer):
     class Meta:
         model = DatasetJob
         # Full log excerpts are available only through the owner-gated logs endpoint.
-        exclude = ["log_excerpt"]
+        exclude = ["log_excerpt", "ingestion_attempt"]
 
 
 class DepositionSessionLinkSerializer(serializers.ModelSerializer):

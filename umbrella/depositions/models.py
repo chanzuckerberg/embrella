@@ -6,6 +6,15 @@ from tem.models import MsiSession
 class Deposition(models.Model):
     # No status field — status is per-dataset (see Dataset.status). A deposition-level status, if ever needed, is a derived rollup of its datasets.
     deposition_id = models.IntegerField(null=True, unique=True, blank=True, help_text="Assigned by reservation service")
+    metadata_config_dataset = models.ForeignKey(
+        "Dataset",
+        to_field="dataset_id",
+        null=True,
+        blank=True,
+        editable=False,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
     title = models.CharField(max_length=256)
     description = models.TextField(blank=True)
     submitter_user = models.ForeignKey(
@@ -156,6 +165,17 @@ class DatasetJob(models.Model):
     push_progress = models.JSONField(null=True, blank=True)
     # Pre-flight validation result for the current prep attempt (see services/validation.py).
     validation = models.JSONField(null=True, blank=True)
+    ingestion_state = models.CharField(
+        max_length=16,
+        default="not_started",
+        db_index=True,
+        choices=[(value, value) for value in ("not_started", "opening_pr", "pr_opened", "failed")],
+    )
+    ingestion_pr_url = models.URLField(blank=True)
+    ingestion_error = models.TextField(blank=True)
+    ingestion_branch = models.CharField(max_length=255, blank=True)
+    last_validated_hash = models.CharField(max_length=64, blank=True)
+    ingestion_attempt = models.CharField(max_length=32, blank=True, editable=False)
     error_message = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

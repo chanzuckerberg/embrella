@@ -45,3 +45,14 @@ comma-separated.
     The service account's SSH key is not a setting. Place it beside
     `docker-compose.yml` as `slurm_key` and enable its mounts; see
     [Deployment](deployment.md#installation).
+
+## Automatic ingestion PRs
+
+| Variable | Required | Default | Notes |
+| --- | --- | --- | --- |
+| `DEPOSITION_INGESTION_ENABLED` | | `False` | Set `True` to open ingestion PRs after upload. |
+| `DEPOSITION_INGESTION_GITHUB_APP_ID` | when enabled | | GitHub App ID. |
+| `DEPOSITION_INGESTION_GITHUB_KEY_HOSTPATH` | when enabled | | Host PEM path mounted into the worker. |
+| `DEPOSITION_INGESTION_GITHUB_KEY_PATH` | | | Set automatically to `/run/secrets/ingestion_github_key` by the staging/prod overlays. |
+| `DEPOSITION_INGESTION_GITHUB_REPOSITORY` | | `chanzuckerberg/cryoet-data-portal-backend` | Target repository. |
+| `DEPOSITION_INGESTION_GITHUB_BASE_BRANCH` | | `main` | Target branch. |

@@ -118,13 +118,17 @@ def build_dataset_metadata(dataset) -> dict:
     source_authors = (
         dataset.deposition.authors_json if dataset.is_authors_same_as_deposition else dataset.authors_json
     ) or []
-    people = (
-        Person.objects.using(dataset._state.db)
-        .select_related("institution")
-        .in_bulk(e["author_id"] for e in source_authors if isinstance(e, dict) and e.get("author_id") is not None)
-    )
-    authors = [a for a in (_map_author(e, people) for e in source_authors if isinstance(e, dict)) if a]
+    authors = build_authors(source_authors, using=dataset._state.db)
     if authors:
         meta["authors"] = authors
 
     return meta
+
+
+def build_authors(entries, *, using):
+    people = (
+        Person.objects.using(using)
+        .select_related("institution")
+        .in_bulk(e["author_id"] for e in entries if isinstance(e, dict) and e.get("author_id") is not None)
+    )
+    return [a for a in (_map_author(e, people) for e in entries if isinstance(e, dict)) if a]

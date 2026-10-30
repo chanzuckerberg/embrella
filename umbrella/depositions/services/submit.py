@@ -14,7 +14,7 @@ from common import clusterio
 from depositions import tasks
 from depositions.models import DatasetJob, Deposition
 from depositions.services.dataprep_config import dataprep_config_yaml, dataset_is_ready, resolve_sync_destination
-from depositions.services.dataset_metadata import build_dataset_metadata
+from depositions.services.dataset_metadata import build_authors, build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
 from depositions.services.metadata_requirements import metadata_issues
@@ -74,8 +74,7 @@ def submit_dataset_prep(dataset):
     # Claim one queued/running prep per deposition before freezing the shared config.
     # Otherwise an older queued job could overwrite a newer sibling's config.
     with transaction.atomic(using=db):
-        Deposition.objects.using(db).select_for_update().get(pk=deposition.pk)
-        deposition.refresh_from_db()
+        deposition = Deposition.objects.using(db).select_for_update().get(pk=deposition.pk)
         dataset.refresh_from_db()
         if not dataset_is_ready(dataset):
             raise SubmissionValidationError(
@@ -94,6 +93,15 @@ def submit_dataset_prep(dataset):
             )
         portal_metadata = build_dataset_metadata(dataset)
         issues = metadata_issues(portal_metadata, deposition.title)
+        defines_deposition = deposition.metadata_config_dataset_id == dataset.dataset_id or (
+            deposition.metadata_config_dataset_id is None
+            and not DatasetJob.objects.using(db).filter(dataset__deposition=deposition, state="completed").exists()
+        )
+        if defines_deposition:
+            if not deposition.description.strip():
+                issues.append("Deposition description is required for its metadata-defining dataset.")
+            if not build_authors(deposition.authors_json, using=db):
+                issues.append("Add at least one deposition author before preparing its metadata-defining dataset.")
         if issues:
             raise SubmissionValidationError("Complete the metadata before preparation:\n" + "\n".join(issues))
         job, _ = DatasetJob.objects.using(db).get_or_create(dataset=dataset)
@@ -119,6 +127,9 @@ def submit_dataset_prep(dataset):
         if not claimed:
             job.refresh_from_db()
             raise SubmissionValidationError(f"Dataset is already {job.state}; it can't be submitted again.")
+        if deposition.metadata_config_dataset_id is None and defines_deposition:
+            deposition.metadata_config_dataset_id = dataset.dataset_id
+            deposition.save(using=db, update_fields=["metadata_config_dataset"])
         job.refresh_from_db()
         apply_status(job)
 

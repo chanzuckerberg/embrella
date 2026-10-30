@@ -13,7 +13,14 @@ export function useDataset(id: number | null) {
     queryFn: () => fetchDataset(id as number),
     enabled: id != null && id > 0,
     // Keep metadata screens current if the owner navigates back during preparation.
-    refetchInterval: (query) =>
-      isActiveJobPhase(query.state.data?.job?.state) ? DEFAULT_DATASET_POLL_INTERVAL_MS : false,
+    refetchInterval: (query) => {
+      const job = query.state.data?.job;
+      return isActiveJobPhase(job?.state) ||
+        (!job?.ingestion_retryable &&
+          (job?.ingestion_state === 'opening_pr' ||
+            (job?.state === 'completed' && job.ingestion_state === 'not_started' && !!job.ingestion_branch)))
+        ? DEFAULT_DATASET_POLL_INTERVAL_MS
+        : false;
+    },
   });
 }

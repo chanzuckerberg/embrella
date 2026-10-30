@@ -50,6 +50,52 @@ beforeEach(() => {
   (api.fetchDatasetLogs as jest.Mock).mockResolvedValue({ logs: '', source: 'none' });
 });
 
+it.each(['failed', 'not_started'] as const)(
+  'retries a %s ingestion attempt without restarting upload',
+  async (ingestionState) => {
+    let serverDataset: Dataset = {
+      ...dataset,
+      status: 'pushed',
+      job: {
+        id: 1,
+        state: 'completed',
+        ingestion_state: ingestionState,
+        ingestion_retryable: true,
+        ingestion_error: 'GitHub unavailable',
+        ingestion_branch: 'deposition-1-dataset-2',
+      },
+    };
+    (api.fetchDataset as jest.Mock).mockImplementation(async () => serverDataset);
+    (api.createIngestionPR as jest.Mock).mockImplementation(async () => {
+      serverDataset = {
+        ...serverDataset,
+        job: {
+          id: 1,
+          state: 'completed',
+          ingestion_state: 'pr_opened',
+          ingestion_pr_url: 'https://github.com/chanzuckerberg/cryoet-data-portal-backend/pull/999',
+          ingestion_branch: 'deposition-1-dataset-2',
+        },
+      };
+      return serverDataset.job;
+    });
+    const client = newClient();
+    client.setQueryData(depositionKeys.dataset(dataset.id), serverDataset);
+    const { unmount } = render(<LiveSubmitStep />, { wrapper: wrapperFor(client) });
+    if (ingestionState === 'failed') expect(screen.getByText('GitHub unavailable')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry PR creation' }));
+    expect(await screen.findByRole('link', { name: 'Ingestion PR opened' })).toHaveAttribute(
+      'href',
+      'https://github.com/chanzuckerberg/cryoet-data-portal-backend/pull/999'
+    );
+    expect(api.createIngestionPR).toHaveBeenCalledWith(dataset.id);
+    expect(api.pushDataset).not.toHaveBeenCalled();
+    expect(api.submitDataset).not.toHaveBeenCalled();
+    unmount();
+    client.clear();
+  }
+);
+
 it('shows recovery after a failed upload, then starts preparation with the real hook', async () => {
   let serverDataset = dataset;
   (api.fetchDataset as jest.Mock).mockImplementation(async () => serverDataset);

@@ -3,6 +3,7 @@
 import logging
 from datetime import timedelta
 
+from django.utils import timezone
 from django_q.tasks import async_task
 
 from common import clusterio
@@ -19,6 +20,26 @@ MAX_WAIT_ATTEMPTS = 20
 
 _COMPLETION = {"prep": submission.on_prep_complete, "push": submission.on_push_complete}
 _ATTEMPT_FIELD = {"prep": "prep_slurm_job_id", "push": "push_slurm_job_id"}
+
+
+def create_ingestion_pr(dataset_job_id, attempt):
+    from depositions.services.ingestion import finish_attempt, open_ingestion_pr
+
+    claimed = DatasetJob.objects.filter(
+        pk=dataset_job_id, state="completed", ingestion_state="not_started", ingestion_attempt=attempt
+    ).update(ingestion_state="opening_pr", updated_at=timezone.now())
+    if not claimed:
+        return
+    try:
+        job = DatasetJob.objects.select_related("dataset__deposition").get(pk=dataset_job_id)
+        url = open_ingestion_pr(job)
+    except Exception as error:
+        logger.exception("Ingestion PR failed for DatasetJob %s", dataset_job_id)
+        finish_attempt(dataset_job_id, attempt, {"ingestion_state": "failed", "ingestion_error": str(error)[:8000]})
+        return
+    finish_attempt(
+        dataset_job_id, attempt, {"ingestion_state": "pr_opened", "ingestion_pr_url": url, "ingestion_error": ""}
+    )
 
 
 def _exit_ok(exit_code):

@@ -25,10 +25,18 @@ function wrapperFor(client: QueryClient) {
   };
 }
 
-it('polls active jobs every four seconds and stops when preparation finishes', async () => {
+it.each(['prep', 'ingestion'])('polls active %s work and stops when it finishes or needs a retry', async (phase) => {
+  jest.clearAllMocks();
   jest.useFakeTimers();
-  const initial = { ...dataset, job: { id: 1, state: 'prep_running' } } as Dataset;
-  (api.fetchDataset as jest.Mock).mockResolvedValue({ ...dataset });
+  const initial = {
+    ...dataset,
+    job:
+      phase === 'prep'
+        ? { id: 1, state: 'prep_running' }
+        : { id: 1, state: 'completed', ingestion_state: 'not_started', ingestion_branch: 'deposition-1-dataset-2' },
+  } as Dataset;
+  const stopped = phase === 'prep' ? dataset : { ...initial, job: { ...initial.job, ingestion_retryable: true } };
+  (api.fetchDataset as jest.Mock).mockResolvedValue(stopped);
   const client = newClient();
   client.setQueryData(depositionKeys.dataset(initial.id), initial);
   const { result, unmount } = renderHook(() => useDataset(initial.id), {
@@ -43,7 +51,7 @@ it('polls active jobs every four seconds and stops when preparation finishes', a
       await jest.advanceTimersByTimeAsync(1);
       await jest.advanceTimersByTimeAsync(1);
     });
-    expect(result.current.data?.job?.state).toBe('prep_completed');
+    expect(result.current.data?.job).toEqual(stopped.job);
     expect(api.fetchDataset).toHaveBeenCalledTimes(1);
     await act(async () => {
       await jest.advanceTimersByTimeAsync(8000);

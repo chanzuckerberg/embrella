@@ -2,6 +2,7 @@
 
 import logging
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -40,7 +41,7 @@ def on_job_running(job, phase, *, job_id):
 
 
 @transaction.atomic
-def _record_completion(job, *, active_states, attempt_field, job_id, fields, require_attempt=False):
+def _record_completion(job, *, active_states, attempt_field, job_id, fields, require_attempt=False, after_record=None):
     # Update only jobs still in the expected state; ignore stale callbacks.
     qs = DatasetJob.objects.filter(pk=job.pk, state__in=active_states)
     if require_attempt:
@@ -59,6 +60,8 @@ def _record_completion(job, *, active_states, attempt_field, job_id, fields, req
         return job
     job.refresh_from_db()
     apply_status(job)
+    if after_record:
+        after_record(job)
     return job
 
 
@@ -193,6 +196,7 @@ def start_push(job, *, launch, cancel=None):
     return job
 
 
+@transaction.atomic
 def on_push_complete(job, success, *, job_id=None, error_message=None, log_excerpt=None):
     """Mark a finished push job completed, or failed. Ignored unless the row is still an active push attempt with a stored SLURM id."""
     if success:
@@ -210,6 +214,27 @@ def on_push_complete(job, success, *, job_id=None, error_message=None, log_excer
         }
         if log_excerpt is not None:
             fields["log_excerpt"] = log_excerpt
+    after_record = None
+    if success and settings.DEPOSITION_INGESTION_ENABLED:
+        from depositions.services.ingestion import queue_ingestion_pr
+
+        def after_record(job):
+            def enqueue():
+                try:
+                    queue_ingestion_pr(job)
+                except Exception:
+                    logger.exception("Could not start ingestion PR for DatasetJob %s", job.pk)
+                    DatasetJob.objects.filter(
+                        pk=job.pk, state="completed", ingestion_state__in=("not_started", "failed")
+                    ).update(
+                        ingestion_state="failed",
+                        ingestion_error="Upload succeeded, but ingestion could not be queued. Retry PR creation.",
+                        ingestion_branch=f"deposition-{job.dataset.deposition.deposition_id}-dataset-{job.dataset.dataset_id}",
+                        updated_at=timezone.now(),
+                    )
+
+            transaction.on_commit(enqueue, robust=True)
+
     return _record_completion(
         job,
         active_states=PUSH_ACTIVE,
@@ -217,4 +242,5 @@ def on_push_complete(job, success, *, job_id=None, error_message=None, log_excer
         job_id=job_id,
         fields=fields,
         require_attempt=True,
+        after_record=after_record,
     )

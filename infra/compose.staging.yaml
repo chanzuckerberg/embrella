@@ -48,8 +48,10 @@ services:
     environment:
       DJANGO_ENV: staging
       SLURM_KEYFILE: /run/secrets/slurm_key
+      DEPOSITION_INGESTION_GITHUB_KEY_PATH: /run/secrets/ingestion_github_key
     volumes:
       - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
+      - ${DEPOSITION_INGESTION_GITHUB_KEY_HOSTPATH:-/dev/null}:/run/secrets/ingestion_github_key:ro
 
   db:
     # Derived image patches out the entrypoint's gosu drop to UID 999, and
