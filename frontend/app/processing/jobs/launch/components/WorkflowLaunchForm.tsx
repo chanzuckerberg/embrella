@@ -1118,6 +1118,7 @@ export default function WorkflowLaunchForm({
                 reconstruction: 'Reconstruction',
                 ctf: 'CTF Options',
                 custom: 'Custom Parameters',
+                advanced: 'Advanced',
               };
 
               // Define order
@@ -1129,6 +1130,7 @@ export default function WorkflowLaunchForm({
                 'reconstruction',
                 'ctf',
                 'custom',
+                'advanced',
               ];
 
               return Object.entries(parameterGroups)
