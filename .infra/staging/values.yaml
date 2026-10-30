@@ -48,7 +48,7 @@ stack:
   services:
     backend:
       image:
-        tag: &backend-image-tag sha-1dad38d
+        tag: &backend-image-tag sha-6f31906
       env:
         - name: EMBRELLA_BUILD_STATIC
           value: '1'
@@ -58,7 +58,7 @@ stack:
 
     frontend:
       image:
-        tag: sha-1dad38d
+        tag: sha-6f31906
       env:
         - name: BACKEND_URL
           value: 'http://$(__ARGUS_STACK_NAME)-stack-backend:8000'
