@@ -63,6 +63,12 @@ class BaseProcessor(ABC):
     # still be executed via get_processor() and have their DB records synced.
     hidden_from_list: bool = False
 
+    # Set to True to let a run execute this processor's pipe again. The run's existing
+    # PipeExecution is then updated in place for the new job, and a summary of the
+    # previous attempt is kept in parameters["_attempts"]. Otherwise a second execute
+    # on the same run is refused before submission.
+    allows_run_reuse: bool = False
+
     @classmethod
     @functools.cache
     def _get_schema_file_path(cls) -> Optional[Path]:
