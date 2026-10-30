@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from processes.models import PipeExecution
-from workflow.execution import PipelineExecutor, RunContext, ValidationError
+from workflow.execution import DuplicateExecutionError, PipelineExecutor, RunContext, ValidationError
 from workflow.processors import get_processor, register_processor
 from workflow.processors.base import BaseProcessor
 from workflow.processors.copick import CopickProcessor
@@ -371,6 +371,53 @@ class TestPipelineExecutor:
 
         assert exc_info.value.errors == ["Required parameter missing: test_param"]
 
+    @patch("workflow.execution.RemoteJobSubmitter")
+    def test_execute_pipe_rejects_duplicate_before_submitting(
+        self,
+        mock_submitter_class,
+        test_proc_run,
+        test_pipe_in_plan,
+        test_user,
+        registered_test_processor,
+    ):
+        """A second execute on the same run and pipe must not reach SLURM: its record could never be saved."""
+        existing = PipeExecution.objects.create(
+            proc_run=test_proc_run, pipe_in_plan=test_pipe_in_plan, status="running", job_id="111"
+        )
+
+        with pytest.raises(DuplicateExecutionError) as exc_info:
+            PipelineExecutor().execute_pipe(
+                pipe_in_plan=test_pipe_in_plan,
+                proc_run=test_proc_run,
+                user=test_user,
+                parameters={"test_param": 50},
+                auth={"username": "test", "password": "pass"},
+            )
+
+        assert exc_info.value.pipe_execution == existing
+        assert "job 111" in str(exc_info.value)
+        mock_submitter_class.assert_not_called()
+        assert PipeExecution.objects.count() == 1
+
+    def test_preview_allowed_on_executed_run(
+        self,
+        test_proc_run,
+        test_pipe_in_plan,
+        test_user,
+        registered_test_processor,
+    ):
+        """Only a submission is refused; previewing an executed run still renders."""
+        PipeExecution.objects.create(proc_run=test_proc_run, pipe_in_plan=test_pipe_in_plan, job_id="111")
+
+        script = PipelineExecutor().preview(
+            pipe_in_plan=test_pipe_in_plan,
+            proc_run=test_proc_run,
+            user=test_user,
+            parameters={"test_param": 50},
+        )
+
+        assert script == "#!/bin/bash\necho 50"
+
     def test_cluster_not_allowed(
         self,
         test_proc_run,
@@ -597,6 +644,36 @@ class TestExecutionAPI:
         assert data["success"] is True
         assert data["dependencies_met"] is True
         assert data["missing_dependencies"] == []
+
+    @patch("workflow.execution.RemoteJobSubmitter")
+    def test_execute_duplicate_returns_409(
+        self,
+        mock_submitter_class,
+        logged_in_client,
+        test_proc_run,
+        test_pipe_in_plan,
+        registered_test_processor,
+    ):
+        existing = PipeExecution.objects.create(
+            proc_run=test_proc_run, pipe_in_plan=test_pipe_in_plan, status="submitted", job_id="111"
+        )
+        body = {
+            "pipe_in_plan_id": test_pipe_in_plan.id,
+            "proc_run_id": test_proc_run.id,
+            "parameters": {"test_param": 50},
+            "cluster": "czii",
+        }
+
+        with patch("workflow.views.execution_api.clusterio.get_auth_for_user", return_value=({"username": "u"}, None)):
+            response = logged_in_client.post("/workflow/v1/execution/execute/", body, content_type="application/json")
+
+        assert response.status_code == 409
+        data = response.json()
+        assert data["success"] is False
+        assert data["pipe_execution_id"] == existing.id
+        assert "already has an execution" in data["error"]
+        mock_submitter_class.assert_not_called()
+        assert PipeExecution.objects.count() == 1
 
     def _preview(self, client, **overrides):
         body = {
