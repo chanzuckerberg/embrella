@@ -5,7 +5,6 @@
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { fetchResource } from '@app/common/queries/fetchResource';
 import { buildQueryString } from '@app/common/services/workflowApi';
-import { calculateNextRunName } from '../utils/runNumbers';
 
 interface MembranesegRunsResult {
   success: boolean;
@@ -35,11 +34,10 @@ export async function fetchMembranesegRuns(sessionId: string): Promise<Membranes
   }
 
   const sessionData = data.sessions?.[0];
-  const runNumbers = sessionData?.run_numbers || [];
 
   return {
     success: true,
-    run_numbers: runNumbers,
-    next_run_name: calculateNextRunName(runNumbers),
+    run_numbers: sessionData?.run_numbers || [],
+    next_run_name: sessionData?.next_run_name,
   };
 }
