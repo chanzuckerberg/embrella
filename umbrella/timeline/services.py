@@ -3,7 +3,7 @@
 from cryo_grids.models import CryoGrid
 
 from timeline.sources.base import history
-from timeline.sources.grids import grid_entries, label_entries
+from timeline.sources.grids import grid_entries, image_entries, label_entries
 from timeline.sources.location import grid_moves
 from timeline.sources.msi_sessions import msi_session_entries
 from timeline.sources.proc_runs import proc_run_entries
@@ -23,6 +23,7 @@ def grid_timeline(grid_id: int) -> list[Entry] | None:
     entries = [
         *grid_entries(grid_id, rows),
         *label_entries(grid_id),
+        *image_entries(grid_id),
         *grid_moves(grid_id, rows),
         *msi_session_entries(grid_id),
         *proc_run_entries(grid_id),

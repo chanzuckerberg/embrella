@@ -19,6 +19,7 @@ import type { AnnotationMethodType, DepositionAnnotation, DepositionMethodLink, 
 import { CollapsibleSection } from './CollapsibleSection';
 import { ObjectOntologyField } from './ObjectOntologyField';
 import { detailsFilled, doiCount, flagsSet, linkCount, methodFilled } from './sectionSummary';
+import { REQUIRED_ANNOTATION_FIELDS } from './scan';
 
 const METHOD_TYPES: { value: AnnotationMethodType; label: string }[] = [
   { value: 'manual', label: 'Manual' },
@@ -191,18 +192,26 @@ export function AnnotationMetadataForm({
   onChange: (patch: Partial<DepositionAnnotation>) => void;
   readOnly?: boolean;
 }) {
-  const text = (key: keyof DepositionAnnotation, label: string, multiline = false) => (
-    <TextField
-      label={label}
-      value={(annotation[key] as string) ?? ''}
-      onChange={(e) => onChange({ [key]: e.target.value } as Partial<DepositionAnnotation>)}
-      size="small"
-      fullWidth
-      InputProps={{ readOnly }}
-      multiline={multiline}
-      minRows={multiline ? 2 : undefined}
-    />
-  );
+  const showRequiredErrors = !readOnly && !!annotation.is_selected;
+  const text = (key: keyof DepositionAnnotation, label: string, multiline = false) => {
+    const required = REQUIRED_ANNOTATION_FIELDS.some((field) => field === key);
+    const missing = showRequiredErrors && required && !(annotation[key] as string)?.trim();
+    return (
+      <TextField
+        label={label}
+        required={required}
+        error={missing}
+        helperText={missing ? `${label} is required.` : undefined}
+        value={(annotation[key] as string) ?? ''}
+        onChange={(e) => onChange({ [key]: e.target.value } as Partial<DepositionAnnotation>)}
+        size="small"
+        fullWidth
+        InputProps={{ readOnly }}
+        multiline={multiline}
+        minRows={multiline ? 2 : undefined}
+      />
+    );
+  };
 
   const links = linkCount(annotation);
   const linksSuffix = links > 0 ? ` · ${links} links` : '';
@@ -216,16 +225,14 @@ export function AnnotationMetadataForm({
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Box>
         <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary' }}>
-          OBJECT{' '}
-          <Box component="span" sx={{ letterSpacing: 0, textTransform: 'none', color: 'text.disabled' }}>
-            Name and ontology ID are required
-          </Box>
+          OBJECT
         </Typography>
         <ObjectOntologyField
           name={annotation.object_name ?? ''}
           id={annotation.object_id ?? ''}
           onChange={onChange}
           disabled={readOnly}
+          showRequiredErrors={showRequiredErrors}
           sx={{ mt: 2 }}
         />
       </Box>
@@ -233,7 +240,7 @@ export function AnnotationMetadataForm({
       <CollapsibleSection
         title="Method & links"
         summary={`${methods} of 2 filled${linksSuffix}`}
-        defaultOpen={methods > 0 || links > 0}
+        defaultOpen={methods > 0 || links > 0 || showRequiredErrors}
       >
         <Box
           sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, columnGap: 2, rowGap: 2.5 }}

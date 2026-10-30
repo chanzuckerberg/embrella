@@ -39,6 +39,11 @@ stack:
         value: 'https://embrella.apps-staging.czbiohub.org/tomodata/'
       - name: FILESERVER_INTERNAL_BASE_URL
         value: 'http://embrella-tomodata/'
+      # Settings require a media dir outside dev. Uploads stay off here (`images`
+      # flag) until a PVC is mounted, so this path is never written to.
+      # TODO: mount PVC so media survives updates.
+      - name: EMBRELLA_MEDIA_DIR
+        value: '/srv/media'
 
   services:
     backend:
