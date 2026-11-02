@@ -4,8 +4,8 @@
 #   podman network create embrella
 #   # Obtain the SLURM SSH key from an admin (vault) and place it on the host,
 #   # then point .env.production's SLURM_KEYFILE at that host path.
-#   # For reservation-lambda signing, place an AWS credentials file on the host and point
-#   # .env.production's EMBRELLA_AWS_CREDENTIALS_FILE at it; set AWS_PROFILE for a named profile, omit the file for unsigned.
+#   # For reservation signing, set EMBRELLA_AWS_CREDENTIALS_FILE in .env.production
+#   # to the host credentials file. Set AWS_PROFILE for a named profile.
 #   # Create the image upload dir and set .env.production's EMBRELLA_MEDIA_HOST_DIR to it,
 #   # e.g. mkdir -p /srv/embrella-media. Back it up with `just mediabackupv2 prod`.
 #

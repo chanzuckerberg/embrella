@@ -9,7 +9,6 @@ from urllib.parse import urlsplit
 import requests
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
-from botocore.exceptions import BotoCoreError
 from botocore.session import Session
 
 # Function URLs look like <id>.lambda-url.<region>.on.aws - the host carries the signing region.
@@ -84,7 +83,7 @@ class StubReservationService(ReservationService):
 
 
 class LambdaReservationService(ReservationService):
-    """HTTPS client for the reservation lambda (RESERVATION_LAMBDA_URL); SigV4-signed when AWS credentials exist."""
+    """HTTPS client for the reservation lambda; Function URLs require AWS credentials."""
 
     DEFAULT_TIMEOUT_SECONDS = 30
 
@@ -93,18 +92,14 @@ class LambdaReservationService(ReservationService):
         self.timeout = timeout
 
     def _sigv4_headers(self, url: str) -> Dict[str, str]:
-        """SigV4 headers for a GET to url; {} when unsigned."""
+        """Sign a Function URL GET; leave other hosts unsigned."""
         # Only Function URLs are signed; skip credential discovery otherwise.
         region = _FUNCTION_URL_REGION.search(urlsplit(url).hostname or "")
         if region is None:
             return {}
-        try:
-            credentials = Session().get_credentials()
-        except BotoCoreError:
-            # missing profile, unreachable metadata service
-            credentials = None
+        credentials = Session().get_credentials()
         if credentials is None:
-            return {}
+            raise RuntimeError("AWS credentials are required for reservation calls.")
         request = AWSRequest(method="GET", url=url)
         SigV4Auth(credentials, "lambda", region.group(1)).add_auth(request)
         return dict(request.headers)

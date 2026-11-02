@@ -46,7 +46,9 @@ comma-separated.
     `docker-compose.yml` as `slurm_key` and enable its mounts; see
     [Deployment](deployment.md#installation).
 
-## Reservation IDs
+## Reservation IDs (CryoET Data Portal deposition)
+
+The CryoET Data Portal deposition feature reserves dataset and deposition IDs from a Lambda.
 
 | Variable                 | Required | Default | Notes                                                                   |
 | ------------------------ | -------- | ------- | ----------------------------------------------------------------------- |
@@ -55,7 +57,7 @@ comma-separated.
 
 !!! note
 
-    Signing needs AWS credentials available to the backend container; the
-    `infra/compose.*` overlays mount a credentials file from
-    `EMBRELLA_AWS_CREDENTIALS_FILE` (see `infra/compose.prod.yaml`). `AWS_PROFILE`
-    is separate from `DEPOSITION_AWS_PROFILE`, which is for cluster upload jobs.
+    Signing needs AWS credentials available to the backend container.
+    Staging/prod overlays mount the file at `EMBRELLA_AWS_CREDENTIALS_FILE`;
+    the dev overlay mounts `~/.aws`. `AWS_PROFILE` is separate from
+    `DEPOSITION_AWS_PROFILE`, which is for cluster upload jobs.

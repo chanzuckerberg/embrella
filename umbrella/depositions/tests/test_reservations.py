@@ -5,7 +5,6 @@ import json
 import pytest
 import requests
 from botocore.credentials import Credentials
-from botocore.exceptions import ProfileNotFound
 
 from depositions.services.reservations import LambdaReservationService
 
@@ -18,10 +17,6 @@ def _fake_response(payload):
     response._content = json.dumps(payload).encode()
     response.headers["Content-Type"] = "application/json"
     return response
-
-
-def _raise_profile_not_found(self):
-    raise ProfileNotFound(profile="embrella")
 
 
 @pytest.fixture
@@ -50,17 +45,12 @@ def test_signs_request_with_region_from_url_and_covers_querystring(monkeypatch, 
     assert "/us-west-2/lambda/aws4_request" in auth
 
 
-@pytest.mark.parametrize(
-    "get_credentials",
-    [lambda self: None, _raise_profile_not_found],
-    ids=["no-credentials", "missing-profile"],
-)
-def test_unsigned_when_credentials_unavailable(monkeypatch, captured, get_credentials):
-    # No credentials, or a stray AWS_PROFILE pointing at a missing profile: unsigned, no 500.
-    monkeypatch.setattr("botocore.session.Session.get_credentials", get_credentials)
+def test_missing_credentials_fail_before_sending_request(monkeypatch, captured):
+    monkeypatch.setattr("botocore.session.Session.get_credentials", lambda self: None)
 
-    assert LambdaReservationService(BASE_URL).reserve_new_dataset() == 20001
-    assert "Authorization" not in captured["request"].headers
+    with pytest.raises(RuntimeError, match="AWS credentials are required for reservation calls"):
+        LambdaReservationService(BASE_URL).reserve_new_dataset()
+    assert "request" not in captured
 
 
 def test_non_function_url_is_unsigned_without_credential_lookup(monkeypatch, captured):
