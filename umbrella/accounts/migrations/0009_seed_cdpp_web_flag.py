@@ -21,7 +21,7 @@ def unseed_flags(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("accounts", "0007_seed_demo_flag"),
+        ("accounts", "0008_seed_images_flag"),
     ]
 
     operations = [
