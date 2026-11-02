@@ -71,7 +71,7 @@ spec:
                   value: "1"
                 # DB connection + DJANGO_ENV from values.yaml global env (single source).
                 {{- range .Values.stack.global.env }}
-                {{- if has .name (list "DJANGO_ENV" "USE_MYSQL" "MYSQL_HOST" "MYSQL_PORT" "MYSQL_NAME" "MYSQL_USER") }}
+                {{- if has .name (list "DJANGO_ENV" "USE_MYSQL" "MYSQL_HOST" "MYSQL_PORT" "MYSQL_NAME" "MYSQL_USER" "EMBRELLA_MEDIA_DIR") }}
                 - name: {{ .name }}
                   value: {{ .value | quote }}
                 {{- end }}

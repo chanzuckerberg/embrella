@@ -13,7 +13,7 @@ import type { AutoSaveState } from '../hooks/useDraftAutoSave';
 import { READ_ONLY_FIELDS_SX } from '../components/readOnlyStyles';
 import { ReopenForEditing } from '../components/ReopenForEditing';
 import { SaveIndicator } from './SaveIndicator';
-import { WIZARD_STEPS, isStepSkipped } from './steps';
+import { WIZARD_STEPS } from './steps';
 import { WizardFooter } from './WizardFooter';
 import { WizardStepper } from './WizardStepper';
 
@@ -29,8 +29,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
   const [closing, setClosing] = useState(false); // saving-and-exiting (distinct from per-step saves)
   const [manualAutofillSessions, setManualAutofillSessions] = useState<Set<string>>(() => new Set());
   const nonOwner = dataset.is_owner === false;
-  const skippedNums = WIZARD_STEPS.filter((s) => isStepSkipped(s, dataset)).map((s) => s.num);
-  const activeNums = WIZARD_STEPS.filter((s) => !skippedNums.includes(s.num)).map((s) => s.num);
+  const activeNums = WIZARD_STEPS.map((s) => s.num);
   const pos = activeNums.indexOf(current);
   const nextStep = WIZARD_STEPS.find((s) => s.num === activeNums[pos + 1]);
   const startsPreparation = !nonOwner && nextStep?.key === 'submit' && submissionPhases(dataset.job).sync === 'idle';
@@ -146,7 +145,6 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
           <WizardStepper
             steps={WIZARD_STEPS}
             current={current}
-            skipped={skippedNums}
             onSelect={go}
             disabled={lockedEdits || savingStep !== null || closing}
             blockForward={blocking > 0}

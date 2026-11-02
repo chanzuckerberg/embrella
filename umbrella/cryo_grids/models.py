@@ -350,3 +350,18 @@ class CryoGrid(models.Model):
             self.freezing_session,
             self.specimen,
         )
+
+
+class GridImage(models.Model):
+    """Links an uploaded image to a grid. Image storage and files live in the images app."""
+
+    grid = models.ForeignKey(CryoGrid, on_delete=models.CASCADE, related_name="grid_images")
+    image = models.OneToOneField("images.Image", on_delete=models.CASCADE, related_name="grid_link")
+    order = models.PositiveSmallIntegerField(default=0)
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"{self.image} on {self.grid.name}"

@@ -6,7 +6,6 @@ import { AutocompleteOptionBasic, Button } from '@czi-sds/components';
 import { DropdownSelect } from '@app/common/components/DropdownSelect';
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { fetchResource } from '@app/common/queries/fetchResource';
-import { calculateNextRunName } from '../utils/runNumbers';
 import { SessionFormDialog } from '@app/sessions/new/tem/components/SessionFormDialog';
 import { CreatedSession } from '@app/sessions/new/tem/types';
 import { SessionDetails } from './SessionDetails';
@@ -99,7 +98,7 @@ export const SessionRunSelector = ({ onChange, disabled = false, planType }: Ses
           const formattedRuns = runNumbers.map((num: string) => `run${num}`);
           setExistingRuns(formattedRuns);
 
-          const nextRunName = calculateNextRunName(runNumbers);
+          const nextRunName: string = sessionData?.next_run_name;
           setRunName(nextRunName);
           setRunNameError('');
           onChange({

@@ -10,7 +10,7 @@ It handles:
 """
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -42,6 +42,22 @@ class ValidationError(Exception):
         super().__init__(f"Validation failed: {'; '.join(errors)}")
 
 
+def duplicate_execution_message(pipe_execution: PipeExecution) -> str:
+    """What to tell the user when the run already has an execution of this pipe."""
+    return (
+        f"Run {pipe_execution.proc_run.name} already has an execution of {pipe_execution.pipe_in_plan.name} "
+        f"(job {pipe_execution.job_id}, status {pipe_execution.status}). Start a new run instead."
+    )
+
+
+class DuplicateExecutionError(Exception):
+    """Raised when the run already has an execution of this pipe (one PipeExecution per run and pipe)."""
+
+    def __init__(self, pipe_execution: PipeExecution):
+        self.pipe_execution = pipe_execution
+        super().__init__(duplicate_execution_message(pipe_execution))
+
+
 class RunMode(Enum):
     """PREVIEW renders against an unsaved run; EXECUTE also resolves upstream inputs."""
 
@@ -57,6 +73,8 @@ class PreparedRun:
     context: RunContext
     parameters: Dict[str, Any]
     script: str
+    # What processor.reserve_runs claimed; EXECUTE only, {} when nothing was reserved.
+    reservation: Dict[str, Any] = field(default_factory=dict)
 
 
 class PipelineExecutor:
@@ -103,6 +121,7 @@ class PipelineExecutor:
 
         Raises:
             ValidationError: If parameters are invalid or cluster not allowed
+            DuplicateExecutionError: If the run already has an execution of this pipe
             ValueError: If dependencies not met or processor not found
             Exception: If job submission fails
         """
@@ -116,13 +135,13 @@ class PipelineExecutor:
         parameters, script_content = prepared.parameters, prepared.script
 
         # 5. Submit to SLURM
-        submitter = RemoteJobSubmitter(
-            cluster_id=context.cluster_id,
-            auth=auth,
-            remote_script_dir=processor.get_script_directory(cluster=context.cluster_id),
-        )
-
+        submitter = None
         try:
+            submitter = RemoteJobSubmitter(
+                cluster_id=context.cluster_id,
+                auth=auth,
+                remote_script_dir=processor.get_script_directory(cluster=context.cluster_id),
+            )
             submitter.connect()
 
             # Upload and submit script
@@ -145,9 +164,11 @@ class PipelineExecutor:
 
         except Exception as e:
             logger.error(f"Error submitting job: {e}", exc_info=True)
+            self._release_runs(processor, context, prepared.reservation)
             raise
         finally:
-            submitter.close()
+            if submitter:
+                submitter.close()
 
         # 6. Create execution records with het-group metadata if applicable
         # Add heterogeneous job info + cluster_id to parameters
@@ -164,6 +185,8 @@ class PipelineExecutor:
         except Exception as e:
             logger.warning(f"Error capturing the paths used: {e}", exc_info=True)
 
+        # The job is running from here on, so a reservation is never released past this point:
+        # its directories are in use even if recording the execution fails.
         pipe_exec = self._create_execution_record(
             pipe_in_plan,
             proc_run,
@@ -173,6 +196,7 @@ class PipelineExecutor:
             submitter.last_script_path,
             context.job_name,  # Pass the full job name from context
             script_content,  # Pass the rendered script content for storage
+            reuse=processor.allows_run_reuse,
         )
 
         # 7. Start universal job status syncer (uses sacct for accurate timing)
@@ -211,9 +235,12 @@ class PipelineExecutor:
         Everything before submission: processor, cluster check, context, validation, render.
 
         Shared by execute_pipe and preview so the previewed script is the one that runs.
+        EXECUTE also calls processor.reserve_runs before rendering; the caller releases
+        the reservation if submission fails (not once the job was submitted).
 
         Raises:
             ValidationError: Parameters invalid or cluster not allowed
+            DuplicateExecutionError: The run already executed this pipe (EXECUTE only)
             ValueError: No processor, inputs missing (EXECUTE only), render failed
         """
         software = pipe_in_plan.pipe.software
@@ -226,6 +253,9 @@ class PipelineExecutor:
             )
 
         self._check_cluster_allowed(software, cluster_id)
+
+        if mode is RunMode.EXECUTE and not processor.allows_run_reuse:
+            self._reject_duplicate_execution(pipe_in_plan, proc_run)
 
         context = self._build_run_context(pipe_in_plan, proc_run, user, processor, cluster_id, mode)
 
@@ -241,13 +271,23 @@ class PipelineExecutor:
         if errors:
             raise ValidationError(errors)
 
+        # Reserve before rendering so the script can name what was reserved. A preview never reserves.
+        reservation = {}
+        if mode is RunMode.EXECUTE:
+            reservation = processor.reserve_runs(context, parameters) or {}
+            if reservation:
+                parameters = {**parameters, "_reserved_runs": reservation}
+
         try:
             script = processor.render_script(parameters, context)
         except Exception as e:
             logger.error(f"Error rendering script: {e}", exc_info=True)
+            self._release_runs(processor, context, reservation)
             raise ValueError(f"Failed to render script: {e}")
 
-        return PreparedRun(processor=processor, context=context, parameters=parameters, script=script)
+        return PreparedRun(
+            processor=processor, context=context, parameters=parameters, script=script, reservation=reservation
+        )
 
     def preview(
         self,
@@ -259,6 +299,21 @@ class PipelineExecutor:
     ) -> str:
         """Rendered script for a run that may be unsaved. Nothing is submitted or recorded."""
         return self.prepare(pipe_in_plan, proc_run, user, parameters, cluster_id, RunMode.PREVIEW).script
+
+    def _release_runs(self, processor: BaseProcessor, context: RunContext, reservation: Dict[str, Any]) -> None:
+        """Hand back a reservation after a failure. Errors are logged, not raised, so the original one surfaces."""
+        if not reservation:
+            return
+        try:
+            processor.release_runs(context, reservation)
+        except Exception as e:
+            logger.error(f"Error releasing reserved runs {reservation}: {e}", exc_info=True)
+
+    def _reject_duplicate_execution(self, pipe_in_plan: PipeInPlan, proc_run: ProcRun) -> None:
+        """Fail before sbatch: the record is created after submission, and a duplicate would orphan the job."""
+        existing = PipeExecution.objects.filter(proc_run=proc_run, pipe_in_plan=pipe_in_plan).first()
+        if existing:
+            raise DuplicateExecutionError(existing)
 
     def _check_cluster_allowed(self, software: ProcSoftware, cluster_id: Optional[str]) -> None:
         if not cluster_id:
@@ -389,6 +444,7 @@ class PipelineExecutor:
         script_path: Optional[str],
         job_name: str,
         script_content: Optional[str] = None,
+        reuse: bool = False,
     ) -> "PipeExecution":
         """
         Create PipeExecution record in database and corresponding JobLog for user tracking.
@@ -402,24 +458,29 @@ class PipelineExecutor:
             script_path: Path to uploaded script
             job_name: Full descriptive job name from RunContext
             script_content: Full rendered SLURM script content
+            reuse: The processor allows run reuse; an existing record is restarted in place
 
         Returns:
-            Created PipeExecution instance
+            Created (or restarted) PipeExecution instance
         """
         from processes.models import PipeExecution
 
-        pipe_exec = PipeExecution.objects.create(
-            proc_run=proc_run,
-            pipe_in_plan=pipe_in_plan,
-            status="submitted",
-            job_id=job_id,
-            parameters=parameters,
-            script_path=script_path,
-            script_content=script_content,
-            submitted_at=timezone.now(),
-        )
+        existing = PipeExecution.objects.filter(proc_run=proc_run, pipe_in_plan=pipe_in_plan).first() if reuse else None
+        if existing:
+            pipe_exec = self._restart_execution(existing, job_id, parameters, script_path, script_content)
+        else:
+            pipe_exec = PipeExecution.objects.create(
+                proc_run=proc_run,
+                pipe_in_plan=pipe_in_plan,
+                status="submitted",
+                job_id=job_id,
+                parameters=parameters,
+                script_path=script_path,
+                script_content=script_content,
+                submitted_at=timezone.now(),
+            )
 
-        logger.info(f"Created PipeExecution record {pipe_exec.id} for job {job_id}")
+            logger.info(f"Created PipeExecution record {pipe_exec.id} for job {job_id}")
 
         # Create JobLog record for user tracking
         try:
@@ -436,6 +497,54 @@ class PipelineExecutor:
             # Don't fail the whole submission if JobLog creation fails
             logger.warning(f"Failed to create JobLog for job {job_id}: {e}", exc_info=True)
 
+        return pipe_exec
+
+    @staticmethod
+    def _attempt_summary(pipe_exec: PipeExecution) -> Dict[str, Any]:
+        """Summary of one previous attempt, as kept in parameters["_attempts"]."""
+
+        def iso(value):
+            return value.isoformat() if value else None
+
+        return {
+            "job_id": pipe_exec.job_id,
+            "status": pipe_exec.status,
+            "submitted_at": iso(pipe_exec.submitted_at),
+            "started_at": iso(pipe_exec.started_at),
+            "completed_at": iso(pipe_exec.completed_at),
+            "script_path": pipe_exec.script_path,
+            "error_message": pipe_exec.error_message,
+        }
+
+    def _restart_execution(
+        self,
+        pipe_exec: PipeExecution,
+        job_id: str,
+        parameters: Dict[str, Any],
+        script_path: Optional[str],
+        script_content: Optional[str],
+    ) -> PipeExecution:
+        """Point an existing PipeExecution at a new job, appending the previous attempt to its history."""
+        attempts = [*(pipe_exec.parameters or {}).get("_attempts", []), self._attempt_summary(pipe_exec)]
+
+        pipe_exec.job_id = job_id
+        pipe_exec.status = "submitted"
+        pipe_exec.parameters = {**parameters, "_attempts": attempts}
+        pipe_exec.script_path = script_path
+        pipe_exec.script_content = script_content
+        pipe_exec.submitted_at = timezone.now()
+        pipe_exec.started_at = None
+        pipe_exec.completed_at = None
+        pipe_exec.error_message = None
+        pipe_exec.stdout_log = None
+        pipe_exec.stderr_log = None
+        pipe_exec.logs_fetched_at = None
+        pipe_exec.log_fetch_error = None
+        # The new job's status syncer marks it active again.
+        pipe_exec.syncer_active = False
+        pipe_exec.save()
+
+        logger.info(f"Restarted PipeExecution record {pipe_exec.id} for job {job_id} (attempt {len(attempts) + 1})")
         return pipe_exec
 
     def check_dependencies_met(
