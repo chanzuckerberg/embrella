@@ -1,6 +1,6 @@
 import type { TomogramFlavor, TiltseriesMetadata, TomogramMetadata } from '../../types';
 import { TOMOGRAM_FLAVORS } from '../../types';
-import { autofilledValue, type FieldDef, SHARED_TOMOGRAM_FIELDS, TILTSERIES_FIELDS, TOMOGRAM_FIELDS } from './fields';
+import { autofilledValue, type FieldDef, TILTSERIES_FIELDS, TOMOGRAM_FIELDS } from './fields';
 import type { FieldValue } from './MetadataRow';
 
 function fmt(v: unknown): string {
@@ -14,9 +14,6 @@ function shown(field: FieldDef, meta: TiltseriesMetadata | TomogramMetadata): un
   return field.readOnly ? autofilledValue(field, meta as never) : v;
 }
 
-const SHARED_KEYS = new Set(SHARED_TOMOGRAM_FIELDS.map((f) => f.key));
-const PER_FLAVOR_FIELDS = TOMOGRAM_FIELDS.filter((f) => !SHARED_KEYS.has(f.key));
-
 export function sessionToYaml(
   tiltseries: TiltseriesMetadata,
   tomograms: Record<TomogramFlavor, TomogramMetadata>
@@ -25,14 +22,10 @@ export function sessionToYaml(
   for (const f of TILTSERIES_FIELDS) {
     lines.push(`  ${f.key}: ${fmt(shown(f, tiltseries))}`);
   }
-  lines.push('reconstruction:');
-  for (const f of SHARED_TOMOGRAM_FIELDS) {
-    lines.push(`  ${f.key}: ${fmt(shown(f, tomograms.denoised))}`);
-  }
   lines.push('tomograms:');
   for (const flavor of TOMOGRAM_FLAVORS) {
     lines.push(`  - flavor: ${flavor}`);
-    for (const f of PER_FLAVOR_FIELDS) {
+    for (const f of TOMOGRAM_FIELDS) {
       lines.push(`    ${f.key}: ${fmt(shown(f, tomograms[flavor]))}`);
     }
   }
@@ -42,14 +35,11 @@ export function sessionToYaml(
 /** Editable overrides parsed back out of the YAML */
 export interface YamlOverrides {
   tiltseries: Record<string, FieldValue>;
-  /** Shared reconstruction fields - apply to BOTH flavors. */
-  shared: Record<string, FieldValue>;
   perFlavor: Record<TomogramFlavor, Record<string, FieldValue>>;
 }
 
 type RawBlocks = {
   tiltseries: Record<string, string>;
-  reconstruction: Record<string, string>;
   flavors: Record<string, Record<string, string>>;
 };
 
@@ -59,17 +49,13 @@ const KEY_NAME_RE = /^\w+$/;
  * Parse the flat key/value YAML that sessionToYaml emits.
  */
 function parseBlocks(text: string): RawBlocks {
-  const out: RawBlocks = { tiltseries: {}, reconstruction: {}, flavors: {} };
+  const out: RawBlocks = { tiltseries: {}, flavors: {} };
   let target: Record<string, string> | null = null;
   for (const line of text.split('\n')) {
     const trimmed = line.trim();
     if (trimmed === '' || trimmed.startsWith('#')) continue;
     if (trimmed === 'tiltseries:') {
       target = out.tiltseries;
-      continue;
-    }
-    if (trimmed === 'reconstruction:') {
-      target = out.reconstruction;
       continue;
     }
     if (trimmed === 'tomograms:') {
@@ -123,15 +109,14 @@ function pickEditable(fields: FieldDef[], raw: Record<string, string>): Record<s
  * YAML → editable field overrides.
  */
 export function yamlToSession(text: string): YamlOverrides {
-  const { tiltseries: tsRaw, reconstruction: recRaw, flavors } = parseBlocks(text);
+  const { tiltseries: tsRaw, flavors } = parseBlocks(text);
 
   const perFlavor = Object.fromEntries(
-    TOMOGRAM_FLAVORS.map((flavor) => [flavor, pickEditable(PER_FLAVOR_FIELDS, flavors[flavor] ?? {})])
+    TOMOGRAM_FLAVORS.map((flavor) => [flavor, pickEditable(TOMOGRAM_FIELDS, flavors[flavor] ?? {})])
   ) as Record<TomogramFlavor, Record<string, FieldValue>>;
 
   return {
     tiltseries: pickEditable(TILTSERIES_FIELDS, tsRaw),
-    shared: pickEditable(SHARED_TOMOGRAM_FIELDS, recRaw),
     perFlavor,
   };
 }

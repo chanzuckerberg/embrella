@@ -135,6 +135,7 @@ urlpatterns = (
         path("cdpp/", include("workflow.processors.cdpp.api_urls")),
         path("people/", include("people.urls")),
         path("timeline/", include("timeline.urls")),
+        path("images/", include("images.urls")),
     ]
     + api_patterns  # API endpoints
 )

@@ -22,12 +22,20 @@ describe('annotationNeedsMetadata', () => {
   it('is false when unselected', () => {
     expect(annotationNeedsMetadata({ ...sel({}), is_selected: false })).toBe(false);
   });
-  it('is true when selected but missing name or id', () => {
-    expect(annotationNeedsMetadata(sel({ object_name: '', object_id: 'GO:1' }))).toBe(true);
-    expect(annotationNeedsMetadata(sel({ object_name: 'VLP', object_id: '' }))).toBe(true);
+  const complete = {
+    object_name: 'VLP',
+    object_id: 'GO:1',
+    annotation_method: 'manual',
+    annotation_software: 'copick',
+  };
+  it('is true when selected but missing any required field', () => {
+    expect(annotationNeedsMetadata(sel({ ...complete, object_name: '' }))).toBe(true);
+    expect(annotationNeedsMetadata(sel({ ...complete, object_id: '' }))).toBe(true);
+    expect(annotationNeedsMetadata(sel({ ...complete, annotation_method: '' }))).toBe(true);
+    expect(annotationNeedsMetadata(sel({ ...complete, annotation_software: '' }))).toBe(true);
   });
-  it('is false when selected and both present', () => {
-    expect(annotationNeedsMetadata(sel({ object_name: 'VLP', object_id: 'GO:1' }))).toBe(false);
+  it('is false when selected and all required fields present', () => {
+    expect(annotationNeedsMetadata(sel(complete))).toBe(false);
   });
 });
 

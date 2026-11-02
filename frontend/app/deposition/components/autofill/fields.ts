@@ -25,18 +25,18 @@ export const SECTION_SOURCE: Record<string, string> = {
 export const TILTSERIES_FIELDS: FieldDef[] = [
   {
     key: 'acceleration_voltage',
-    label: 'acceleration_voltage',
+    label: 'Accelerating voltage',
     section: 'Acquisition',
     unit: 'kV',
     type: 'number',
     required: true,
     autofillPath: 'acquisition.acceleration_voltage_kv',
   },
-  { key: 'binning_from_frames', label: 'binning_from_frames', section: 'Acquisition', type: 'number' },
-  { key: 'data_acquisition_software', label: 'data_acquisition_software', section: 'Acquisition', type: 'text' },
+  { key: 'binning_from_frames', label: 'Binning (from frames)', section: 'Acquisition', type: 'number' },
+  { key: 'data_acquisition_software', label: 'Acquisition software', section: 'Acquisition', type: 'text' },
   {
     key: 'pixel_spacing',
-    label: 'pixel_spacing',
+    label: 'Pixel size',
     section: 'Acquisition',
     unit: 'Å',
     type: 'number',
@@ -45,34 +45,34 @@ export const TILTSERIES_FIELDS: FieldDef[] = [
   },
   {
     key: 'tilt_axis',
-    label: 'tilt_axis',
+    label: 'Tilt-axis angle',
     section: 'Acquisition',
     unit: '°',
     type: 'number',
     required: true,
     default: -96,
   },
-  { key: 'tilt_step', label: 'tilt_step', section: 'Acquisition', unit: '°', type: 'number' },
-  { key: 'tilting_scheme', label: 'tilting_scheme', section: 'Acquisition', type: 'text', default: 'dose-symmetric' },
+  { key: 'tilt_step', label: 'Tilt step', section: 'Acquisition', unit: '°', type: 'number' },
+  { key: 'tilting_scheme', label: 'Tilting scheme', section: 'Acquisition', type: 'text', default: 'dose-symmetric' },
   {
     key: 'total_flux',
-    label: 'total_flux',
+    label: 'Total dose',
     section: 'Acquisition',
     unit: 'e⁻/Å²',
     type: 'number',
     readOnly: true,
     autofillPath: 'total_dose',
   },
-  { key: 'microscope_manufacturer', label: 'microscope_manufacturer', section: 'Instrument', type: 'text' },
-  { key: 'microscope_model', label: 'microscope_model', section: 'Instrument', type: 'text' },
-  { key: 'camera_manufacturer', label: 'camera_manufacturer', section: 'Instrument', type: 'text' },
-  { key: 'camera_model', label: 'camera_model', section: 'Instrument', type: 'text' },
-  { key: 'microscope_energy_filter', label: 'energy_filter', section: 'Instrument', type: 'text' },
-  { key: 'microscope_image_corrector', label: 'image_corrector', section: 'Instrument', type: 'text' },
-  { key: 'microscope_phase_plate', label: 'phase_plate', section: 'Instrument', type: 'text' },
+  { key: 'microscope_manufacturer', label: 'Microscope manufacturer', section: 'Instrument', type: 'text' },
+  { key: 'microscope_model', label: 'Microscope model', section: 'Instrument', type: 'text' },
+  { key: 'camera_manufacturer', label: 'Camera manufacturer', section: 'Instrument', type: 'text' },
+  { key: 'camera_model', label: 'Camera model', section: 'Instrument', type: 'text' },
+  { key: 'microscope_energy_filter', label: 'Energy filter', section: 'Instrument', type: 'text' },
+  { key: 'microscope_image_corrector', label: 'Image corrector', section: 'Instrument', type: 'text' },
+  { key: 'microscope_phase_plate', label: 'Phase plate', section: 'Instrument', type: 'text' },
   {
     key: 'spherical_aberration_constant',
-    label: 'spherical_aberration',
+    label: 'Spherical aberration',
     section: 'Instrument',
     unit: 'mm',
     type: 'number',
@@ -82,7 +82,7 @@ export const TILTSERIES_FIELDS: FieldDef[] = [
 
   {
     key: '_path_gain',
-    label: 'gain_ref',
+    label: 'Gain reference',
     section: 'Paths',
     type: 'text',
     readOnly: true,
@@ -90,7 +90,7 @@ export const TILTSERIES_FIELDS: FieldDef[] = [
   },
   {
     key: '_path_frames',
-    label: 'frames',
+    label: 'Frames',
     section: 'Paths',
     type: 'text',
     readOnly: true,
@@ -106,7 +106,7 @@ export const TILTSERIES_FIELDS: FieldDef[] = [
   },
   {
     key: '_path_aretomo3',
-    label: 'aretomo3',
+    label: 'AreTomo3 output',
     section: 'Paths',
     type: 'text',
     readOnly: true,
@@ -114,7 +114,7 @@ export const TILTSERIES_FIELDS: FieldDef[] = [
   },
   {
     key: '_path_dctf',
-    label: 'dctf_vol',
+    label: 'dCTF volumes',
     section: 'Paths',
     type: 'text',
     readOnly: true,
@@ -125,7 +125,7 @@ export const TILTSERIES_FIELDS: FieldDef[] = [
 export const TOMOGRAM_FIELDS: FieldDef[] = [
   {
     key: 'voxel_spacing',
-    label: 'voxel_spacing',
+    label: 'Voxel size',
     section: 'Reconstruction',
     unit: 'Å',
     type: 'number',
@@ -133,7 +133,7 @@ export const TOMOGRAM_FIELDS: FieldDef[] = [
   },
   {
     key: 'reconstruction_software',
-    label: 'reconstruction_software',
+    label: 'Reconstruction software',
     section: 'Reconstruction',
     type: 'text',
     required: true,
@@ -141,7 +141,7 @@ export const TOMOGRAM_FIELDS: FieldDef[] = [
   },
   {
     key: 'reconstruction_method',
-    label: 'reconstruction_method',
+    label: 'Reconstruction method',
     section: 'Reconstruction',
     type: 'text',
     readOnly: true,
@@ -149,20 +149,19 @@ export const TOMOGRAM_FIELDS: FieldDef[] = [
   },
   {
     key: 'ctf_corrected',
-    label: 'ctf_corrected',
+    label: 'CTF corrected',
     section: 'Reconstruction',
     type: 'boolean',
     readOnly: true,
     default: true,
   },
-  { key: 'is_visualization_default', label: 'is_visualization_default', section: 'Reconstruction', type: 'boolean' },
-  { key: 'processing', label: 'processing', section: 'Reconstruction', type: 'text' },
-  { key: 'processing_software', label: 'processing_software', section: 'Reconstruction', type: 'text', required: true },
+  { key: 'is_visualization_default', label: 'Default view', section: 'Reconstruction', type: 'boolean' },
+  { key: 'processing', label: 'Processing', section: 'Reconstruction', type: 'text' },
+  { key: 'processing_software', label: 'Processing software', section: 'Reconstruction', type: 'text', required: true },
 ];
-const PER_FLAVOR_TOMOGRAM_KEYS = new Set(['processing', 'processing_software', 'is_visualization_default']);
-export const SHARED_TOMOGRAM_FIELDS = TOMOGRAM_FIELDS.filter((f) => !PER_FLAVOR_TOMOGRAM_KEYS.has(f.key));
-
-const PER_FLAVOR_FIELDS = TOMOGRAM_FIELDS.filter((f) => f.key === 'processing' || f.key === 'processing_software');
+// Voxel size + reconstruction metadata are set per tomogram type (flavor); only the
+// visualization-default toggle renders outside the grid, as a header checkbox.
+const PER_FLAVOR_FIELDS = TOMOGRAM_FIELDS.filter((f) => f.key !== 'is_visualization_default');
 
 export function perFlavorTomogramFields(_flavor: TomogramFlavor): FieldDef[] {
   return PER_FLAVOR_FIELDS;
@@ -217,7 +216,7 @@ export function countIssues(fields: FieldDef[], meta: Meta | null | undefined): 
 }
 
 export function countTomogramIssues(tomograms: Record<TomogramFlavor, TomogramMetadata>): number {
-  let n = countIssues(SHARED_TOMOGRAM_FIELDS, tomograms.denoised as never);
+  let n = 0;
   for (const flavor of TOMOGRAM_FLAVORS) {
     n += countIssues(perFlavorTomogramFields(flavor), tomograms[flavor] as never);
   }
