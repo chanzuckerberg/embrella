@@ -23,6 +23,13 @@ def test_syncs_dataset_subtree_to_dest():
     assert 'aws s3 sync /staged/dep_1/ds_2 "$s3_dest" --delete --follow-symlinks' in script
 
 
+def test_writes_ingest_ready_marker_after_successful_sync():
+    script = _render()
+    marker = 'aws s3 cp - "${s3_dest%/}/ingest.ready"'
+    assert marker in script
+    assert script.index('if [ "$upload_status" -ne 0 ]') < script.index(marker)
+
+
 @pytest.mark.parametrize(
     "destination,allowed",
     [
