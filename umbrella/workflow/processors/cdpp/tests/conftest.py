@@ -11,6 +11,8 @@ from workflow.context import RunContext
 
 FIXTURES = Path(__file__).parent / "fixtures"
 PLAN = json.loads((FIXTURES / "plan.json").read_text())
+# The same run planned with --publish-aretomo3 aretomo_recon_from_warp_global: an extra aretomo3 tree.
+PUBLISH_PLAN = json.loads((FIXTURES / "plan_publish.json").read_text())
 PROGRESS = (FIXTURES / "progress.json").read_text()
 
 ROOT = "/hpc/projects/group.czii/krios1.processing"
@@ -21,8 +23,9 @@ CDPP_DIR = f"{ROOT}/cdpp/{SESSION}/run001"
 class FakeCluster:
     """Answers the processor's --plan-only SSH call."""
 
-    def __init__(self, plan=PLAN, err=""):
+    def __init__(self, plan=PLAN, err="", publish_plan=PUBLISH_PLAN):
         self.plan = plan
+        self.publish_plan = publish_plan
         self.err = err
         self.commands = []
 
@@ -34,8 +37,9 @@ class FakeCluster:
     def _exec(self, command, timeout=None):
         self.commands.append(command)
         out = ""
-        if "--plan-only" in command and self.plan:
-            out = f"Loading mamba\nCDPP_PLAN_BEGIN\n{json.dumps(self.plan)}\nCDPP_PLAN_END\n"
+        plan = self.publish_plan if "--publish-aretomo3" in command else self.plan
+        if "--plan-only" in command and plan:
+            out = f"Loading mamba\nCDPP_PLAN_BEGIN\n{json.dumps(plan)}\nCDPP_PLAN_END\n"
         return Mock(), _stream(out), _stream(self.err)
 
     @property
