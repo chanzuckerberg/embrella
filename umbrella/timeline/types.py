@@ -23,6 +23,8 @@ class EntryKind(StrEnum):
     UNCLIPPED = "unclipped"
     LABEL_ADDED = "label_added"
     LABEL_REMOVED = "label_removed"
+    IMAGE_ADDED = "image_added"
+    IMAGE_REMOVED = "image_removed"
     DELETED = "deleted"
 
 

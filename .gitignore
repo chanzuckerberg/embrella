@@ -180,3 +180,6 @@ umbrella/staticfiles/
 .claude/
 .planning/
 CLAUDE.md
+
+# Uploaded media (MEDIA_ROOT fallback; the dev image folder lives in .scratch/media)
+umbrella/media/
