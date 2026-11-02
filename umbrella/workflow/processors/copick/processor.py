@@ -11,6 +11,7 @@ import re
 from typing import Any, Dict, List
 
 from jinja2 import Environment, FileSystemLoader
+from stores.paths import resolve_dir
 from tem.models import MsiSession
 
 from workflow.context import RunContext
@@ -137,6 +138,7 @@ class CopickProcessor(BaseProcessor):
             "operation": operation,  # Pass operation to template for conditionals
             "session": session_name,
             "copickRun": copick_run,
+            "copickEnv": resolve_dir("dataportal_env", cluster=run_context.cluster_id),
             "copick_root": self.get_processing_base_path(cluster=run_context.cluster_id),
             "slurm_directives": context.get("slurm_directives", []),
             "context_vars": context.get("context_vars", {}),

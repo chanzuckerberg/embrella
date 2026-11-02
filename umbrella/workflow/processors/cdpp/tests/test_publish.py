@@ -44,7 +44,6 @@ def test_script_passes_the_option_only_when_set(cdpp_plans, cdpp_context):
 
 @pytest.mark.django_db
 def test_reservation_has_the_aretomo3_tree_only_when_set(fake_cluster, cdpp_context, input_run):
-    fake_cluster.dirs = {"aretomo3": ["run001", "run002"]}  # run002 exists on disk only
     processor = CdppProcessor()
 
     off = processor.reserve_runs(cdpp_context, PARAMS)
@@ -54,8 +53,8 @@ def test_reservation_has_the_aretomo3_tree_only_when_set(fake_cluster, cdpp_cont
     assert on["pipeline_fingerprint"] == PUBLISH_PLAN["fingerprint"]
     assert on["trees"]["aretomo3"] == {
         "plan": "czii-live",
-        "run": "run003",
-        "dir": f"{ROOT}/aretomo3/{SESSION}/run003",
+        "run": "run002",
+        "dir": PUBLISHED_DIR,
         "fingerprint": PUBLISH_PLAN["trees"]["aretomo3"]["fingerprint"],
         "reused": False,
     }

@@ -2,20 +2,17 @@
 Run-name allocation.
 
 A processing run lives at ``{processing_base}/{session}/runNNN``. The next name is
-one past the highest number taken, counting both the session's ProcRuns for the plan
-and any directories already on disk (e.g. created outside Embrella), so a new run
-never lands in an existing directory.
+one past the highest number taken, counting the session's ProcRuns for the plan and
+its other runs of the same software (see list_run_dirs). The DB is the truth:
+directories created on the cluster outside Embrella are ignored.
 """
 
 import re
-import shlex
 from typing import Iterable, Optional
 
 from django.db import transaction
-from processes.models import ProcRun
+from processes.models import ProcRun, ProcSoftware
 from tem.models import MsiSession
-
-from common import clusterio
 
 RUN_NAME_RE = re.compile(r"run(\d+)")
 
@@ -43,7 +40,7 @@ def next_run_name(msi_session, proc_plan, existing_dirs: Iterable[str] = ()) -> 
     Args:
         msi_session: The session the run belongs to
         proc_plan: The plan the run hangs off
-        existing_dirs: Run directory names already on disk (see list_run_dirs)
+        existing_dirs: Other run names of the software in the session (see list_run_dirs)
 
     Returns:
         e.g. "run004" when run001-run003 exist; "run1000" past run999
@@ -57,7 +54,7 @@ def reserve_run(msi_session, proc_plan, existing_dirs: Iterable[str] = ()) -> Pr
 
     The session row is locked for the transaction so concurrent reservations on the
     same session take turns instead of computing the same name. select_for_update is
-    a no-op on SQLite. List the disk before calling: SSH must not run under the lock.
+    a no-op on SQLite.
     """
     existing_dirs = list(existing_dirs)
     with transaction.atomic():
@@ -66,18 +63,29 @@ def reserve_run(msi_session, proc_plan, existing_dirs: Iterable[str] = ()) -> Pr
         return ProcRun.objects.create(name=name, proc_plan=proc_plan, msi_session=msi_session)
 
 
-def list_run_dirs(processing_base: str, session_name: str, cluster_id: str) -> list[str]:
-    """
-    Names of the ``run*`` entries under ``{processing_base}/{session_name}`` on the cluster.
+def list_run_dirs(softwares, msi_session) -> list[str]:
+    """Run names of `msi_session` under any plan using one of `softwares` (they share directories)."""
+    runs = ProcRun.objects.filter(msi_session=msi_session, proc_plan__pipeinplan__pipe__software__in=softwares)
+    return list(runs.values_list("name", flat=True).distinct())
 
-    Listed over SSH as the service account. A missing session directory yields [];
-    connection errors propagate, so "could not look" is never mistaken for "no runs".
+
+def plan_softwares(proc_plan) -> list:
+    """Every software the plan chains: a run name must be free under each one's directory."""
+    return list(ProcSoftware.objects.filter(pipe__pipeinplan__plan=proc_plan).distinct())
+
+
+def software_run_names(softwares, session_names: Iterable[str]) -> dict[str, list[str]]:
     """
-    session_dir = f"{processing_base.rstrip('/')}/{session_name}"
-    ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster_id)
-    try:
-        _, stdout, _ = ssh.exec_command(f"ls -1d {shlex.quote(session_dir)}/run* 2>/dev/null", timeout=20)
-        out = stdout.read().decode("utf-8", "replace")
-        return [line.strip().rstrip("/").rsplit("/", 1)[-1] for line in out.splitlines() if line.strip()]
-    finally:
-        ssh.close()
+    Run names per session under any plan using one of `softwares`; list_run_dirs for many sessions.
+
+    Returns:
+        e.g. {"24nov10": ["run001", "run002"]}
+    """
+    runs = ProcRun.objects.filter(
+        msi_session__name__in=list(session_names), proc_plan__pipeinplan__pipe__software__in=softwares
+    )
+    names: dict[str, list[str]] = {}
+    for session_name, run_name in runs.values_list("msi_session__name", "name").distinct():
+        names.setdefault(session_name, []).append(run_name)
+
+    return names

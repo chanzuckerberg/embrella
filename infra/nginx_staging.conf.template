@@ -47,8 +47,17 @@ http {
             expires 1h;
         }
 
+        # Uploaded images: Django checks the request, then replies with
+        # X-Accel-Redirect here. `internal` blocks direct browser requests.
+        location /protected-media/ {
+            internal;
+            alias /srv/media/;
+            # nginx drops most upstream headers on X-Accel-Redirect; re-add nosniff
+            add_header X-Content-Type-Options nosniff always;
+        }
+
         # ===== DJANGO BACKEND ROUTES =====
-        location ~ ^/(admin|accounts|api|user|ping|docs|workflow|cryo_grids|processes|projects|people/v1|depositions/v1|copick|tem/v1|timeline/v1|get_grids_by_user|annotations)(/|$) {
+        location ~ ^/(admin|accounts|api|user|ping|docs|workflow|cryo_grids|processes|projects|people/v1|depositions/v1|copick|tem/v1|timeline/v1|images/v1|get_grids_by_user|annotations)(/|$) {
             # Variable forces nginx to use the resolver instead of caching at startup.
             set $upstream_backend backend;
             proxy_pass http://$upstream_backend:8000;
