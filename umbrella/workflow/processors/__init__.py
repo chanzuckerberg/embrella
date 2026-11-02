@@ -110,6 +110,7 @@ def list_processors() -> Dict[str, Type[BaseProcessor]]:
 # to allow clean registration without circular imports
 from . import (  # noqa: E402, F401
     aretomo3,
+    cdpp,
     copick,
     denoiset,
     deposition_prep,

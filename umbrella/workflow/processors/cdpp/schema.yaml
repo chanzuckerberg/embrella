@@ -1,0 +1,97 @@
+# CryoET Data Portal Pipeline (cdpp) Processor Parameter Schema
+# JSON Schema with custom x-* extensions for template generation
+#
+# The job is the pipeline's Nextflow driver: one long, light CPU job that submits the
+# pipeline's own step jobs. Processing choices come from the preset; config_overrides
+# changes individual values of the generated config.
+#
+# Custom extensions:
+#   x-bash-skip: Skip in bash variable section - boolean
+#   x-dynamic-options: Frontend dropdown source - dict with source and depends_on_session
+#   x-parameter-group: Groups parameter in a collapsible section - string
+#   x-compute-resource: Groups parameter in "Compute Resources" section - boolean
+#   x-slurm-directive: SLURM directive flag (e.g., "--partition") - string
+
+type: object
+
+properties:
+  aretomo_run:
+    type: string
+    title: AreTomo3 Run Number
+    description: AreTomo3 run of this session the pipeline imports (alignments, CTF, reconstructions)
+    minLength: 1
+    x-dynamic-options:
+      source: aretomo3_runs
+      depends_on_session: true
+    x-bash-skip: true
+
+  preset:
+    type: string
+    title: Preset
+    description: Processing choices; insitu_import runs miss-alignment refinement, IsoNet2, MemBrain-seg and the sample boundary
+    enum:
+      - insitu_import
+    default: insitu_import
+    x-bash-skip: true
+
+  refined_pixel_size:
+    type: number
+    title: Refined Pixel Size (Å)
+    description: Pixel size of the miss-alignment tilt stacks and refined reconstructions
+    minimum: 1.0
+    maximum: 50.0
+    default: 10.4
+    x-bash-skip: true
+
+  config_overrides:
+    type: string
+    title: Config Overrides
+    description: "Values to change in the generated config, as dotted.key=value (VALUE is YAML), separated by new lines or ';' (e.g. isonet2.epochs=50)"
+    default: ""
+    x-parameter-group: advanced
+    x-bash-skip: true
+
+  # SLURM Resource Options (Compute Resources section) -- for the driver only
+  slurm_partition:
+    type: string
+    title: "Partition"
+    description: SLURM partition of the driver job; must not be preemptible
+    default: cpu
+    x-slurm-directive: "--partition"
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_cpus_per_task:
+    type: integer
+    title: "CPUs per Task"
+    description: CPU cores for the driver
+    minimum: 1
+    maximum: 16
+    default: 2
+    x-slurm-directive: "--cpus-per-task"
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_mem:
+    type: string
+    title: "Memory"
+    description: Memory for the driver (e.g., 8G)
+    default: "8G"
+    pattern: "^[0-9]+[KMGT]$"
+    x-slurm-directive: "--mem"
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_time:
+    type: string
+    title: "Time Limit"
+    description: Wall time of the whole pipeline (D-HH:MM:SS or HH:MM:SS); a timed-out driver stops every step
+    default: "7-00:00:00"
+    pattern: "^([0-9]+-)?[0-9]{1,3}:[0-5][0-9]:[0-5][0-9]$"
+    x-slurm-directive: "--time"
+    x-compute-resource: true
+    x-bash-skip: true
+
+required:
+  - aretomo_run
+  - preset

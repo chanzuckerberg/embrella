@@ -1521,6 +1521,7 @@ Used to determine the next available run number when submitting jobs.
 - `copick-import` → copick-import plan (import tomograms)
 - `membraneseg` → membraneseg plan (membrane segmentation)
 - `octopi` → czii-octopi plan
+- `cdpp` → czii-cdpp plan (CryoET Data Portal Pipeline)
 
 **Example response:**
 ```json
@@ -1543,7 +1544,16 @@ with no runs of this plan is still listed, with empty `run_numbers`.
             required=False,
             type=OpenApiTypes.STR,
             description="Processing plan type. Defaults to 'aretomo3'.",
-            enum=["aretomo3", "denoiset", "copick", "copick-add-object", "copick-import", "membraneseg", "octopi"],
+            enum=[
+                "aretomo3",
+                "denoiset",
+                "copick",
+                "copick-add-object",
+                "copick-import",
+                "membraneseg",
+                "octopi",
+                "cdpp",
+            ],
         ),
         OpenApiParameter(
             name="session_name",
@@ -1576,6 +1586,7 @@ def get_plan_runs(request):
             "copick-import": "copick-import",
             "membraneseg": "membraneseg",
             "octopi": "czii-octopi",
+            "cdpp": "czii-cdpp",
         }
         if plan_type not in plan_map:
             return JsonResponse({"error": f'Unsupported plan_type "{plan_type}"'}, status=400)
