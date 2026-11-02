@@ -1,10 +1,11 @@
-"""Grid and grid-label history → entries."""
+"""Grid, grid-label and grid-image history → entries."""
 
 from datetime import datetime, time
 
 from cryo_grids.history import ChangeReason
-from cryo_grids.models import LABEL_TYPO_WINDOW, CryoGrid, GridLabel, Label
+from cryo_grids.models import LABEL_TYPO_WINDOW, CryoGrid, GridImage, GridLabel, Label
 from django.utils import timezone
+from images.models import Image
 
 from timeline.sources.base import (
     CREATED,
@@ -72,6 +73,30 @@ def label_entries(grid_id: int) -> list[Entry]:
             entries.append(
                 grid_entry(grid_id, row.history_date, EntryKind.LABEL_REMOVED, f"Label {name} removed", user, detail)
             )
+
+    return entries
+
+
+def image_entries(grid_id: int) -> list[Entry]:
+    """Image added / removed entries, from GridImage history. Deleted images keep their name."""
+    rows = history(GridImage, grid_id=grid_id)
+    images = latest(Image, {r.image_id for r in rows})
+    kinds = {CREATED: EntryKind.IMAGE_ADDED, DELETED: EntryKind.IMAGE_REMOVED}
+    entries = []
+
+    for row in rows:
+        kind = kinds.get(row.history_type)
+        if kind is None:  # Reorders aren't history worth showing
+            continue
+
+        image = images.get(row.image_id)
+        name = image.original_name if image else "(unknown image)"
+        verb = "added" if kind == EntryKind.IMAGE_ADDED else "removed"
+        detail = {"image_id": str(row.image_id), "name": name}
+
+        entries.append(
+            grid_entry(grid_id, row.history_date, kind, f"Image {name} {verb}", username(row.history_user), detail)
+        )
 
     return entries
 

@@ -11,7 +11,6 @@ const draft: Dataset = {
   dataset_id: 100,
   title: 'Draft dataset',
   status: 'draft',
-  type: 'Tomos only',
   session_names: [],
   session_count: 0,
   updated_at: '2026-07-01T00:00:00Z',
@@ -30,6 +29,7 @@ describe('DatasetRow ownership gating', () => {
   it('shows "Resume" on a draft the user owns', () => {
     renderRow(true);
     expect(screen.getByText('Resume')).toBeInTheDocument();
+    expect(screen.getByText('Dataset')).toBeInTheDocument();
     expect(screen.queryByText('View')).not.toBeInTheDocument();
   });
 

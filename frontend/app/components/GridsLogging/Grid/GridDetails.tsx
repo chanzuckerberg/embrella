@@ -11,6 +11,7 @@ import { MoveGrid } from './MoveGrid';
 import { DuplicateGrid } from './DuplicateGrid';
 import { TrashGridDialog } from './TrashGridDialog';
 import { GridFormFields } from './GridFormFields';
+import { GridImageTile } from './GridImageTile';
 import { useGridForm } from './useGridForm';
 import { mapGridDetailsToFormData } from './utils';
 
@@ -100,26 +101,32 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
 
         <CardContent sx={{ padding: '0px' }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
-            <Box
-              sx={{
-                borderColor: '#debf41',
-                borderWidth: '2px',
-                borderRadius: '8px',
-                marginTop: '20px',
-                marginLeft: '7px',
-                flexDirection: 'column',
-                alignItems: 'center',
-              }}
-            >
-              <Image
-                src={form.clippedValue ? '/clippedGrid.png' : '/grid.png'}
-                alt={form.clippedValue ? 'Clipped Grid' : 'Grid'}
-                width={150}
-                height={150}
-                style={{
-                  objectFit: 'contain',
+            {/* Grid icon, with the grid's images below it */}
+            <Box>
+              <Box
+                sx={{
+                  borderColor: '#debf41',
+                  borderWidth: '2px',
+                  borderRadius: '8px',
+                  marginTop: '20px',
+                  marginLeft: '7px',
+                  flexDirection: 'column',
+                  alignItems: 'center',
                 }}
-              />
+              >
+                <Image
+                  src={form.clippedValue ? '/clippedGrid.png' : '/grid.png'}
+                  alt={form.clippedValue ? 'Clipped Grid' : 'Grid'}
+                  width={150}
+                  height={150}
+                  style={{
+                    objectFit: 'contain',
+                  }}
+                />
+              </Box>
+              {selectedGridId !== null && (
+                <GridImageTile key={selectedGridId} gridId={selectedGridId} onGridUpdated={onGridMutated} />
+              )}
             </Box>
 
             <Box sx={{ flex: 1, minWidth: 0 }}>

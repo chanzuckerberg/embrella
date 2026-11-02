@@ -10,6 +10,7 @@ export enum FEATURE_FLAG {
   COPICK_WEB = 'copick-web',
   CDPP_WEB = 'cdpp-web',
   DEMO = 'demo',
+  IMAGES = 'images',
 }
 
 export const FeatureFlagsContext = createContext<FEATURE_FLAG[]>([]);

@@ -81,12 +81,14 @@ export function ObjectOntologyField({
   id,
   onChange,
   disabled,
+  showRequiredErrors = false,
   sx,
 }: {
   name: string;
   id: string;
   onChange: (patch: Partial<DepositionAnnotation>) => void;
   disabled?: boolean;
+  showRequiredErrors?: boolean;
   sx?: SxProps<Theme>;
 }) {
   const inferred = OBJECT_ONTOLOGIES.find((o) => id.startsWith(`${o.prefix}${o.separator ?? ':'}`)) ?? null;
@@ -135,6 +137,7 @@ export function ObjectOntologyField({
   if (!disabled && nameEmpty) nameHelper = 'Name is required; pick an ID below.';
   else if (!disabled && !id.trim()) nameHelper = 'Edit if needed.';
 
+  const idMissing = showRequiredErrors && !id.trim();
   let idField: ReactNode;
   if (disabled) {
     idField = (
@@ -156,13 +159,16 @@ export function ObjectOntologyField({
         fullWidth
         disabled
         placeholder="Choose an ontology first"
-        helperText="Search unlocks after picking an ontology."
+        helperText={
+          idMissing ? 'Object ID is required; choose an ontology first.' : 'Search unlocks after picking an ontology.'
+        }
       />
     );
   } else if (searchable) {
     const idPattern = new RegExp(cfg.pattern);
     let idHelper = `Search ${cfg.type} by name, or paste an ID.`;
-    let idError = false;
+    let idError = idMissing;
+    if (idMissing) idHelper = 'Object ID is required.';
     if (id.trim()) {
       if (!formatOk) {
         idHelper = `Invalid ID format for ${cfg.type}.`;
@@ -228,6 +234,8 @@ export function ObjectOntologyField({
       />
     );
   } else {
+    let helper = !!id.trim() && !formatOk ? `Expected format like ${cfg.placeholder}` : `Enter the ${cfg.type} ID.`;
+    if (idMissing) helper = 'Object ID is required.';
     idField = (
       <TextField
         label="Object ID"
@@ -240,8 +248,8 @@ export function ObjectOntologyField({
           onChange({ object_id: e.target.value.trim() });
         }}
         placeholder={cfg.placeholder}
-        error={!!id.trim() && !formatOk}
-        helperText={!!id.trim() && !formatOk ? `Expected format like ${cfg.placeholder}` : `Enter the ${cfg.type} ID.`}
+        error={idMissing || (!!id.trim() && !formatOk)}
+        helperText={helper}
       />
     );
   }

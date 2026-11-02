@@ -103,6 +103,26 @@ it('collapses Method & links and Details by default on an empty annotation', () 
   expect(screen.queryByLabelText('Object state')).not.toBeInTheDocument();
 });
 
+it('opens incomplete selected metadata and clears inline method errors as fields are filled', () => {
+  render(<StatefulForm initial={{ ...base, is_selected: true }} />);
+  const section = screen.getByRole('button', { name: /Method & links/ });
+  expect(section).toHaveAttribute('aria-expanded', 'true');
+  fireEvent.click(section);
+  expect(section).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(section);
+  const method = screen.getByLabelText(/Annotation method/);
+  const software = screen.getByLabelText(/Annotation software/);
+  expect(method).toBeRequired();
+  expect(software).toBeRequired();
+  expect(method).toHaveAttribute('aria-invalid', 'true');
+  expect(software).toHaveAttribute('aria-invalid', 'true');
+  expect(screen.getByText('Object ID is required; choose an ontology first.')).toBeInTheDocument();
+  fireEvent.change(method, { target: { value: 'Manual picking' } });
+  fireEvent.change(software, { target: { value: 'Copick' } });
+  expect(method).toHaveAttribute('aria-invalid', 'false');
+  expect(software).toHaveAttribute('aria-invalid', 'false');
+});
+
 it('auto-opens Details when a flag is already set (no click needed)', () => {
   setup({ ground_truth_status: true });
   expect(screen.getByLabelText(/Ground truth/)).toBeInTheDocument();

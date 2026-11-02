@@ -20,6 +20,9 @@ from cryo_grids.models import (
     Specimen,
 )
 
+# Reorder payload cap; real grids hold ~20 images
+MAX_GRID_IMAGES = 100
+
 
 class LabelSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source="created_by.username", read_only=True)
@@ -719,3 +722,13 @@ class FreezingSessionSerializer(serializers.ModelSerializer):
     def get_display_name(self, obj):
         """Get human-readable display name matching the __str__ method"""
         return str(obj)
+
+
+class GridImageOrderSerializer(serializers.Serializer):
+    """All of a grid's image ids, first shown first."""
+
+    image_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        max_length=MAX_GRID_IMAGES,
+        error_messages={"max_length": "Can't reorder more than {max_length} images on one grid."},
+    )

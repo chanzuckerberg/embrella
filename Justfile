@@ -497,6 +497,28 @@ fetchprodsnapshot host="umbrella": initenv
     echocolor $GREEN "Fetched ./.scratch/$LATEST"
     echo "Next: just devexec just loaddevdb ./.scratch/$LATEST    # (or just loaddevdb ./.scratch/$LATEST from host)"
 
+# Mirror a stack's image backup (/srv/mediabackups/media, from `just mediabackupv2`) into the
+# dev image folder. Host-side only (needs SSH access). Pair with a DB snapshot from the same
+# stack so image rows match their files. Local-only uploads are kept.
+# Usage:
+#   just fetchmedia prod
+#   just fetchmedia staging
+fetchmedia stage: initenv mediainit
+    #!/bin/bash
+    source ./helpers/shell_common.sh
+    set -euo pipefail
+    if [[ "{{stage}}" != "prod" && "{{stage}}" != "staging" ]]; then
+        echo "Error: stage must be one of: prod, staging"; exit 1
+    fi
+    HOST=umbrella-dev
+    if [[ "{{stage}}" == "prod" ]]; then HOST=umbrella; fi
+
+    DEST="${EMBRELLA_MEDIA_HOST_DIR:-.scratch/media}"
+    echo "Mirroring {{stage}} ($HOST:/srv/mediabackups/media/) → $DEST/ ..."
+    rsync -a --info=progress2 svc.czii.umbrella@$HOST:/srv/mediabackups/media/ "$DEST"/
+
+    echocolor $GREEN "Mirrored {{stage}} images into $DEST/"
+
 # Load a SQL snapshot into the dev compose `db` service.
 # `snapshot` is a path to the .sql or .sql.gz file (relative or absolute).
 # Usage:
@@ -695,14 +717,18 @@ COMPOSE_DEV := "podman compose --env-file .env -f infra/compose.yaml -f infra/co
 netinit:
     @podman network inspect embrella >/dev/null 2>&1 || podman network create embrella
 
+# Create the dev image folder bind-mounted at /srv/media (podman won't create it). Idempotent.
+mediainit:
+    @mkdir -p "${EMBRELLA_MEDIA_HOST_DIR:-.scratch/media}"
+
 # Bring up the dev stack (db, backend, worker, frontend, nginx) in the background.
 # First run builds images; subsequent runs use cached layers.
-devup: netinit
+devup: netinit mediainit
     {{COMPOSE_DEV}} up -d --build
 
 # Like devup, plus the optional Caddy file server for the demo (adds compose.demo.yaml).
 # Serves ${EMBRELLA_TOMODATA_DIR:-.scratch/tomodata} at http://localhost:8080/tomodata/.
-devup-demo: netinit
+devup-demo: netinit mediainit
     {{COMPOSE_DEV}} -f infra/compose.demo.yaml up -d --build
 
 # Tear the dev stack down. Named volumes (db_data, frontend_node_modules, etc.) survive.
@@ -925,3 +951,27 @@ dbbackupv2 stage:
       mv /srv/dbbackups/.backup_\$TS.sql.gz.partial /srv/dbbackups/backup_\$TS.sql.gz"
     echo "Done. Latest backups on $HOST:"
     ssh svc.czii.umbrella@$HOST "ls -alht /srv/dbbackups/backup_*.sql* | head -n 5"
+
+# Mirror a deployed stack's uploaded images ($EMBRELLA_MEDIA_HOST_DIR) to
+# /srv/mediabackups/media/ on the same host. Uploads never change, so rsync only
+# copies new files; nothing is deleted from the mirror, so removed images stay recoverable.
+#
+# Usage:
+#   just mediabackupv2 prod
+#   just mediabackupv2 staging
+mediabackupv2 stage:
+    #!/bin/bash
+    set -euo pipefail
+    if [[ "{{stage}}" != "prod" && "{{stage}}" != "staging" ]]; then
+        echo "Error: stage must be one of: prod, staging"; exit 1
+    fi
+    HOST=umbrella-dev; ENVNAME=staging
+    if [[ "{{stage}}" == "prod" ]]; then HOST=umbrella; ENVNAME=production; fi
+    echo "Backing up the {{stage}} uploaded images on $HOST → /srv/mediabackups/media/ ..."
+    ssh svc.czii.umbrella@$HOST "set -euo pipefail; \
+      cd /srv/czii-umbrella-django && \
+      export \$(grep '^EMBRELLA_MEDIA_HOST_DIR=' .env.$ENVNAME | xargs) && \
+      mkdir -p /srv/mediabackups/media && \
+      rsync -a \"\$EMBRELLA_MEDIA_HOST_DIR\"/ /srv/mediabackups/media/"
+    echo "Done. Backup size on $HOST:"
+    ssh svc.czii.umbrella@$HOST "du -sh /srv/mediabackups/media"

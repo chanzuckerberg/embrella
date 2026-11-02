@@ -254,8 +254,8 @@ def run_job_status_syncer(job_id: str, cluster_id: str | None = None):
     Single iteration of job status syncer.
 
     Queries SLURM's sacct for accurate job timing and status, updates
-    the PipeExecution record, and self-reschedules until job reaches
-    a terminal state.
+    every PipeExecution record the job backs, and self-reschedules until
+    job reaches a terminal state.
 
     This is a lightweight syncer that runs for ALL jobs to ensure accurate
     completion timestamps, unlike the file-scanning syncers which are
@@ -289,7 +289,7 @@ def run_job_status_syncer(job_id: str, cluster_id: str | None = None):
             )
             return {"status": "waiting", "job_id": job_id}
 
-        # Update PipeExecution with current info
+        # Update the job's PipeExecutions with current info
         syncer.update_pipe_execution(job_info)
 
         if syncer.is_job_terminal(job_info):
