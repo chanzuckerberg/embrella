@@ -45,3 +45,17 @@ comma-separated.
     The service account's SSH key is not a setting. Place it beside
     `docker-compose.yml` as `slurm_key` and enable its mounts; see
     [Deployment](deployment.md#installation).
+
+## Reservation IDs
+
+| Variable                 | Required | Default | Notes                                                                   |
+| ------------------------ | -------- | ------- | ----------------------------------------------------------------------- |
+| `RESERVATION_LAMBDA_URL` |          | unset   | Reservation lambda URL. Unset: IDs come from a local in-memory counter. |
+| `AWS_PROFILE`            |          | unset   | Profile for signing reservation calls, read by the backend container.   |
+
+!!! note
+
+    Signing needs AWS credentials available to the backend container; the
+    `infra/compose.*` overlays mount a credentials file from
+    `EMBRELLA_AWS_CREDENTIALS_FILE` (see `infra/compose.prod.yaml`). `AWS_PROFILE`
+    is separate from `DEPOSITION_AWS_PROFILE`, which is for cluster upload jobs.

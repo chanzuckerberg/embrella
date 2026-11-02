@@ -1,10 +1,19 @@
 """Reservation service for deposition + dataset IDs."""
 
 import os
+import re
 from abc import ABC, abstractmethod
 from typing import Any, Dict
+from urllib.parse import urlsplit
 
 import requests
+from botocore.auth import SigV4Auth
+from botocore.awsrequest import AWSRequest
+from botocore.exceptions import BotoCoreError
+from botocore.session import Session
+
+# Function URLs look like <id>.lambda-url.<region>.on.aws - the host carries the signing region.
+_FUNCTION_URL_REGION = re.compile(r"\.lambda-url\.([a-z0-9-]+)\.on\.aws$")
 
 
 class ReservationService(ABC):
@@ -75,7 +84,7 @@ class StubReservationService(ReservationService):
 
 
 class LambdaReservationService(ReservationService):
-    """HTTPS client for the cryoet-data-portal reservation lambda (RESERVATION_LAMBDA_URL)."""
+    """HTTPS client for the reservation lambda (RESERVATION_LAMBDA_URL); SigV4-signed when AWS credentials exist."""
 
     DEFAULT_TIMEOUT_SECONDS = 30
 
@@ -83,12 +92,29 @@ class LambdaReservationService(ReservationService):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
+    def _sigv4_headers(self, url: str) -> Dict[str, str]:
+        """SigV4 headers for a GET to url; {} when unsigned."""
+        # Only Function URLs are signed; skip credential discovery otherwise.
+        region = _FUNCTION_URL_REGION.search(urlsplit(url).hostname or "")
+        if region is None:
+            return {}
+        try:
+            credentials = Session().get_credentials()
+        except BotoCoreError:
+            # missing profile, unreachable metadata service
+            credentials = None
+        if credentials is None:
+            return {}
+        request = AWSRequest(method="GET", url=url)
+        SigV4Auth(credentials, "lambda", region.group(1)).add_auth(request)
+        return dict(request.headers)
+
     def _get(self, path: str, params: Dict[str, Any] | None = None) -> Dict[str, Any]:
-        response = requests.get(
-            f"{self.base_url}{path}",
-            params=params,
-            timeout=self.timeout,
-        )
+        # Prepare the full URL (incl. querystring) first so the signature covers it.
+        prepared = requests.Request("GET", f"{self.base_url}{path}", params=params).prepare()
+        prepared.headers.update(self._sigv4_headers(prepared.url))
+        with requests.Session() as session:
+            response = session.send(prepared, timeout=self.timeout)
         response.raise_for_status()
         return response.json()
 
