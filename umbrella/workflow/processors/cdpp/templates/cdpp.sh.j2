@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# CryoET Data Portal Pipeline: this job is the pipeline's Nextflow driver. It writes the
+# config, then submits and follows the pipeline's own step jobs until the pipeline ends.
+
+#SBATCH --job-name={{ job_name }}
+{% for directive in slurm_directives -%}
+{% if directive.directive.startswith('-') and not directive.directive.startswith('--') -%}
+#SBATCH {{ directive.directive }} {{ directive.value }}
+{% else -%}
+#SBATCH {{ directive.directive }}={{ directive.value }}
+{% endif -%}
+{% endfor %}
+#SBATCH -o {{ cdpp_dir }}/JOB%j_cdpp.out
+#SBATCH -e {{ cdpp_dir }}/JOB%j_cdpp.err
+{% if cluster == "czii" -%}
+#SBATCH --qos=embrella
+{% endif %}
+# Group-writable files/dirs so other users can launch subsequent runs in the same session.
+umask 0002
+
+module load mamba
+conda activate {{ cdpp_env }}
+# After activation: conda's activate scripts are not nounset-safe.
+set -euo pipefail
+
+cdpp_dir={{ cdpp_dir }}
+config="${cdpp_dir}/pipeline.yaml"
+
+{% if not reserved -%}
+# Preview: the tool trees (one runNNN per tool) are reserved at submission.
+{% endif -%}
+mkdir -p "${cdpp_dir}/nextflow"{% for tree in trees %} {{ tree.dir }}{% endfor %}
+
+cryoet-pipeline config from-aretomo3 \
+{% for flag, value in config_args %}    {{ flag }} {{ value }} \
+{% endfor %}{% for tree in trees %}    --tree {{ tree.name }}={{ tree.dir }} \
+{% endfor %}    --output "${config}"
+
+# exec: the CLI becomes the batch shell, so scancel's SIGTERM reaches it; it forwards the
+# signal to Nextflow, waits for its cleanup, and keeps progress.json current for Embrella.
+exec cryoet-pipeline pipeline submit-nextflow -c "${config}" --foreground --progress-json "${cdpp_dir}/nextflow/progress.json"

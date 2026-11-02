@@ -28,8 +28,8 @@ def _type(dataset):
 
 
 class TestDatasetTypeDerivation:
-    def test_tomos_only_when_no_selected_annotations(self):
-        assert _type(_dataset([_session(tomogram=True)])) == "Tomos only"
+    def test_dataset_when_no_selected_annotations(self):
+        assert _type(_dataset([_session(tomogram=True)])) == "Dataset"
 
     def test_dataset_when_annotations_plus_tomogram_metadata(self):
         ds = _dataset([_session(annotations=[_annotation(True)], tomogram=True)])
@@ -45,7 +45,7 @@ class TestDatasetTypeDerivation:
 
     def test_unselected_annotations_do_not_count(self):
         ds = _dataset([_session(annotations=[_annotation(False)], tomogram=True)])
-        assert _type(ds) == "Tomos only"
+        assert _type(ds) == "Dataset"
 
-    def test_empty_dataset_is_tomos_only(self):
-        assert _type(_dataset([])) == "Tomos only"
+    def test_empty_dataset_defaults_to_dataset(self):
+        assert _type(_dataset([])) == "Dataset"

@@ -1,6 +1,5 @@
 'use client';
 
-import type { Dataset } from '../types';
 import type { StepDef } from './wizardTypes';
 import { DepositionStep } from './steps/DepositionStep';
 import { DatasetStep } from './steps/DatasetStep';
@@ -17,12 +16,3 @@ export const WIZARD_STEPS: StepDef[] = [
   { num: 5, key: 'annotations', title: 'Annotations', Component: AnnotationsStep },
   { num: 6, key: 'submit', title: 'Finalize & Submit', Component: SubmitStep },
 ];
-
-export function datasetHasAnnotations(dataset: Dataset): boolean {
-  return dataset.type !== 'Tomos only';
-}
-
-export function isStepSkipped(step: StepDef, dataset: Dataset): boolean {
-  if (step.key === 'annotations') return !datasetHasAnnotations(dataset);
-  return false;
-}
