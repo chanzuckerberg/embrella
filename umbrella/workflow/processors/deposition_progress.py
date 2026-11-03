@@ -10,6 +10,15 @@ from collections import Counter
 from pathlib import Path
 
 
+def _source_mdoc(mdoc_dir, pos):
+    """Mirror deposition_prep's find_source_mdoc: prefer {pos}.mdoc, fall back to SerialEM {pos}.mrc.mdoc."""
+    for name in (f"{pos}.mdoc", f"{pos}.mrc.mdoc"):
+        candidate = mdoc_dir / name
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def prep_inventory(config_path, dataset_id):
     import yaml
 
@@ -24,7 +33,6 @@ def prep_inventory(config_path, dataset_id):
         ("dctf_vol", "{pos}_Vol.mrc", "{run}_dctf_Vol.mrc", "Tomograms"),
         ("denoise", "{pos}_Vol.mrc", "{run}_Vol.mrc", "Tomograms"),
         ("memseg", "{pos}_Vol_Segment_mask.mrc", "{run}_Vol_Segment_mask.mrc", "Masks"),
-        ("mdoc", "{pos}.mdoc", "{run}.mdoc", "Metadata"),
         ("aretomo3", "{pos}_TLT.txt", "{run}_st.rawtlt", "Metadata"),
     )
     for name, session in block["sessions"].items():
@@ -46,9 +54,10 @@ def prep_inventory(config_path, dataset_id):
             for key, source, target, label in links:
                 if paths.get(key) and (Path(paths[key]) / source.format(pos=pos)).exists():
                     inventory[target.format(run=run)] = label
-            if paths.get("mdoc") and paths.get("frames"):
-                mdoc = Path(paths["mdoc"]) / f"{pos}.mdoc"
-                if mdoc.is_file():
+            mdoc = _source_mdoc(Path(paths["mdoc"]), pos) if paths.get("mdoc") else None
+            if mdoc:
+                inventory[f"{run}.mdoc"] = "Metadata"
+                if paths.get("frames"):
                     text = mdoc.read_text(errors="replace")
                     for original in re.findall(r"^\s*SubFramePath\s*=\s*(.+?)\s*$", text, re.MULTILINE):
                         filename = original.replace("\\", "/").rsplit("/", 1)[-1]

@@ -49,6 +49,9 @@ upload_status=${PIPESTATUS[0]}
 set -e
 if [ "$upload_status" -ne 0 ]; then exit "$upload_status"; fi
 
+# marker upload complete; written last so it only exists after a successful sync.
+aws s3 cp - "${s3_dest%/}/ingest.ready" <<< "ready"
+
 # Allow the reporter to publish its final snapshot without holding the job open.
 touch "$progress_file.done" 2>/dev/null || true
 for ((i=0; i<50; i++)); do

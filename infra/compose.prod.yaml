@@ -4,6 +4,8 @@
 #   podman network create embrella
 #   # Obtain the SLURM SSH key from an admin (vault) and place it on the host,
 #   # then point .env.production's SLURM_KEYFILE at that host path.
+#   # For reservation signing, set EMBRELLA_AWS_CREDENTIALS_FILE in .env.production
+#   # to the host credentials file. Set AWS_PROFILE for a named profile.
 #   # Create the image upload dir and set .env.production's EMBRELLA_MEDIA_HOST_DIR to it,
 #   # e.g. mkdir -p /srv/embrella-media. Back it up with `just mediabackupv2 prod`.
 #
@@ -35,10 +37,12 @@ services:
     environment:
       DJANGO_ENV: production
       SLURM_KEYFILE: /run/secrets/slurm_key
+      AWS_SHARED_CREDENTIALS_FILE: /run/secrets/aws_credentials
       # nginx streams uploaded files once Django has checked the request
       MEDIA_ACCEL_PREFIX: /protected-media/
     volumes:
       - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
+      - ${EMBRELLA_AWS_CREDENTIALS_FILE:-/dev/null}:/run/secrets/aws_credentials:ro
       - ${EMBRELLA_MEDIA_HOST_DIR:?set EMBRELLA_MEDIA_HOST_DIR}:/srv/media:z
 
   worker:
