@@ -45,3 +45,19 @@ comma-separated.
     The service account's SSH key is not a setting. Place it beside
     `docker-compose.yml` as `slurm_key` and enable its mounts; see
     [Deployment](deployment.md#installation).
+
+## Reservation IDs (CryoET Data Portal deposition)
+
+The CryoET Data Portal deposition feature reserves dataset and deposition IDs from a Lambda.
+
+| Variable                 | Required | Default | Notes                                                                   |
+| ------------------------ | -------- | ------- | ----------------------------------------------------------------------- |
+| `RESERVATION_LAMBDA_URL` |          | unset   | Reservation lambda URL. Unset: IDs come from a local in-memory counter. |
+| `AWS_PROFILE`            |          | unset   | Profile for signing reservation calls, read by the backend container.   |
+
+!!! note
+
+    Signing needs AWS credentials available to the backend container.
+    Staging/prod overlays mount the file at `EMBRELLA_AWS_CREDENTIALS_FILE`;
+    the dev overlay mounts `~/.aws`. `AWS_PROFILE` is separate from
+    `DEPOSITION_AWS_PROFILE`, which is for cluster upload jobs.

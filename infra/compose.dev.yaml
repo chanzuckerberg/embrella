@@ -42,6 +42,8 @@ services:
       - frontend_next:/app/frontend/.next
       - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
       - ${HOME}/.gitconfig:/home/embrella/.gitconfig:ro
+      # AWS config for reservation signing
+      - ${HOME}/.aws:/home/embrella/.aws
       # Uploaded images in a host folder, laid out like prod so `just fetchmedia` can mirror it.
       # Default: .scratch/media beside DB snapshots (created by the devcontainer precheck / `just devup`).
       # Override with an absolute path.
