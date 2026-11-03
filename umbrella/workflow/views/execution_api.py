@@ -26,6 +26,7 @@ from common import clusterio
 from workflow.defaults import resolve_defaults
 from workflow.execution import PipelineExecutor, ValidationError
 from workflow.processors import get_processor, list_processors
+from workflow.run_numbers import next_run_name_from, plan_softwares, software_run_names
 
 # OpenAPI shapes shared by the processor list and schema endpoints.
 _CLUSTER_FIELDS = {
@@ -1505,14 +1506,16 @@ Used to determine the next available run number when submitting jobs.
 ```json
 {
   "sessions": [
-    {"name": "24nov10", "run_numbers": ["001", "002", "003"]},
-    {"name": "24dec05", "run_numbers": ["001"]}
+    {"name": "24nov10", "run_numbers": ["003", "002", "001"], "next_run_name": "run004"},
+    {"name": "24dec05", "run_numbers": ["001"], "next_run_name": "run002"}
   ]
 }
 ```
 
-Run numbers are returned without the 'run' prefix. To get the next run name,
-find the max number and increment (e.g., max "003" → next is "run004").
+Run numbers are returned without the 'run' prefix, most recent first.
+`next_run_name` is one past the highest `runNNN` the session has under any plan
+sharing a software with this plan, since those runs share a directory. A `session_name`
+with no runs of this plan is still listed, with empty `run_numbers`.
 """,
     parameters=[
         OpenApiParameter(
@@ -1585,22 +1588,35 @@ def get_plan_runs(request):
 
         # Group results by name and collect unique run numbers with sorting by created_at
         grouped_sessions = {}
+        run_names = {}
         for entry in query_results:
             name = entry["name"]
             run_number = entry["run_number"]
             created_at = entry["run_created_at"]
             if name not in grouped_sessions:
                 grouped_sessions[name] = []
+                run_names[name] = []
             if run_number:
                 # Remove 'run' prefix if it exists
                 stripped_run_number = run_number.replace("run", "")
                 grouped_sessions[name].append((stripped_run_number, created_at))
+                run_names[name].append(run_number)
+
+        # A filtered session with no runs of this plan still gets a next_run_name (e.g. run001)
+        new_session = session_name_filter and session_name_filter not in grouped_sessions
+        if new_session and MsiSession.objects.filter(name=session_name_filter).exists():
+            grouped_sessions[session_name_filter] = []
+            run_names[session_name_filter] = []
+
+        # Plans sharing any of this plan's software share a run directory, so their names are taken too
+        software_runs = software_run_names(plan_softwares(plan), grouped_sessions)
 
         # Sort run numbers by created_at (most recent first) and format the response
         formatted_sessions = [
             {
                 "name": name,
                 "run_numbers": [run[0] for run in sorted(run_numbers, key=lambda x: x[1], reverse=True)],
+                "next_run_name": next_run_name_from([*run_names[name], *software_runs.get(name, [])]),
             }
             for name, run_numbers in grouped_sessions.items()
         ]
