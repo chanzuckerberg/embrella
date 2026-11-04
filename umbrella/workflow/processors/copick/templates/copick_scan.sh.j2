@@ -79,6 +79,19 @@ except Exception as exc:
     out = {"scanned": False, "error": str(exc), "session": msi_session, "run": msi_run, "config_path": config_path}
 else:
     runs = list(root.runs)
+    # Custom subset: scan only the selected runs ([] = whole project). Tolerate a .mrc suffix
+    # on either side so positions and copick run names match.
+    _wanted = {{ scanPositions }}
+    if _wanted:
+        def _norm(n):
+            return n[:-4] if n and n.endswith(".mrc") else (n or "")
+        _keep = {_norm(w) for w in _wanted}
+        runs = [r for r in runs if _norm(r.name) in _keep]
+        # Surface selected positions with no matching run (not-in-project / name mismatch) so an
+        # empty scan isn't silently indistinguishable from "runs exist but have no annotations".
+        _missing = sorted(_keep - {_norm(r.name) for r in runs})
+        if _missing:
+            warnings.append("subset: selected runs not found in copick project: " + ", ".join(_missing))
     total_runs = len(runs)
     # Emit progress every ~4% so the web UI can show "N of M runs" while the job runs.
     step = max(1, total_runs // 25)

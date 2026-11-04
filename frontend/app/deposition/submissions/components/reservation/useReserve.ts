@@ -22,14 +22,15 @@ export function useReserve(onDone: () => void) {
     mutationFn: async ({ mode, datasetChoice, depositionId, existingDatasetId }: ReserveParams): Promise<number> => {
       if (mode === 'reuse_dataset') return Number(existingDatasetId);
 
+      // title is required + non-blank on the serializer; seed a placeholder the user renames in the wizard.
       if (mode === 'new') {
-        const dep = await createDeposition({ title: '' });
-        const ds = await createDataset({ deposition: dep.id, title: '' });
+        const dep = await createDeposition({ title: 'Untitled deposition' });
+        const ds = await createDataset({ deposition: dep.id, title: 'Untitled dataset' });
         return ds.id;
       }
 
       if (datasetChoice === 'existing') return Number(existingDatasetId);
-      const ds = await createDataset({ deposition: Number(depositionId), title: '' });
+      const ds = await createDataset({ deposition: Number(depositionId), title: 'Untitled dataset' });
       return ds.id;
     },
     onSuccess: (datasetId) => {
