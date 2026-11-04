@@ -32,6 +32,7 @@ import {
   staleAnnotationIds,
   stripIncompleteLinks,
 } from '../../components/annotations/scan';
+import { subsetPositions } from '../../components/sources/counts';
 import { type Dataset, type DepositionAnnotation } from '../../types';
 import type { StepProps } from '../wizardTypes';
 
@@ -41,6 +42,7 @@ interface SessionRef {
   name: string;
   aretomoRun: string;
   runs: string[];
+  subsetSelection?: unknown;
   saved: DepositionAnnotation[];
 }
 
@@ -51,6 +53,7 @@ function toSessionRefs(dataset: Dataset): SessionRef[] {
     name: s.msi_session_name ?? '',
     aretomoRun: s.aretomo_run_name ?? '',
     runs: Array.isArray(s.selected_copick_runs) ? (s.selected_copick_runs as string[]) : [],
+    subsetSelection: s.subset_selection,
     saved: s.annotations ?? [],
   }));
 }
@@ -101,7 +104,10 @@ export function AnnotationsStep({ dataset, reportSave, readOnly, reportBlocking 
     setRescanning(true);
     setRescanError(null);
     try {
-      await rescanCopick(active.name, active.runs);
+      // Custom mode: scope the scan to the selected positions so it scans those, not every run.
+      const positions =
+        dataset.tomogram_subset_mode === 'custom' ? (subsetPositions(active.subsetSelection) ?? []) : [];
+      await rescanCopick(active.name, active.runs, positions);
       // Re-read scan.json - the pending marker now drives polling + spinner.
       await queryClient.invalidateQueries({ queryKey: ['copick-scan', active.name, [...active.runs].sort()] });
       queryClient.invalidateQueries({ queryKey: ['copick-aretomo-compat', active.name] });
@@ -110,7 +116,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly, reportBlocking 
     } finally {
       setRescanning(false);
     }
-  }, [active, queryClient]);
+  }, [active, dataset.tomogram_subset_mode, queryClient]);
 
   const save = useCallback(
     async (state: Record<string, DepositionAnnotation[]>) => {
@@ -399,9 +405,14 @@ export function AnnotationsStep({ dataset, reportSave, readOnly, reportBlocking 
           <Box />
         )}
         {(active?.runs.length ?? 0) > 0 && !readOnly && (
-          <Button size="small" variant="outlined" onClick={handleRescan} disabled={scanning || rescanning}>
-            {scanning || rescanning ? 'Scanning…' : 'Re-scan copick'}
-          </Button>
+          <Box sx={{ textAlign: 'right' }}>
+            <Button size="small" variant="outlined" onClick={handleRescan} disabled={scanning || rescanning}>
+              {scanning || rescanning ? 'Scanning…' : 'Re-scan copick'}
+            </Button>
+            <Typography variant="caption" component="p" color="text.secondary">
+              Re-scan after changing the subset.
+            </Typography>
+          </Box>
         )}
       </Box>
 

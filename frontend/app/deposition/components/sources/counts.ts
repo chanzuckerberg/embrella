@@ -11,6 +11,20 @@ export function subsetCount(row: Pick<SourceRow, 'subset_selection'>): number | 
   return undefined;
 }
 
+/** Positions to keep from a stored custom subset: JSON "Selected positions" or CSV Tilt_Series rows. */
+export function subsetPositions(sel: unknown): string[] | undefined {
+  if (Array.isArray(sel)) {
+    return sel
+      .map((row) => (row && typeof row === 'object' ? (row as Record<string, unknown>)['Tilt_Series'] : null))
+      .filter((v): v is string => typeof v === 'string' && v.length > 0);
+  }
+  if (sel && typeof sel === 'object') {
+    const positions = (sel as Record<string, unknown>)['Selected positions'];
+    if (Array.isArray(positions)) return positions.filter((v): v is string => typeof v === 'string' && v.length > 0);
+  }
+  return undefined;
+}
+
 export function rowSelected(
   row: Pick<SourceRow, 'tomogram_total' | 'tomogram_selected' | 'subset_csv_path' | 'subset_selection'>,
   mode: TomogramSubsetMode
