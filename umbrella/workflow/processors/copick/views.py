@@ -996,6 +996,13 @@ def trigger_copick_scan(request, session_name: str, run_name: str) -> JsonRespon
     except MsiSession.DoesNotExist:
         return JsonResponse({"success": False, "error": f"Session '{session_name}' not found"}, status=404)
 
+    if not isinstance(request.data, dict):
+        return JsonResponse({"success": False, "error": "Expected a JSON object."}, status=400)
+
+    # Empty positions scan the whole project.
+    raw_positions = request.data.get("positions")
+    scan_positions = [str(name) for name in raw_positions if name] if isinstance(raw_positions, list) else []
+
     pipe_in_plan = (
         PipeInPlan.objects.filter(pipe__software__processor_class=COPICK_SCAN_PROCESSOR)
         .select_related("plan", "pipe", "pipe__software")
@@ -1028,7 +1035,7 @@ def trigger_copick_scan(request, session_name: str, run_name: str) -> JsonRespon
             pipe_in_plan=pipe_in_plan,
             proc_run=proc_run,
             user=request.user,
-            parameters={},
+            parameters={"scan_positions": scan_positions},
             auth=clusterio.get_auth_service_user(),
             cluster_id=cluster_id,
         )

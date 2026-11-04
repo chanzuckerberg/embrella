@@ -223,6 +223,25 @@ class TestCopickScanWiring:
         assert "#SBATCH --mem-per-cpu=8G" in script
         assert "#SBATCH --time=00:30:00" in script
 
+    def test_scan_positions_param_scopes_the_enumeration(self, db):
+        """A subset renders a Python list literal the scan filters `root.runs` on; empty = whole project."""
+        from workflow.processors import get_processor as real_get_processor
+
+        proc = real_get_processor("copick-scan")
+        run_context = mock.Mock(run_number="run003", cluster_id=None)
+        run_context.msi_session.name = "25oct20a"
+        with (
+            mock.patch.object(type(proc), "get_template_context", return_value={"slurm_directives": []}),
+            mock.patch("workflow.processors.copick.scan_processor.get_processor") as gp,
+        ):
+            gp.return_value.get_processing_base_path.return_value = "/hpc/copick"
+            scoped = proc.render_script({"scan_positions": ["Position_1", "Position_2"]}, run_context)
+            unscoped = proc.render_script({}, run_context)
+        assert '_wanted = ["Position_1", "Position_2"]' in scoped
+        assert "_wanted = []" in unscoped
+        # Unmatched selections are surfaced instead of silently producing an empty scan.
+        assert 'warnings.append("subset: selected runs not found' in scoped
+
 
 SCAN_URL = "/copick/v1/projects/{session}/{run}/scan/"
 
@@ -238,6 +257,10 @@ def api(db):
 @pytest.mark.django_db
 class TestTriggerCopickScan:
     """POST .../scan/ submits the copick-scan job (service SSH) and returns immediately."""
+
+    def test_rejects_non_object_body(self, api, copick_session):
+        response = api.post(SCAN_URL.format(session="26feb20b", run="run001"), [], format="json")
+        assert response.status_code == 400
 
     def test_submits_scan_job_and_returns_202(self, api, copick_session):
         with (
@@ -255,14 +278,32 @@ class TestTriggerCopickScan:
         assert body["job_id"] == "9001"
         # invalidate the old scan.json BEFORE submitting
         invalidate.assert_called_once_with("czii", "26feb20b", "run001")
-        # submitted the copick-scan pipe with SERVICE auth (not per-user), no client params
+        # submitted the copick-scan pipe with SERVICE auth (not per-user); no subset -> scan whole project
         _, kwargs = Executor.return_value.execute_pipe.call_args
         assert kwargs["pipe_in_plan"].pipe.software.processor_class == "copick-scan"
         assert kwargs["auth"] == {"username": "svc"}
-        assert kwargs["parameters"] == {}
+        assert kwargs["parameters"] == {"scan_positions": []}
         assert kwargs["cluster_id"] == "czii"
         # ProcRun reused under the copick-scan plan, named as the copick project run
         assert ProcRun.objects.filter(name="run001", proc_plan__name="copick-scan").exists()
+
+    def test_subset_positions_scope_the_scan_job(self, api, copick_session):
+        """Selected positions reach the scan job unchanged."""
+        with (
+            mock.patch.object(copick_views.clusterio, "get_auth_service_user", return_value={"username": "svc"}),
+            mock.patch.object(copick_views, "_invalidate_scan_json"),
+            mock.patch.object(copick_views, "cluster_id_for_run", return_value="czii"),
+            mock.patch("workflow.execution.PipelineExecutor") as Executor,
+        ):
+            Executor.return_value.execute_pipe.return_value = {"job_id": "9002"}
+            r = api.post(
+                SCAN_URL.format(session="26feb20b", run="run001"),
+                {"positions": ["Position_1", "Position_2"]},
+                format="json",
+            )
+        assert r.status_code == 202
+        _, kwargs = Executor.return_value.execute_pipe.call_args
+        assert kwargs["parameters"] == {"scan_positions": ["Position_1", "Position_2"]}
 
     def test_rescan_clears_prior_execution_row(self, api, copick_session):
         """Re-scan reuses the same run+pipe; PipeExecution(run,pipe) is unique_together, so the prior

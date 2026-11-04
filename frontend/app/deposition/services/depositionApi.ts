@@ -233,12 +233,14 @@ export async function scanCopickAnnotations(sessionName: string, runs: string[])
   return merged;
 }
 
-export async function rescanCopick(sessionName: string, runs: string[]): Promise<void> {
+export async function rescanCopick(sessionName: string, runs: string[], positions: string[] = []): Promise<void> {
+  // Empty positions scan the whole project.
+  const body = positions.length ? { positions } : {};
   const results = await Promise.allSettled(
     runs.map(async (run) => {
       const res = await postResource(
         url(`${API.COPICK_PROJECT_DETAIL}${encodeURIComponent(sessionName)}/${encodeURIComponent(run)}/scan/`),
-        {}
+        body
       );
       if (!res.ok) throw new Error(`Copick scan could not be started for ${run} (${res.status})`);
     })
