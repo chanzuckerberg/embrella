@@ -96,6 +96,7 @@ class CdppProcessor(BaseProcessor):
     task_name = "cryoet_pipeline"
     # Re-launching a cdpp run resumes it: its execution is restarted in place.
     allows_run_reuse = True
+    chained_plans = tuple(TREE_PLANS.values())
 
     def validate_parameters(self, params: Dict[str, Any]) -> List[str]:
         errors = []

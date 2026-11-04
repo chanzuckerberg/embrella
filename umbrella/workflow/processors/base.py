@@ -7,7 +7,7 @@ Defines the abstract interface that all processing software integrations must im
 import functools
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import yaml
 from django.core.exceptions import ImproperlyConfigured
@@ -68,6 +68,10 @@ class BaseProcessor(ABC):
     # previous attempt is kept in parameters["_attempts"]. Otherwise a second execute
     # on the same run is refused before submission.
     allows_run_reuse: bool = False
+
+    # ProcPlan names this processor's pipeline writes into (e.g. cdpp → czii-live).
+    # Its run names must be free in each (see workflow.run_numbers.plan_softwares).
+    chained_plans: Tuple[str, ...] = ()
 
     @classmethod
     @functools.cache

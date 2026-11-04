@@ -340,6 +340,19 @@ def test_plan_runs_knows_cdpp(logged_in_client, cdpp_run):
     assert session["next_run_name"] == "run002"
 
 
+@pytest.mark.django_db
+def test_plan_runs_cdpp_skips_tree_runs(logged_in_client, cdpp_plans, test_msi_session):
+    # One AreTomo3 run and no cdpp run yet: cdpp's run001 would collide with it.
+    ProcRun.objects.create(name="run001", proc_plan=cdpp_plans["czii-live"], msi_session=test_msi_session)
+
+    response = logged_in_client.get(
+        "/workflow/v1/execution/plan_runs/", {"plan_type": "cdpp", "session_name": test_msi_session.name}
+    )
+
+    (session,) = response.json()["sessions"]
+    assert session["next_run_name"] == "run002"
+
+
 def test_progress_syncer_is_registered():
     from workflow.views.job_api import SYNCER_CLASS_PATH, SYNCER_TYPES
 
