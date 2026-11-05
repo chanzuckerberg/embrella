@@ -44,7 +44,7 @@ def capture_failure_tail(cluster_id, auth, phase, slurm_job_id):
 
 
 def fetch_job_logs(dataset, *, phase=None):
-    """SLURM tail , readable by any user"""
+    """SLURM tail, live or saved; omit phase to read the current attempt."""
     job = getattr(dataset, "job", None)
     if job is None:
         return {"logs": "", "state": None, "source": "none"}

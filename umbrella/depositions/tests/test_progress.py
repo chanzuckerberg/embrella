@@ -5,6 +5,7 @@ from datetime import timedelta
 from types import SimpleNamespace
 
 import pytest
+import yaml
 from django.utils import timezone
 from workflow.processors import deposition_progress as reporter
 
@@ -73,8 +74,6 @@ def test_missing_progress_never_changes_job_state(monkeypatch):
 
 
 def test_reporter_counts_real_staged_files_and_followed_link_bytes(tmp_path):
-    import yaml
-
     source = tmp_path / "source"
     source.mkdir()
     (source / "TiltSeries_Metrics.csv").write_text("Tilt_Series\nPosition_1.mrc\n")
@@ -97,6 +96,31 @@ def test_reporter_counts_real_staged_files_and_followed_link_bytes(tmp_path):
     (source / "Position_1.mrc").write_bytes(b"mrc")
     assert reporter.prep_sample(root, inventory, False)["done"] == 1
     assert reporter.prep_sample(root, inventory, True)["summary"] == {"objects": 1, "bytes": 3}
+
+
+def test_inventory_uses_custom_positions_from_source_despite_stale_staged_metrics(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "TiltSeries_Metrics.csv").write_text("Tilt_Series\nPosition_1.mrc\nPosition_2.mrc\n")
+    root = tmp_path / "2"
+    root.mkdir()
+    (root / "session_TiltSeries_Metrics.csv").write_text("Tilt_Series\nPosition_1.mrc\n")
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        yaml.safe_dump(
+            {
+                "output_dir": str(tmp_path),
+                "datasets": {
+                    "ds": {
+                        "dataset_id": 2,
+                        "sessions": {"session": {"paths": {"aretomo3": str(source)}, "positions": ["Position_2.mrc"]}},
+                    }
+                },
+            }
+        )
+    )
+    _, inventory = reporter.prep_inventory(config, "2")
+    assert {name for name, label in inventory.items() if label == "Tilt series"} == {"session_Position_2_TS.mrc"}
 
 
 def test_finished_sync_snapshot_excludes_validation_time():
@@ -178,8 +202,6 @@ def test_upload_counts_and_elapsed_are_collected_and_serialized(monkeypatch, est
 
 @pytest.mark.parametrize("mdoc_suffix", [".mdoc", ".mrc.mdoc"])
 def test_prep_inventory_matches_cli_mdoc_support(tmp_path, mdoc_suffix):
-    import yaml
-
     source = tmp_path / "source"
     source.mkdir()
     (source / "TiltSeries_Metrics.csv").write_text("Tilt_Series\nPosition_1.mrc\n")
@@ -217,8 +239,6 @@ def test_prep_inventory_matches_cli_mdoc_support(tmp_path, mdoc_suffix):
 
 # Expected staged names mirror deposition_prep SYMLINK_TYPES; the mapping is confirmed against the CLI source, not here.
 def test_prep_inventory_matches_expected_staged_names(tmp_path):
-    import yaml
-
     source = tmp_path / "source"
     source.mkdir()
     (source / "TiltSeries_Metrics.csv").write_text("Tilt_Series\nPosition_1.mrc\n")
@@ -300,7 +320,6 @@ def test_generated_scripts_publish_progress_and_preserve_command_failure(tmp_pat
     import sys
     from pathlib import Path
 
-    import yaml
     from workflow.processors.deposition_prep.processor import DepositionPrepProcessor
     from workflow.processors.deposition_push.processor import DepositionPushProcessor
 

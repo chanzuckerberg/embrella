@@ -230,7 +230,7 @@ export function SessionCard({
             )}
           </Box>
 
-          <CopickConfigs row={row} readOnly={readOnly} onChange={set} />
+          <CopickConfigs row={row} subsetMode={subsetMode} readOnly={readOnly} onChange={set} />
         </Box>
       )}
     </Box>

@@ -1143,7 +1143,7 @@ class TestSubmitEndpoint:
         with mock.patch(self.SERVICE, return_value=job) as m:
             r = client.post(f"{DATASETS}{ds['id']}/submit/")
         assert r.status_code == 202, r.content
-        m.assert_called_once()  # any authenticated user can submit (#1430)
+        m.assert_called_once()  # any authenticated user can submit
 
 
 @pytest.mark.django_db
@@ -1270,7 +1270,7 @@ class TestLogsEndpoint:
         read.assert_called_once()
 
     def test_any_user_gets_a_live_read(self, auth_client):
-        # Depositions are open to all (#1430), so any logged-in user triggers the service-account read.
+        # Depositions are open to all, so any logged-in user triggers the read.
         ds = self._owned_dataset(auth_client)
         self._running_job(ds)
         other = User.objects.create_user(username="nonowner@example.com", password="pw")
@@ -1367,7 +1367,7 @@ class TestRawLogPrivacy:
         ):
             response = auth_client.get(url)
         assert response.status_code == 200
-        assert response.json()["logs"] == "private failure tail"  # any user now sees the saved tail 
+        assert response.json()["logs"] == "private failure tail"  # any user now sees the saved tail
 
 
 @pytest.mark.django_db
@@ -1468,7 +1468,7 @@ def test_validation_diagnostics_visible_to_any_user(auth_client, endpoint):
             "blocking_issues": [{"message": issue, "path": path}],
         },
     )
-    # Diagnostics are no longer owner-gated (#1430): view as a different user and see them in full.
+    # Diagnostics are no longer owner-gated
     auth_client.force_login(User.objects.create_user(username="diagnostic-viewer", password="pw"))
     endpoints = {
         "deposition": f"{DEPOSITIONS}{dep['id']}/",

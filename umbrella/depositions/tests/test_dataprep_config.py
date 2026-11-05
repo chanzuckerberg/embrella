@@ -95,6 +95,39 @@ def test_includes_every_dataset_in_the_deposition(dataset, test_session_plan):
     assert config["datasets"]["dataset_303"]["dataset_id"] == 303
 
 
+def test_custom_positions_are_per_session_and_omitted_outside_custom_mode(dataset, test_session_plan):
+    session = dataset.sessions.get()
+    session.subset_selection = {"Selected positions": ["Position_1.mrc"]}
+    session.save()
+    other = DepositionSession.objects.create(
+        dataset=dataset,
+        msi_session=MsiSession.objects.create(name="24dec01", session_plan=test_session_plan),
+        aretomo_run_name="run009",
+        subset_selection=[{"Tilt_Series": "Position_2.mrc"}],
+    )
+    TiltseriesMetadata.objects.create(session=other, autofill_metadata=deepcopy(RAW_SESSION), pixel_spacing=1.54)
+    dataset.tomogram_subset_mode = "custom"
+    dataset.save()
+    config = _build(dataset)
+    assert _session(config)["positions"] == ["Position_1"]
+    assert _session(config, "24dec01")["positions"] == ["Position_2"]
+
+    dataset.tomogram_subset_mode = "all"
+    dataset.save()
+    config = _build(dataset)
+    assert "positions" not in _session(config)
+    assert "positions" not in _session(config, "24dec01")
+
+
+def test_custom_mode_rejects_an_empty_selection(dataset):
+    """Empty positions in custom mode would mean "process all" to the CLI, so it must be rejected
+    at config build - not silently omitted - which also stops a shared-session sibling leaking."""
+    dataset.tomogram_subset_mode = "custom"
+    dataset.save()
+    with pytest.raises(SubmissionValidationError, match="no custom subset selected"):
+        _build(dataset)
+
+
 def test_user_edits_override_autofill_without_changing_saved_raw_data(dataset):
     metadata = TiltseriesMetadata.objects.get(session__dataset=dataset)
     metadata.pixel_spacing = 2.0

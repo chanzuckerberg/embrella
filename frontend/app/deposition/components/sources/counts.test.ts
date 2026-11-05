@@ -1,4 +1,4 @@
-import { rollup, rowSelected, subsetCount } from './counts';
+import { rollup, rowSelected, subsetCount, subsetPositions } from './counts';
 import type { SourceRow } from './types';
 
 function row(over: Partial<SourceRow> = {}): SourceRow {
@@ -27,6 +27,21 @@ describe('subsetCount', () => {
   it('returns undefined when there is no usable selection', () => {
     expect(subsetCount(row({ subset_selection: undefined }))).toBeUndefined();
     expect(subsetCount(row({ subset_selection: { other: 1 } }))).toBeUndefined();
+  });
+});
+
+describe('subsetPositions', () => {
+  it('reads a metadata-viewer JSON selection', () => {
+    expect(subsetPositions({ 'Selected positions': ['P_1', 'P_2'] })).toEqual(['P_1', 'P_2']);
+  });
+
+  it('reads a parsed CSV (list of Tilt_Series rows)', () => {
+    expect(subsetPositions([{ Tilt_Series: 'P_1.mrc' }, { Tilt_Series: 'P_2.mrc' }])).toEqual(['P_1.mrc', 'P_2.mrc']);
+  });
+
+  it('returns undefined when there is no usable selection', () => {
+    expect(subsetPositions(undefined)).toBeUndefined();
+    expect(subsetPositions({ other: 1 })).toBeUndefined();
   });
 });
 

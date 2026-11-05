@@ -116,8 +116,6 @@ class DatasetJobSerializer(serializers.ModelSerializer):
     sync_summary = serializers.SerializerMethodField()
     push_progress = serializers.SerializerMethodField()
 
-    # `validation` serializes directly: visible to any user
-
     def get_sync_progress(self, obj):
         return serialize_progress(obj.sync_progress)
 
@@ -129,7 +127,7 @@ class DatasetJobSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DatasetJob
-        # Full log excerpts are served via the logs endpoint (readable by any user - see #1430).
+        # Full log excerpts are served via the logs endpoint (readable by any user).
         exclude = ["log_excerpt"]
 
 
@@ -446,7 +444,7 @@ class DatasetSerializer(serializers.ModelSerializer):
 
 
 def _is_owner(serializer, obj) -> bool:
-    # Any authenticated user can edit, replaces it with project permissions.
+    # Any authenticated user can edit; replaced by project permissions.
     request = serializer.context.get("request")
     user = getattr(request, "user", None)
     return bool(user and user.is_authenticated)

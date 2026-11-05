@@ -13,7 +13,12 @@ from stores.paths import resolve_dir
 from common import clusterio
 from depositions import tasks
 from depositions.models import DatasetJob, Deposition
-from depositions.services.dataprep_config import dataprep_config_yaml, dataset_is_ready, resolve_sync_destination
+from depositions.services.dataprep_config import (
+    dataprep_config_yaml,
+    dataset_is_ready,
+    require_custom_positions,
+    resolve_sync_destination,
+)
 from depositions.services.dataset_metadata import build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
@@ -96,6 +101,11 @@ def submit_dataset_prep(dataset):
         issues = metadata_issues(portal_metadata, deposition.title)
         if issues:
             raise SubmissionValidationError("Complete the metadata before preparation:\n" + "\n".join(issues))
+        # Fail fast (pre-claim) if a custom dataset has an unusable selection; dataprep_config
+        # re-checks every included dataset (siblings) as the backstop.
+        if dataset.tomogram_subset_mode == "custom":
+            for session in dataset.sessions.select_related("msi_session"):
+                require_custom_positions(session)
         job, _ = DatasetJob.objects.using(db).get_or_create(dataset=dataset)
         claimed = (
             DatasetJob.objects.using(db)
