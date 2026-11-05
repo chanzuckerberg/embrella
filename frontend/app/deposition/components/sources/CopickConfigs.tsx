@@ -7,14 +7,18 @@ import { Box, Chip, IconButton, Link, Menu, MenuItem, Typography } from '@mui/ma
 import { useCopickRunObjects, useCopickRuns } from '../../hooks/useSources';
 import { rescanCopick } from '../../services/depositionApi';
 import { outlineChipSx } from './chipStyles';
+import { subsetPositions } from './counts';
+import type { TomogramSubsetMode } from '../../types';
 import type { SourceRow } from './types';
 
 export function CopickConfigs({
   row,
+  subsetMode,
   readOnly,
   onChange,
 }: {
   row: SourceRow;
+  subsetMode: TomogramSubsetMode;
   readOnly: boolean;
   onChange: (patch: Partial<SourceRow>) => void;
 }) {
@@ -142,7 +146,12 @@ export function CopickConfigs({
             key={r.name}
             onClick={() => {
               onChange({ selected_copick_runs: [...configs, r.name] });
-              if (row.msi_session_name) rescanCopick(row.msi_session_name, [r.name]).catch(() => undefined);
+              if (row.msi_session_name)
+                rescanCopick(
+                  row.msi_session_name,
+                  [r.name],
+                  subsetMode === 'custom' ? (subsetPositions(row.subset_selection) ?? []) : []
+                ).catch(() => undefined);
               setAnchor(null);
             }}
           >

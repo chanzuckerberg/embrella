@@ -16,9 +16,10 @@ from django.contrib.auth.decorators import login_not_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 from processes.models import PipeExecution, PipeInPlan, ProcPlan, ProcRun, ProcSoftware
 from processes.services.cluster_resolver import cluster_id_for_run, get_default_cluster_id
+from rest_framework import serializers
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from stores.models import Cluster, resolve_review_path
@@ -981,9 +982,20 @@ def _mark_scan_failed(cluster_id: str, session_name: str, run_name: str, message
     tags=["Copick Projects"],
     description=(
         "Submit a copick-scan SLURM job for (session, run) and return immediately. Re-runs the "
-        "same producer that first wrote scan.json (atomic overwrite); poll GET ?scan=true for the result."
+        "same producer that first wrote scan.json (atomic overwrite); poll GET ?scan=true for the result. "
+        "Optional body `positions`: tilt-series positions (matched to copick run names) to scope the "
+        "scan to a custom subset; omit or leave empty to scan the whole project."
     ),
-    responses={202: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT, 503: OpenApiTypes.OBJECT},
+    request=inline_serializer(
+        name="CopickScanRequest",
+        fields={"positions": serializers.ListField(child=serializers.CharField(), required=False)},
+    ),
+    responses={
+        202: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+        404: OpenApiTypes.OBJECT,
+        503: OpenApiTypes.OBJECT,
+    },
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -995,6 +1007,13 @@ def trigger_copick_scan(request, session_name: str, run_name: str) -> JsonRespon
         session = MsiSession.objects.get(name=session_name)
     except MsiSession.DoesNotExist:
         return JsonResponse({"success": False, "error": f"Session '{session_name}' not found"}, status=404)
+
+    if not isinstance(request.data, dict):
+        return JsonResponse({"success": False, "error": "Expected a JSON object."}, status=400)
+
+    # Empty positions scan the whole project.
+    raw_positions = request.data.get("positions")
+    scan_positions = [str(name) for name in raw_positions if name] if isinstance(raw_positions, list) else []
 
     pipe_in_plan = (
         PipeInPlan.objects.filter(pipe__software__processor_class=COPICK_SCAN_PROCESSOR)
@@ -1028,7 +1047,7 @@ def trigger_copick_scan(request, session_name: str, run_name: str) -> JsonRespon
             pipe_in_plan=pipe_in_plan,
             proc_run=proc_run,
             user=request.user,
-            parameters={},
+            parameters={"scan_positions": scan_positions},
             auth=clusterio.get_auth_service_user(),
             cluster_id=cluster_id,
         )
