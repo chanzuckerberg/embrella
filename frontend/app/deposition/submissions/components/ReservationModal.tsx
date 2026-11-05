@@ -10,7 +10,6 @@ import {
   MenuItem,
   Radio,
   Select,
-  Snackbar,
   Tab,
   Tabs,
   TextField,
@@ -181,7 +180,6 @@ export function ReservationModal({
   const [manualId, setManualId] = useState('');
   const [datasetChoice, setDatasetChoice] = useState<DatasetChoice>('new');
   const [existingDatasetId, setExistingDatasetId] = useState<string>('');
-  const [notice, setNotice] = useState(false);
 
   const selectedDeposition = useMemo(
     () => depositions.find((d) => String(d.id) === depositionId) ?? null,
@@ -207,89 +205,74 @@ export function ReservationModal({
     ? `Add a dataset to ${depositionLabel(lockedDeposition?.deposition_id)}`
     : 'Reserve or select IDs';
 
-  const willReserve = mode === 'new' || (mode === 'existing_deposition' && datasetChoice === 'new');
-
   const handleContinue = () => {
-    if (willReserve) {
-      setNotice(true);
-      return;
-    }
     reserve.mutate({ mode, datasetChoice, depositionId, existingDatasetId });
   };
 
   return (
-    <>
-      <BaseFormDialog
-        open={open}
-        onClose={onClose}
-        sdsSize={isAddDataset ? 'xs' : 's'}
-        subtitle={subtitle}
-        title={title}
-        saveButtonText="Continue"
-        isSubmitting={reserve.isPending}
-        disabled={!canContinue}
-        onSave={handleContinue}
-      >
-        {!isAddDataset && <OptionCards mode={mode} onSelect={setMode} />}
+    <BaseFormDialog
+      open={open}
+      onClose={onClose}
+      sdsSize={isAddDataset ? 'xs' : 's'}
+      subtitle={subtitle}
+      title={title}
+      saveButtonText="Continue"
+      isSubmitting={reserve.isPending}
+      disabled={!canContinue}
+      onSave={handleContinue}
+    >
+      {!isAddDataset && <OptionCards mode={mode} onSelect={setMode} />}
 
-        {mode === 'existing_deposition' && (
-          <Box>
-            {!isAddDataset && (
-              <ExistingDepositionPicker
-                tab={tab}
-                onTabChange={setTab}
-                depositions={depositions}
-                depositionId={depositionId}
-                onDepositionIdChange={setDepositionId}
-                manualId={manualId}
-                onManualIdChange={setManualId}
-              />
-            )}
-            <DatasetChoiceField
-              choice={datasetChoice}
-              onChoiceChange={setDatasetChoice}
-              existingDatasetId={existingDatasetId}
-              onExistingDatasetIdChange={setExistingDatasetId}
-              datasets={datasetsInSelected}
+      {mode === 'existing_deposition' && (
+        <Box>
+          {!isAddDataset && (
+            <ExistingDepositionPicker
+              tab={tab}
+              onTabChange={setTab}
+              depositions={depositions}
+              depositionId={depositionId}
+              onDepositionIdChange={setDepositionId}
+              manualId={manualId}
+              onManualIdChange={setManualId}
             />
-          </Box>
-        )}
+          )}
+          <DatasetChoiceField
+            choice={datasetChoice}
+            onChoiceChange={setDatasetChoice}
+            existingDatasetId={existingDatasetId}
+            onExistingDatasetIdChange={setExistingDatasetId}
+            datasets={datasetsInSelected}
+          />
+        </Box>
+      )}
 
-        {mode === 'reuse_dataset' && (
-          <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.75, mt: 5 }}>
-              Select dataset
-            </Typography>
-            <FormControl fullWidth size="small">
-              <Select
-                displayEmpty
-                value={existingDatasetId}
-                onChange={(e) => setExistingDatasetId(String(e.target.value))}
-              >
-                <MenuItem value="" disabled>
-                  Select a dataset…
+      {mode === 'reuse_dataset' && (
+        <Box>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.75, mt: 5 }}>
+            Select dataset
+          </Typography>
+          <FormControl fullWidth size="small">
+            <Select
+              displayEmpty
+              value={existingDatasetId}
+              onChange={(e) => setExistingDatasetId(String(e.target.value))}
+            >
+              <MenuItem value="" disabled>
+                Select a dataset…
+              </MenuItem>
+              {allDatasets.map((ds) => (
+                <MenuItem key={ds.id} value={String(ds.id)}>
+                  {datasetLabel(ds.dataset_id)} - {ds.title || '(untitled)'}
                 </MenuItem>
-                {allDatasets.map((ds) => (
-                  <MenuItem key={ds.id} value={String(ds.id)}>
-                    {datasetLabel(ds.dataset_id)} - {ds.title || '(untitled)'}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-        )}
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      )}
 
-        {reserve.isError && (
-          <Callout intent="negative" sdsStyle="persistent" body="Could not reserve IDs. Please try again." />
-        )}
-      </BaseFormDialog>
-      <Snackbar
-        open={notice}
-        autoHideDuration={3000}
-        onClose={() => setNotice(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        message="Backend reservation will happen here - then you'll continue to the wizard."
-      />
-    </>
+      {reserve.isError && (
+        <Callout intent="negative" sdsStyle="persistent" body="Could not reserve IDs. Please try again." />
+      )}
+    </BaseFormDialog>
   );
 }
