@@ -116,28 +116,28 @@ class TestScoping:
         assert mine["id"] in ids
         assert others_dep["id"] not in ids
 
-    def test_non_owner_cannot_edit_deposition(self, auth_client):
+    def test_any_user_can_edit_anothers_deposition(self, auth_client):
         other = User.objects.create_user(username="dave@example.com", password="pw")
         other_client = APIClient()
         other_client.force_login(other)
-        dep = _make_deposition(auth_client)  # owned by alice
-        r = other_client.patch(f"{DEPOSITIONS}{dep['id']}/", {"description": "hax"}, format="json")
-        assert r.status_code == 403
+        dep = _make_deposition(auth_client)  # created by alice
+        r = other_client.patch(f"{DEPOSITIONS}{dep['id']}/", {"description": "collab edit"}, format="json")
+        assert r.status_code == 200
 
-    def test_non_owner_cannot_delete_deposition(self, auth_client):
+    def test_any_user_can_delete_anothers_deposition(self, auth_client):
         other = User.objects.create_user(username="erin@example.com", password="pw")
         other_client = APIClient()
         other_client.force_login(other)
         dep = _make_deposition(auth_client)
-        assert other_client.delete(f"{DEPOSITIONS}{dep['id']}/").status_code == 403
+        assert other_client.delete(f"{DEPOSITIONS}{dep['id']}/").status_code == 204
 
-    def test_non_owner_cannot_add_dataset(self, auth_client):
+    def test_any_user_can_add_dataset_to_anothers_deposition(self, auth_client):
         other = User.objects.create_user(username="frank@example.com", password="pw")
         other_client = APIClient()
         other_client.force_login(other)
         dep = _make_deposition(auth_client)
-        r = other_client.post(DATASETS, {"deposition": dep["id"], "title": "x"}, format="json")
-        assert r.status_code == 403
+        r = other_client.post(DATASETS, {"deposition": dep["id"], "title": "collab dataset"}, format="json")
+        assert r.status_code == 201, r.content
 
 
 @pytest.mark.django_db
@@ -331,13 +331,14 @@ class TestSubsetUpload:
         r = auth_client.post(self._url(owned_session), {"file": upload}, format="multipart")
         assert r.status_code == 400
 
-    def test_non_owner_cannot_upload(self, owned_session):
+    def test_any_user_can_upload(self, owned_session):
         other = User.objects.create_user(username="grace@example.com", password="pw")
         client = APIClient()
         client.force_login(other)
-        upload = SimpleUploadedFile("Metadata.json", b"{}", content_type="application/json")
-        r = client.post(f"{SESSIONS}{owned_session.id}/subset-csv/", {"file": upload}, format="multipart")
-        assert r.status_code == 403
+        payload = {"Selected positions": ["Position_1"], "Filter type": "AND"}
+        upload = SimpleUploadedFile("Metadata.json", json.dumps(payload).encode(), content_type="application/json")
+        r = client.post(self._url(owned_session), {"file": upload}, format="multipart")
+        assert r.status_code == 200, r.content
 
 
 @pytest.mark.django_db
@@ -695,13 +696,6 @@ class TestAutoFill:
         assert "Metrics file not found" not in detail
         assert detail == expected
 
-    def test_non_owner_cannot_autofill(self, owned_session):
-        other = User.objects.create_user(username="heidi@example.com", password="pw")
-        client = APIClient()
-        client.force_login(other)
-        r = client.post(f"{SESSIONS}{owned_session.id}/auto-fill/")
-        assert r.status_code == 403
-
 
 @pytest.mark.django_db
 class TestTomogramFlavorValidation:
@@ -857,12 +851,12 @@ class TestAnnotationPersistence:
         assert r.status_code == 200
         assert [a["copick_ref"] for a in r.json()["annotations"]] == ["a"]
 
-    def test_non_owner_cannot_patch(self, owned_session):
+    def test_any_user_can_patch(self, owned_session):
         other = User.objects.create_user(username="mallory@example.com", password="pw")
         client = APIClient()
         client.force_login(other)
         r = self._patch(client, owned_session, [self._ann("a")])
-        assert r.status_code == 403
+        assert r.status_code == 200
 
     def test_creates_nested_method_links(self, auth_client, owned_session):
         from depositions.models import DepositionAnnotation
@@ -1140,15 +1134,16 @@ class TestSubmitEndpoint:
         assert r.status_code == 502
         assert r.json() == {"detail": "Couldn't reach the cluster to submit. Please try again."}
 
-    def test_non_owner_is_forbidden(self, auth_client, db):
+    def test_any_user_can_submit(self, auth_client, db):
         ds = self._owned_dataset(auth_client)
         other = User.objects.create_user(username="bob@example.com", password="pw")
         client = APIClient()
         client.force_login(other)
-        with mock.patch(self.SERVICE) as m:
+        job = SimpleNamespace(state="prep_submitted", dataset_status="syncing")
+        with mock.patch(self.SERVICE, return_value=job) as m:
             r = client.post(f"{DATASETS}{ds['id']}/submit/")
-        assert r.status_code == 403
-        m.assert_not_called()  # permission check runs before the service
+        assert r.status_code == 202, r.content
+        m.assert_called_once()  # any authenticated user can submit (#1430)
 
 
 @pytest.mark.django_db
@@ -1185,15 +1180,16 @@ class TestPushEndpoint:
         assert r.status_code == 502
         assert r.json() == {"detail": "Couldn't reach the cluster to push. Please try again."}
 
-    def test_push_non_owner_is_forbidden(self, auth_client, db):
+    def test_any_user_can_push(self, auth_client, db):
         ds = self._owned_dataset(auth_client)
         other = User.objects.create_user(username="grace@example.com", password="pw")
         client = APIClient()
         client.force_login(other)
-        with mock.patch(self.SERVICE) as m:
+        job = SimpleNamespace(state="push_submitted", dataset_status="syncing")
+        with mock.patch(self.SERVICE, return_value=job) as m:
             r = client.post(f"{DATASETS}{ds['id']}/push/")
-        assert r.status_code == 403
-        m.assert_not_called()
+        assert r.status_code == 202, r.content
+        m.assert_called_once()  # any authenticated user can push
 
 
 @pytest.mark.django_db
@@ -1273,18 +1269,21 @@ class TestLogsEndpoint:
         assert r.json()["source"] == "live"
         read.assert_called_once()
 
-    def test_non_owner_gets_no_excerpt_or_live_read(self, auth_client):
-        # Any logged-in user can view a deposition, but only the owner triggers a service-account read.
+    def test_any_user_gets_a_live_read(self, auth_client):
+        # Depositions are open to all (#1430), so any logged-in user triggers the service-account read.
         ds = self._owned_dataset(auth_client)
         self._running_job(ds)
         other = User.objects.create_user(username="nonowner@example.com", password="pw")
         client = APIClient()
         client.force_login(other)
-        with mock.patch("depositions.services.logs.read_slurm_tail", side_effect=AssertionError("no live read")):
+        with (
+            mock.patch("depositions.services.logs.clusterio.get_auth_service_user", return_value={"username": "svc"}),
+            mock.patch("depositions.services.logs.read_slurm_tail", return_value="live!") as read,
+        ):
             r = client.get(f"{DATASETS}{ds['id']}/logs/")
         assert r.status_code == 200, r.content
-        assert r.json()["source"] == "stored"
-        assert r.json()["logs"] == ""
+        assert r.json()["source"] == "live"
+        read.assert_called_once()
 
     def test_invalid_log_phase_is_rejected(self, auth_client):
         ds = self._owned_dataset(auth_client)
@@ -1347,7 +1346,7 @@ class TestRawLogPrivacy:
         assert raw_log not in payload
 
     @pytest.mark.parametrize("phase", ["prep", "push"])
-    def test_saved_failure_logs_are_owner_only(self, auth_client, phase):
+    def test_saved_failure_logs_visible_to_any_user(self, auth_client, phase):
         from depositions.models import Dataset, DatasetJob
 
         dep = _make_deposition(auth_client)
@@ -1361,24 +1360,14 @@ class TestRawLogPrivacy:
             log_excerpt="private failure tail",
         )
         url = f"{DATASETS}{ds['id']}/logs/?phase={phase}"
+        other = User.objects.create_user(username="viewer@example.com", password="pw")
+        auth_client.force_login(other)
         with mock.patch(
             "depositions.services.logs.clusterio.get_auth_service_user", side_effect=RuntimeError("offline")
         ):
-            owner_response = auth_client.get(url)
-        assert owner_response.status_code == 200
-        assert owner_response.json()["logs"] == "private failure tail"
-
-        other = User.objects.create_user(username="viewer@example.com", password="pw")
-        auth_client.force_login(other)
-        with (
-            mock.patch("depositions.services.logs.clusterio.get_auth_service_user") as auth,
-            mock.patch("depositions.services.logs.read_slurm_tail") as read,
-        ):
-            viewer_response = auth_client.get(url)
-        assert viewer_response.status_code == 200
-        assert viewer_response.json()["logs"] == ""
-        auth.assert_not_called()
-        read.assert_not_called()
+            response = auth_client.get(url)
+        assert response.status_code == 200
+        assert response.json()["logs"] == "private failure tail"  # any user now sees the saved tail 
 
 
 @pytest.mark.django_db
@@ -1444,20 +1433,22 @@ class TestResetPreparationEndpoint:
         assert response.status_code == 400
         assert response.json() == {"detail": "This dataset hasn't been prepared yet."}
 
-    def test_non_owner_is_forbidden(self, auth_client):
-        ds = _make_dataset(auth_client, _make_deposition(auth_client)["id"])
+    def test_any_user_can_reset(self, auth_client):
+        from depositions.models import DatasetJob
+
+        dep = _make_deposition(auth_client)
+        ds = _make_dataset(auth_client, dep["id"])
+        DatasetJob.objects.create(dataset_id=ds["id"], state="prep_completed", prep_slurm_job_id="42")
         client = APIClient()
         client.force_login(User.objects.create_user(username="reset-other", password="pw"))
-        with mock.patch("depositions.services.submission.reset_preparation") as reset:
-            response = client.post(f"{DATASETS}{ds['id']}/reset-preparation/")
-        assert response.status_code == 403
-        reset.assert_not_called()
+        response = client.post(f"{DATASETS}{ds['id']}/reset-preparation/")
+        assert response.status_code == 200, response.content
+        assert response.json()["state"] == "pending"
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("is_owner", [True, False])
 @pytest.mark.parametrize("endpoint", ["deposition", "dataset_list", "dataset", "job_status"])
-def test_validation_diagnostics_are_owner_only(auth_client, is_owner, endpoint):
+def test_validation_diagnostics_visible_to_any_user(auth_client, endpoint):
     from depositions.models import DatasetJob
 
     dep = _make_deposition(auth_client)
@@ -1477,8 +1468,8 @@ def test_validation_diagnostics_are_owner_only(auth_client, is_owner, endpoint):
             "blocking_issues": [{"message": issue, "path": path}],
         },
     )
-    if not is_owner:
-        auth_client.force_login(User.objects.create_user(username="diagnostic-viewer", password="pw"))
+    # Diagnostics are no longer owner-gated (#1430): view as a different user and see them in full.
+    auth_client.force_login(User.objects.create_user(username="diagnostic-viewer", password="pw"))
     endpoints = {
         "deposition": f"{DEPOSITIONS}{dep['id']}/",
         "dataset_list": DATASETS,
@@ -1489,14 +1480,12 @@ def test_validation_diagnostics_are_owner_only(auth_client, is_owner, endpoint):
     assert response.status_code == 200
     payload = json.dumps(response.json())
     for raw in (warning, issue, path):
-        assert (raw in payload) == is_owner
+        assert raw in payload
     if endpoint == "job_status":
         validation = response.json()["validation"]
         assert validation["status"] == "failed" and validation["attempt"] == "42"
         assert validation["duration_seconds"] == 12
         assert len(validation["warnings"]) == len(validation["blocking_issues"]) == 1
-        if not is_owner:
-            assert "submission owner" in validation["blocking_issues"][0]["message"]
 
 
 @pytest.mark.django_db

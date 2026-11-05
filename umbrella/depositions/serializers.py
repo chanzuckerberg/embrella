@@ -23,7 +23,6 @@ from .models import (
     TiltseriesMetadata,
     TomogramMetadata,
 )
-from .permissions import deposition_owner_id
 from .services.autofill import TILTSERIES_PIPELINE_VALUES
 from .services.dataset_metadata import build_dataset_metadata
 from .services.exceptions import SubmissionValidationError
@@ -116,24 +115,8 @@ class DatasetJobSerializer(serializers.ModelSerializer):
     sync_progress = serializers.SerializerMethodField()
     sync_summary = serializers.SerializerMethodField()
     push_progress = serializers.SerializerMethodField()
-    validation = serializers.SerializerMethodField()
 
-    def get_validation(self, obj):
-        result = obj.validation
-        if result is None or _is_owner(self, obj.dataset):
-            return result
-        # CLI text can contain private paths; only the owner sees it.
-        return {
-            **{key: result[key] for key in ("status", "attempt", "dataset_id", "duration_seconds") if key in result},
-            "warnings": [
-                {"message": "Validation warning. Details are available to the submission owner."}
-                for _ in result.get("warnings", [])
-            ],
-            "blocking_issues": [
-                {"message": "Validation issue. Details are available to the submission owner."}
-                for _ in result.get("blocking_issues", [])
-            ],
-        }
+    # `validation` serializes directly: visible to any user
 
     def get_sync_progress(self, obj):
         return serialize_progress(obj.sync_progress)
@@ -146,7 +129,7 @@ class DatasetJobSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DatasetJob
-        # Full log excerpts are available only through the owner-gated logs endpoint.
+        # Full log excerpts are served via the logs endpoint (readable by any user - see #1430).
         exclude = ["log_excerpt"]
 
 
@@ -463,11 +446,10 @@ class DatasetSerializer(serializers.ModelSerializer):
 
 
 def _is_owner(serializer, obj) -> bool:
+    # Any authenticated user can edit, replaces it with project permissions.
     request = serializer.context.get("request")
     user = getattr(request, "user", None)
-    if not (user and user.is_authenticated):
-        return False
-    return deposition_owner_id(obj) == user.id
+    return bool(user and user.is_authenticated)
 
 
 class DepositionSerializer(serializers.ModelSerializer):
