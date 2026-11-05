@@ -6,7 +6,7 @@ from tem.models import MsiSession
 class Deposition(models.Model):
     # No status field — status is per-dataset (see Dataset.status). A deposition-level status, if ever needed, is a derived rollup of its datasets.
     deposition_id = models.IntegerField(null=True, unique=True, blank=True, help_text="Assigned by reservation service")
-    title = models.CharField(max_length=256)
+    title = models.CharField(max_length=256, blank=True)
     description = models.TextField(blank=True)
     submitter_user = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL, related_name="depositions"
@@ -40,7 +40,7 @@ class Dataset(models.Model):
 
     deposition = models.ForeignKey(Deposition, on_delete=models.CASCADE, related_name="datasets")
     dataset_id = models.IntegerField(null=True, unique=True, blank=True, help_text="Assigned by reservation service")
-    title = models.CharField(max_length=256)
+    title = models.CharField(max_length=256, blank=True)
     description = models.TextField(blank=True)
     sample_preparation = models.TextField(blank=True)
     grid_preparation = models.TextField(blank=True)

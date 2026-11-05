@@ -66,6 +66,12 @@ class TestDepositionCrud:
         assert body["deposition_id"] is not None  # reserved on create
         assert body["submitter_username"] == user.username
 
+    def test_create_allows_blank_title_draft(self, auth_client):
+        # The reservation modal creates blank drafts; title is enforced later, at prep.
+        dep = _make_deposition(auth_client, title="")
+        ds = _make_dataset(auth_client, dep["id"], title="")
+        assert dep["title"] == "" and ds["title"] == ""
+
     def test_list_returns_envelope(self, auth_client):
         _make_deposition(auth_client)
         r = auth_client.get(DEPOSITIONS)
