@@ -10,8 +10,14 @@ from depositions.services.subset import selected_positions
     [
         (None, []),
         ({}, []),
-        ({"Selected positions": ["Position_1", "Position_2"], "Filter type": "AND"}, ["Position_1", "Position_2"]),
-        ([{"Tilt_Series": "Position_4.mrc"}, {"Tilt_Series": "Position_5"}], ["Position_4", "Position_5"]),
+        (
+            {"Selected positions": ["Position_1", " ", None, "Position_2"], "Filter type": "AND"},
+            ["Position_1", "Position_2"],
+        ),
+        (
+            [{"Tilt_Series": "Position_4.mrc"}, {"Tilt_Series": " "}, {"Tilt_Series": "Position_5"}],
+            ["Position_4", "Position_5"],
+        ),
     ],
 )
 def test_selected_positions(stored, expected):

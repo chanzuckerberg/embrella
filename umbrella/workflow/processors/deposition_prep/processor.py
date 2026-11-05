@@ -2,7 +2,6 @@
 ``sync -> pre-flight validation (push --dry-run, scoped to this dataset)``
 """
 
-import json
 import logging
 import os
 import shlex
@@ -40,22 +39,14 @@ class DepositionPrepProcessor(BaseProcessor):
         template = env.get_template("deposition_prep.sh.j2")
         prep_env = params.get("prep_env") or resolve_dir("dataportal_env", cluster=run_context.cluster_id)
         # Scope sync to this dataset's sessions; blank means process the whole config.
-        session_names = params.get("session_names") or []
-        session_flags = "".join(f" -s {shlex.quote(name)}" for name in session_names)
+        session_flags = "".join(f" -s {shlex.quote(name)}" for name in params.get("session_names") or [])
         config_yaml = params["config_yaml"]
         config_delimiter = "END_CONFIG"
         while config_delimiter in config_yaml.splitlines():
             config_delimiter += "_"
-        # Prune staged metrics to the custom subset; empty map = clear stale copies only.
-        subset_positions = params.get("subset_positions") or {}
-        subset_prune_code = (Path(__file__).parent / "subset_prune.py").read_text()
-        subset_json = shlex.quote(json.dumps(subset_positions))
         return template.render(
             progress_code=(Path(__file__).parent.parent / "deposition_progress.py").read_text(),
             validation_code=(Path(__file__).parent.parent / "deposition_validation.py").read_text(),
-            subset_prune_code=subset_prune_code,
-            subset_json=subset_json,
-            session_names_json=shlex.quote(json.dumps(session_names)),
             dataset_id=shlex.quote(str(params["dataset_id"])),
             output_dir=shlex.quote(params["output_dir"]),
             config_path=shlex.quote(params["config_path"]),

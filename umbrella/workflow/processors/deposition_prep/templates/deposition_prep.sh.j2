@@ -36,11 +36,6 @@ mv -f -- "$tmp" "$config_path"
 
 cd {{ output_dir }}
 
-# Prune staged metrics to the custom subset so sync stages only those runs.
-python - "$config_path" "$output_dir" {{ dataset_id }} {{ session_names_json }} {{ subset_json }} <<'END_SUBSET_PRUNE'
-{{ subset_prune_code }}
-END_SUBSET_PRUNE
-
 progress_file="${SLURM_SUBMIT_DIR:-$output_dir}/deposition-prep-${SLURM_JOB_ID:-local}.progress.json"
 python - prep "$progress_file" "$config_path" {{ dataset_id }} <<'END_DEPOSITION_PROGRESS' &
 {{ progress_code }}

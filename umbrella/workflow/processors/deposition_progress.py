@@ -44,10 +44,14 @@ def prep_inventory(config_path, dataset_id):
             root.parent / metrics_name,
             Path(paths["aretomo3"]) / "TiltSeries_Metrics.csv",
         )
-        metrics = next(p for p in candidates if p.is_file())
+        requested = session.get("positions")
+        metrics = candidates[-1] if requested is not None else next(p for p in candidates if p.is_file())
         inventory[metrics_name] = "Metadata"
         with metrics.open() as handle:
             positions = [row["Tilt_Series"].removesuffix(".mrc") for row in csv.DictReader(handle)]
+        if requested is not None:
+            selected = {pos.removesuffix(".mrc") for pos in requested}
+            positions = [pos for pos in positions if pos in selected]
         for pos in positions:
             run = f"{prefix}_{pos}"
             inventory[f"{run}_TS.mrc"] = "Tilt series"

@@ -16,6 +16,7 @@ from depositions.models import TiltseriesMetadata
 from depositions.services.annotation_config import session_annotations
 from depositions.services.dataset_metadata import build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
+from depositions.services.subset import selected_positions
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,21 @@ def dataset_is_ready(dataset):
     return bool(sessions) and all(_session_has_autofill(s) for s in sessions)
 
 
+def require_custom_positions(session) -> list[str]:
+    """Positions to keep for a custom-mode session; raise if it has no usable selection or uses an
+    unsupported cluster CSV path. Shared by submit (pre-claim) and the config builder (backstop)."""
+    name = session.msi_session.name
+    if session.subset_csv_path:
+        raise SubmissionValidationError(
+            f"Session {name} uses a cluster CSV path for its subset, which isn't supported yet - "
+            "re-upload the selection in the Sources step."
+        )
+    positions = selected_positions(session.subset_selection)
+    if not positions:
+        raise SubmissionValidationError(f"Session {name} has no custom subset selected.")
+    return positions
+
+
 def _dataset_block(dataset):
     if dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve the dataset_id before preparing the dataset.")
@@ -118,7 +134,11 @@ def _dataset_block(dataset):
         .order_by("msi_session__name")
     )
     for session in selected_sessions:
-        sessions[session.msi_session.name] = _session_config(session, metadata.get("authors", []))
+        config = _session_config(session, metadata.get("authors", []))
+        if dataset.tomogram_subset_mode == "custom":
+            # Custom selections must not fall back to processing all positions.
+            config["positions"] = require_custom_positions(session)
+        sessions[session.msi_session.name] = config
     if not sessions:
         raise SubmissionValidationError("Select at least one session before preparing the dataset.")
     return {"dataset_id": dataset.dataset_id, "metadata": metadata, "sessions": sessions}

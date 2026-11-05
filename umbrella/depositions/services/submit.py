@@ -13,13 +13,17 @@ from stores.paths import resolve_dir
 from common import clusterio
 from depositions import tasks
 from depositions.models import DatasetJob, Deposition
-from depositions.services.dataprep_config import dataprep_config_yaml, dataset_is_ready, resolve_sync_destination
+from depositions.services.dataprep_config import (
+    dataprep_config_yaml,
+    dataset_is_ready,
+    require_custom_positions,
+    resolve_sync_destination,
+)
 from depositions.services.dataset_metadata import build_dataset_metadata
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
 from depositions.services.metadata_requirements import metadata_issues
 from depositions.services.submission import PREP_ACTIVE, PUSH_ACTIVE, apply_status, on_push_complete, start_push
-from depositions.services.subset import selected_positions
 from depositions.services.validation import require_validation
 
 logger = logging.getLogger(__name__)
@@ -97,22 +101,11 @@ def submit_dataset_prep(dataset):
         issues = metadata_issues(portal_metadata, deposition.title)
         if issues:
             raise SubmissionValidationError("Complete the metadata before preparation:\n" + "\n".join(issues))
-        # Custom mode applies to every session, so each one needs an uploaded selection;
-        # otherwise that session would silently stage all its runs. The prep job prunes to these.
-        subset_positions = {}
+        # Fail fast (pre-claim) if a custom dataset has an unusable selection; dataprep_config
+        # re-checks every included dataset (siblings) as the backstop.
         if dataset.tomogram_subset_mode == "custom":
             for session in dataset.sessions.select_related("msi_session"):
-                name = session.msi_session.name
-                if session.subset_csv_path:
-                    # Path mode points at a cluster CSV we don't resolve yet
-                    raise SubmissionValidationError(
-                        f"Session {name} uses a cluster CSV path for its subset, which isn't supported yet - "
-                        "re-upload the selection in the Sources step."
-                    )
-                positions = selected_positions(session.subset_selection)
-                if not positions:
-                    raise SubmissionValidationError(f"Session {name} has no custom subset selected.")
-                subset_positions[name] = positions
+                require_custom_positions(session)
         job, _ = DatasetJob.objects.using(db).get_or_create(dataset=dataset)
         claimed = (
             DatasetJob.objects.using(db)
@@ -157,7 +150,6 @@ def submit_dataset_prep(dataset):
             "config_path": config_path,
             "config_yaml": config_yaml,
             "session_names": list(dataset.sessions.values_list("msi_session__name", flat=True)),
-            "subset_positions": subset_positions,
             **_notification_parameters(deposition),
         }
         job_name = f"deposition_prep_{deposition.deposition_id}_{dataset.dataset_id}"

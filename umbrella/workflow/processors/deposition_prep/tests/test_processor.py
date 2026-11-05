@@ -139,10 +139,3 @@ def test_staging_permission_denied_stops_before_sync(tmp_path):
     assert result.returncode != 0
     assert "Permission denied" in result.stderr
     assert not synced.exists()
-
-
-def test_subset_prune_step_renders_before_sync():
-    script = _render(session_names=["24nov10"], subset_positions={"24nov10": ["Position_1", "Position_2"]})
-    assert script.index("END_SUBSET_PRUNE") < script.index("cryoetportalprep sync")
-    assert '["24nov10"]' in script  # session names, so stale copies can be cleared
-    assert '{"24nov10": ["Position_1", "Position_2"]}' in script  # selected positions
