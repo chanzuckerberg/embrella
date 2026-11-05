@@ -128,6 +128,24 @@ class TestSubmitDatasetPrep:
         assert launched["auth"] is mocks["auth"]
         assert mocks["synced"] == (job.id, "prep", "cluster-a", "slurm-500")
 
+    def test_custom_mode_requires_a_selection_per_session(self, dataset, mocks):
+        dataset.tomogram_subset_mode = "custom"
+        dataset.save(update_fields=["tomogram_subset_mode"])
+        with pytest.raises(SubmissionValidationError, match="no custom subset selected"):
+            submit.submit_dataset_prep(dataset)
+        assert mocks["launched"] is None
+        assert not DatasetJob.objects.filter(dataset=dataset).exists()
+
+    def test_custom_mode_rejects_cluster_path_subset(self, dataset, mocks):
+        dataset.tomogram_subset_mode = "custom"
+        dataset.save(update_fields=["tomogram_subset_mode"])
+        session = dataset.sessions.get()
+        session.subset_csv_path = "/cluster/path/subset.csv"
+        session.save(update_fields=["subset_csv_path"])
+        with pytest.raises(SubmissionValidationError, match="cluster CSV path"):
+            submit.submit_dataset_prep(dataset)
+        assert mocks["launched"] is None
+
     def test_rejects_unreserved_ids(self, dataset, mocks):
         dataset.dataset_id = None  # checked on the passed object
         with pytest.raises(SubmissionValidationError, match="Reserve"):
