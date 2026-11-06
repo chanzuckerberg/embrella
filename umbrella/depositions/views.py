@@ -11,7 +11,6 @@ from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schem
 from processes.services.cluster_resolver import cluster_id_for_run
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from stores.models import Cluster, resolve_review_path
@@ -23,7 +22,6 @@ from .models import (
     TiltseriesMetadata,
     TomogramMetadata,
 )
-from .permissions import IsDepositionOwnerOrReadOnly
 from .serializers import (
     DatasetJobSerializer,
     DatasetSerializer,
@@ -94,7 +92,7 @@ class MetadataLockedMixin:
 class DepositionViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
     """Container CRUD; list nests datasets (My Submissions)."""
 
-    permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
+    permission_classes = [IsAuthenticated]
     http_method_names = HTTP_METHODS_NO_PUT
     serializer_class = DepositionSerializer
     queryset = Deposition.objects.all().prefetch_related(
@@ -181,7 +179,7 @@ class DepositionViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
 class DatasetViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
     """Submit-unit CRUD + per-dataset actions."""
 
-    permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
+    permission_classes = [IsAuthenticated]
     http_method_names = HTTP_METHODS_NO_PUT
     serializer_class = DatasetSerializer
     queryset = (
@@ -198,10 +196,7 @@ class DatasetViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        deposition = serializer.validated_data["deposition"]
-        if deposition.submitter_user_id != self.request.user.id:
-            raise PermissionDenied("You can only add datasets to your own depositions.")
-        # New drafts do not change shared metadata or staged files; prep claims remain serialized per deposition.
+        # Any authenticated user may add datasets to any deposition.
         dataset_id = None
         try:
             dataset_id = get_reservation_service().reserve_new_dataset()
@@ -299,15 +294,13 @@ class DatasetViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
     )
     @action(detail=True, methods=["get"])
     def logs(self, request, pk=None):
-        from .permissions import deposition_owner_id
         from .services.logs import fetch_job_logs
 
         dataset = self.get_object()
-        is_owner = deposition_owner_id(dataset) == request.user.id
         phase = request.query_params.get("phase")
         if phase is not None and phase not in ("prep", "push"):
             return Response({"detail": "phase must be prep or push."}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(fetch_job_logs(dataset, is_owner=is_owner, phase=phase))
+        return Response(fetch_job_logs(dataset, phase=phase))
 
     @action(detail=True, methods=["get"], url_path="config.yaml")
     def config_yaml(self, request, pk=None):
@@ -394,7 +387,7 @@ class DepositionSessionViewSet(
 ):
     """Session detail save. No create/list/delete — managed via dataset nested sessions."""
 
-    permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
+    permission_classes = [IsAuthenticated]
     http_method_names = HTTP_METHODS_NO_PUT
     serializer_class = DepositionSessionSerializer
     queryset = DepositionSession.objects.all().select_related("dataset__deposition")
