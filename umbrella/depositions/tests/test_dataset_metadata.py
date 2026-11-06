@@ -20,7 +20,8 @@ def test_maps_core_fields():
         tissue_name="brain",
         tissue_id="UBERON:0000955",
         cell_component_name="membrane",
-        ontology="GO:0016020",
+        cell_component_id="GO:0016020",
+        ontology="GO:9999999",  # legacy grid field must not leak into cell_component
     )
     ds = Dataset.objects.create(
         deposition=dep,
@@ -46,7 +47,6 @@ def test_maps_core_fields():
     assert meta["sample_type"] == "cell_line"
     assert meta["organism"] == {"name": "Homo sapiens", "taxonomy_id": 9606}
     assert meta["tissue"] == {"name": "brain", "id": "UBERON:0000955"}
-    # cell_component id maps from Sample.ontology
     assert meta["cell_component"] == {"name": "membrane", "id": "GO:0016020"}
     assert meta["assay"] == {"name": "cryo-electron tomography", "id": "EFO:0010961"}
     assert meta["sample_preparation"] == "plunge-frozen"
