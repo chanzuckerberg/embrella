@@ -11,6 +11,7 @@ import re
 from typing import Iterable, Optional
 
 from django.db import transaction
+from django.db.models import Q
 from processes.models import ProcRun, ProcSoftware
 from tem.models import MsiSession
 
@@ -63,9 +64,6 @@ def reserve_run(msi_session, proc_plan, existing_dirs: Iterable[str] = ()) -> Pr
         return ProcRun.objects.create(name=name, proc_plan=proc_plan, msi_session=msi_session)
 
 
-# TODO(#1376 cdpp/c6-cdpp-processor): CdppProcessor._reserve_tree still calls the old SSH
-# form list_run_dirs(base, session.name, cluster_id=...); switch it to
-# list_run_dirs(plan_softwares(plan), session).
 def list_run_dirs(softwares, msi_session) -> list[str]:
     """Run names of `msi_session` under any plan using one of `softwares` (they share directories)."""
     runs = ProcRun.objects.filter(msi_session=msi_session, proc_plan__pipeinplan__pipe__software__in=softwares)
@@ -73,8 +71,28 @@ def list_run_dirs(softwares, msi_session) -> list[str]:
 
 
 def plan_softwares(proc_plan) -> list:
-    """Every software the plan chains: a run name must be free under each one's directory."""
-    return list(ProcSoftware.objects.filter(pipe__pipeinplan__plan=proc_plan).distinct())
+    """
+    Every software the plan chains: a run name must be free under each one's directory.
+
+    Includes the softwares of its processors' chained_plans, e.g. czii-cdpp → cdpp, aretomo3, isonet2, ...
+    """
+    from workflow.processors import list_processors
+
+    softwares = ProcSoftware.objects.filter(pipe__pipeinplan__plan=proc_plan)
+    processors = list_processors()
+    shared = [
+        plan_name
+        for processor_class in softwares.values_list("processor_class", flat=True)
+        for plan_name in getattr(processors.get(processor_class), "chained_plans", ())
+    ]
+    if not shared:
+        return list(softwares.distinct())
+
+    return list(
+        ProcSoftware.objects.filter(
+            Q(pipe__pipeinplan__plan=proc_plan) | Q(pipe__pipeinplan__plan__name__in=shared)
+        ).distinct()
+    )
 
 
 def software_run_names(softwares, session_names: Iterable[str]) -> dict[str, list[str]]:

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useContext } from 'react';
 import { Box, Alert, TextField, InputAdornment } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
@@ -20,8 +20,10 @@ import { useClusters } from '@app/common/hooks/useClusters';
 import { JobLogsModal } from './JobLogsModal';
 import { SSHSetupModal } from '@app/common/components/SSHSetupModal';
 import { CancelJobButton } from './CancelJobButton';
+import { CdppWebLink } from './CdppWebLink';
 import { API, DJANGO_URL, POST_API } from '@app/common/constants/api';
 import { postResource } from '@app/common/queries/fetchResource';
+import { FEATURE_FLAG, FeatureFlagsContext } from '@app/common/context/FeatureFlagsProvider';
 
 export const JobsManagementView: React.FC = () => {
   // Site default cluster until the user picks one.
@@ -40,6 +42,7 @@ export const JobsManagementView: React.FC = () => {
   const [sshSetupContext, setSSHSetupContext] = useState<'check_access' | 'bulk_cancel' | null>(null);
   const [jobIdSearch, setJobIdSearch] = useState<string>('');
   const [jobNameSearch, setJobNameSearch] = useState<string>('');
+  const isCdppWebEnabled = useContext(FeatureFlagsContext).includes(FEATURE_FLAG.CDPP_WEB);
 
   // Debounced search values (for API calls)
   const [debouncedJobIdSearch, setDebouncedJobIdSearch] = useState<string>('');
@@ -183,7 +186,12 @@ export const JobsManagementView: React.FC = () => {
   );
 
   const renderActionsCell = useCallback(
-    ({ row }: { row: { original: Job } }) => <CancelJobButton job={row.original} onCancel={handleRefresh} />,
+    ({ row }: { row: { original: Job } }) => (
+      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+        <CdppWebLink job={row.original} />
+        <CancelJobButton job={row.original} onCancel={handleRefresh} />
+      </Box>
+    ),
     [handleRefresh]
   );
 
@@ -194,11 +202,12 @@ export const JobsManagementView: React.FC = () => {
         return { ...col, cell: renderJobNameCell };
       }
       if (col.id === 'actions') {
-        return { ...col, cell: renderActionsCell };
+        // Room for the cdpp-web link next to the cancel button.
+        return { ...col, cell: renderActionsCell, size: isCdppWebEnabled ? 100 : col.size };
       }
       return col;
     });
-  }, [renderJobNameCell, renderActionsCell]);
+  }, [renderJobNameCell, renderActionsCell, isCdppWebEnabled]);
 
   const bulkCancelLabel = `Cancel ${selectedJobIds.length} ${selectedJobIds.length > 1 ? 'Jobs' : 'Job'}`;
 

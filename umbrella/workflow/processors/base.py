@@ -7,7 +7,7 @@ Defines the abstract interface that all processing software integrations must im
 import functools
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import yaml
 from django.core.exceptions import ImproperlyConfigured
@@ -62,6 +62,16 @@ class BaseProcessor(ABC):
     # Note: This only affects list_available_processors API. Hidden processors can
     # still be executed via get_processor() and have their DB records synced.
     hidden_from_list: bool = False
+
+    # Set to True to let a run execute this processor's pipe again. The run's existing
+    # PipeExecution is then updated in place for the new job, and a summary of the
+    # previous attempt is kept in parameters["_attempts"]. Otherwise a second execute
+    # on the same run is refused before submission.
+    allows_run_reuse: bool = False
+
+    # ProcPlan names this processor's pipeline writes into (e.g. cdpp → czii-live).
+    # Its run names must be free in each (see workflow.run_numbers.plan_softwares).
+    chained_plans: Tuple[str, ...] = ()
 
     @classmethod
     @functools.cache
@@ -300,6 +310,33 @@ class BaseProcessor(ABC):
                     notify_user(run_context.user, "Processing failed")
         """
         pass
+
+    def reserve_runs(self, run_context: "RunContext", params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Hook called before rendering when a job is about to be submitted; never for a preview.
+
+        Override to claim something the script must name before it exists, e.g. run
+        directories another tool writes into. A non-empty result reaches render_script
+        as params["_reserved_runs"] and is stored with the PipeExecution parameters.
+
+        Args:
+            run_context: Execution context
+            params: Validated parameters, defaults applied
+
+        Returns:
+            JSON-serializable description of what was reserved; {} reserves nothing
+        """
+        return {}
+
+    def release_runs(self, run_context: "RunContext", reservation: Dict[str, Any]) -> None:
+        """
+        Undo reserve_runs when rendering, submission or record creation fails.
+
+        Args:
+            run_context: Execution context
+            reservation: What reserve_runs returned
+        """
+        return None
 
     def _proc_software(self):
         """This processor's ProcSoftware row, or None if it has not synced yet."""
