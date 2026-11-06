@@ -163,7 +163,7 @@ class Sample(models.Model):
         unique=True,
         help_text="unique sample name that you may use to search your grid for later. For example, lysosome",
     )
-    # cell_Component_id is ontology
+    # Legacy grid-only ontology id. Deposition uses cell_component_id.
     ontology = models.CharField(
         max_length=32,
         blank=True,
@@ -181,6 +181,7 @@ class Sample(models.Model):
     cell_strain_name = models.CharField(max_length=128, blank=True)
     cell_strain_id = models.CharField(max_length=64, blank=True)
     cell_component_name = models.CharField(max_length=128, blank=True)
+    cell_component_id = models.CharField(max_length=64, blank=True)
     development_stage_name = models.CharField(max_length=128, blank=True)
     development_stage_ontology_id = models.CharField(max_length=64, blank=True)
     disease_name = models.CharField(max_length=128, blank=True)

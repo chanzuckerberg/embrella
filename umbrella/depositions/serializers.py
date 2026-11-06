@@ -265,7 +265,7 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
 
 
 class DatasetSampleSerializer(serializers.ModelSerializer):
-    """Nested writable cryo_grids.Sample fields. Sample.name is auto-set, cell-component id is `ontology`."""
+    """Nested writable cryo_grids.Sample fields. Sample.name is auto-set."""
 
     class Meta:
         model = Sample
@@ -280,7 +280,7 @@ class DatasetSampleSerializer(serializers.ModelSerializer):
             "cell_strain_name",
             "cell_strain_id",
             "cell_component_name",
-            "ontology",
+            "cell_component_id",
             "development_stage_name",
             "development_stage_ontology_id",
             "disease_name",
