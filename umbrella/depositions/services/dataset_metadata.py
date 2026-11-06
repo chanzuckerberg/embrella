@@ -8,7 +8,7 @@ _ONTOLOGY_FIELDS = [
     ("tissue", "tissue_name", "tissue_id"),
     ("cell_type", "cell_name", "cell_type_id"),
     ("cell_strain", "cell_strain_name", "cell_strain_id"),
-    ("cell_component", "cell_component_name", "ontology"),
+    ("cell_component", "cell_component_name", "cell_component_id"),
     ("development_stage", "development_stage_name", "development_stage_ontology_id"),
     ("disease", "disease_name", "disease_ontology_id"),
 ]
