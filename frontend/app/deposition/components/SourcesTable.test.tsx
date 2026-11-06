@@ -82,3 +82,13 @@ it('removes an unsaved row without confirmation', () => {
   expect(onChange).toHaveBeenCalledWith([]);
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
+
+it('gives each added row a unique key', () => {
+  const onChange = setup([]);
+  const add = screen.getByRole('button', { name: /add another session/i });
+  fireEvent.click(add);
+  fireEvent.click(add);
+  const firstKey = onChange.mock.calls[0][0].at(-1).key;
+  const secondKey = onChange.mock.calls[1][0].at(-1).key;
+  expect(firstKey).not.toBe(secondKey);
+});

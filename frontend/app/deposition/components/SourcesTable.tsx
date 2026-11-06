@@ -23,8 +23,11 @@ function modeHelp(mode: TomogramSubsetMode, excluded: number): string {
   return 'Filtered against copick ExperimentRuns - tomograms without annotations are excluded.';
 }
 
-const emptyRow = (key: string): SourceRow => ({
-  key,
+// Unique key for client-only rows; a counter avoids the reuse the old length-based key caused.
+let nextRowKey = 0;
+
+const emptyRow = (): SourceRow => ({
+  key: `new-${nextRowKey++}`,
   msi_session: null,
   msi_session_name: '',
   aretomo_run_name: '',
@@ -61,7 +64,7 @@ export function SourcesTable({
   const changingFrom = pendingSessionChange
     ? rows.find((r) => r.key === pendingSessionChange.key)?.msi_session_name
     : undefined;
-  const addRow = () => onChange([...rows, emptyRow(`new-${rows.length}-${sessionOptions.length}`)]);
+  const addRow = () => onChange([...rows, emptyRow()]);
 
   const [counts, setCounts] = useState<Record<string, number | undefined>>({});
   const reportCount = useCallback((key: string, total: number | undefined) => {

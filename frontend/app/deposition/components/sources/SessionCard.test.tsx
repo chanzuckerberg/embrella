@@ -90,7 +90,15 @@ it('routes a saved-card session switch through confirmation instead of applying 
   render(
     <SessionCard
       index={1}
-      row={{ ...row, id: 10, msi_session: 1, msi_session_name: 'sess' }}
+      row={{
+        ...row,
+        id: 10,
+        msi_session: 1,
+        msi_session_name: 'sess',
+        subset_csv_path: '/old/path',
+        subset_selection: ['tomo-1'],
+        subset_filename: 'subset.csv',
+      }}
       sessionOptions={['sess', 'sess-2']}
       subsetMode="annotated"
       readOnly={false}
@@ -105,8 +113,16 @@ it('routes a saved-card session switch through confirmation instead of applying 
   expect(input).toBeEnabled();
   fireEvent.mouseDown(input);
   fireEvent.click(await screen.findByRole('option', { name: 'sess-2' }));
+  // The new session carries no subset; the old selection must be dropped.
   expect(onRequestSessionChange).toHaveBeenCalledWith(
-    expect.objectContaining({ id: 10, msi_session_name: 'sess-2', msi_session: null })
+    expect.objectContaining({
+      id: 10,
+      msi_session_name: 'sess-2',
+      msi_session: null,
+      subset_csv_path: '',
+      subset_selection: undefined,
+      subset_filename: undefined,
+    })
   );
   expect(onChange).not.toHaveBeenCalled();
 });
