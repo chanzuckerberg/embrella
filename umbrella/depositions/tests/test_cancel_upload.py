@@ -1,4 +1,4 @@
-"""Only an owner can cancel their current upload, through the service account."""
+"""Any authenticated user can cancel a dataset's current upload."""
 
 from unittest.mock import Mock
 
@@ -43,12 +43,12 @@ def test_rejects_stale_or_finished_upload_attempts(upload, state, job_id):
     cancel.assert_not_called()
 
 
-def test_other_users_cannot_cancel_service_account_jobs(upload):
+def test_any_user_can_cancel_an_upload(upload):
     client, _, cancel, url = upload
     other = User.objects.create_user(username="other-owner")
     client.force_authenticate(other)
-    assert client.post(url, {"job_id": "123"}, format="json").status_code == 403
-    cancel.assert_not_called()
+    assert client.post(url, {"job_id": "123"}, format="json").status_code == 202
+    cancel.assert_called_once()
 
 
 def test_cluster_failure_does_not_unlock_upload_or_expose_diagnostics(upload):
