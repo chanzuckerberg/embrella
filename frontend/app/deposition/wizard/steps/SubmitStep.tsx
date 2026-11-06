@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button, Icon } from '@czi-sds/components';
 import { Alert, Box, ButtonBase, CircularProgress, LinearProgress, Stack, Typography } from '@mui/material';
 import { ConfirmDialog } from '@app/common/components/Forms/ConfirmDialog';
@@ -94,6 +94,12 @@ function syncSub(status: PhaseStatus, progress?: SyncProgress | null, summary?: 
   if (status === 'done') return summary ? `Complete · ${summary.objects.toLocaleString()} objects` : 'Complete';
   if (status === 'error') return 'Failed';
   return 'Not started';
+}
+
+function syncProgressNote(status: PhaseStatus): string {
+  if (status === 'idle') return 'Preparation has not started yet. Start it to sync this dataset on the cluster.';
+  if (status === 'active') return 'Waiting for preparation progress.';
+  return 'Detailed progress is unavailable for this preparation.';
 }
 
 function validationSub(status: PhaseStatus, validation?: JobValidation | null): string {
@@ -361,7 +367,6 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
   const { submit, push, cancel: cancelUpload } = useSubmitFlow(dataset.id, dataset.deposition);
   const [cancelJobId, setCancelJobId] = useState<string | null>(null);
   const [selection, setSelection] = useState<{ datasetId: number; phase: 1 | 2 | 3 } | null>(null);
-  const started = useRef(false);
 
   const job = dataset.job;
   const state = job?.state;
@@ -385,15 +390,6 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
     submit.reset();
     push.mutate();
   };
-
-  // Intentional: entering Finalize, including after reset, starts prep once per mount.
-  // The server's atomic claim prevents concurrent launches across tabs.
-  useEffect(() => {
-    if (!readOnly && sync === 'idle' && !submit.isPending && !started.current) {
-      started.current = true;
-      runSync();
-    }
-  }, [readOnly, sync, submit.isPending, runSync]);
 
   const annotations = (dataset.sessions ?? []).flatMap((session) => session.annotations ?? []);
   const selectedAnnotations = annotations.filter((annotation) => annotation.is_selected).length;
@@ -536,9 +532,7 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
                     <LinearProgress aria-label="Sync progress" sx={{ mt: '16px', height: 8, borderRadius: '6px' }} />
                   )}
                   <Typography variant="body2" color="text.secondary" sx={{ display: 'block', mt: '16px' }}>
-                    {sync === 'active' || sync === 'idle'
-                      ? 'Waiting for preparation progress.'
-                      : 'Detailed progress is unavailable for this preparation.'}
+                    {syncProgressNote(sync)}
                   </Typography>
                 </>
               )}
@@ -701,6 +695,13 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
             </Box>
           )}
 
+          {!readOnly && sync === 'idle' && !submit.isError && (
+            <Box>
+              <Button sdsType="primary" sdsStyle="solid" disabled={submit.isPending} onClick={runSync}>
+                {submit.isPending ? 'Starting…' : 'Start preparation'}
+              </Button>
+            </Box>
+          )}
           {!readOnly && state === 'prep_completed' && (
             <Box sx={DETAIL_CARD_SX}>
               {!canPush && (

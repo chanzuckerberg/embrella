@@ -7,7 +7,6 @@ import { Alert, Box, Container, IconButton, Paper, Tooltip, Typography } from '@
 
 import { ConfirmDialog } from '@app/common/components/Forms/ConfirmDialog';
 import type { Dataset } from '../types';
-import { submissionPhases } from '../submitPhases';
 import { usePreparationEditing } from '../hooks/usePreparationEditing';
 import type { AutoSaveState } from '../hooks/useDraftAutoSave';
 import { READ_ONLY_FIELDS_SX } from '../components/readOnlyStyles';
@@ -31,8 +30,6 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
   const nonOwner = dataset.is_owner === false;
   const activeNums = WIZARD_STEPS.map((s) => s.num);
   const pos = activeNums.indexOf(current);
-  const nextStep = WIZARD_STEPS.find((s) => s.num === activeNums[pos + 1]);
-  const startsPreparation = !nonOwner && nextStep?.key === 'submit' && submissionPhases(dataset.job).sync === 'idle';
 
   const step = WIZARD_STEPS.find((s) => s.num === current) ?? WIZARD_STEPS[0];
   const Body = step.Component;
@@ -195,7 +192,6 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
             disableNext={
               pos < 0 || pos >= activeNums.length - 1 || blocking > 0 || savingStep !== null || closing || lockedEdits
             }
-            nextLabel={startsPreparation ? 'Next: prepare & validate' : 'Next'}
             savingNext={savingStep !== null && savingStep === activeNums[pos + 1]}
             onBack={() => pos > 0 && go(activeNums[pos - 1])}
             onNext={() => pos >= 0 && pos < activeNums.length - 1 && go(activeNums[pos + 1])}
