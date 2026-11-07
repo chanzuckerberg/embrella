@@ -7,7 +7,7 @@ from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-from processes.services.cluster_resolver import cluster_id_for_run, get_default_cluster_id
+from processes.services.cluster_resolver import cluster_id_for_run, get_default_cluster_id, run_dirname
 from stores.paths import resolve_dir
 
 from common import clusterio
@@ -45,9 +45,7 @@ def _cluster_for_dataset(dataset):
     session = dataset.sessions.select_related("msi_session").order_by("msi_session__name").first()
     if session is None:
         return get_default_cluster_id()
-    run = session.aretomo_run_name or ""
-    run_number = run if run.startswith("run") else f"run{run}"
-    return cluster_id_for_run(session.msi_session.name, run_number)
+    return cluster_id_for_run(session.msi_session.name, run_dirname(session.aretomo_run_name))
 
 
 def _service_auth():

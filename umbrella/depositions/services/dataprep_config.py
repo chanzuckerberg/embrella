@@ -1,7 +1,7 @@
 """Build the prep deployment config from saved autofill data and reviewed DB values.
 
 This is dataprep_config.yaml, separate from the portal metadata built by dataset_metadata.
-Path resolution, remote writes, and launching jobs belong to the submit service.
+Remote writes and launching jobs belong to the submit service.
 """
 
 import logging
@@ -10,7 +10,10 @@ from pathlib import PurePosixPath
 from urllib.parse import urlsplit
 
 import yaml
+from processes.services.cluster_resolver import cluster_id_for_run, run_dirname
+from stores.models import Cluster
 from stores.paths import resolve_dir
+from workflow.processors import get_processor
 
 from depositions.models import TiltseriesMetadata
 from depositions.services.annotation_config import session_annotations
@@ -39,6 +42,24 @@ ACQUISITION_FIELDS = {
 }
 
 
+def _apply_denoise_run(config, session):
+    """Resolve the selected denoise output on the preparation cluster."""
+    paths = config["paths"]
+    run = (session.denoise_run_name or "").strip()
+    if not run:
+        paths.pop("denoise", None)
+        return
+    msi_session = session.msi_session
+    run = run_dirname(run)
+    cluster_id = cluster_id_for_run(msi_session.name, run_dirname(session.aretomo_run_name))
+    try:
+        cluster = Cluster.objects.get(cluster_id=cluster_id, is_active=True)
+    except Cluster.DoesNotExist:
+        raise SubmissionValidationError(f"Unknown cluster for session {msi_session.name!r}: {cluster_id}.")
+    root = get_processor("denoiset").get_processing_base_path(cluster=cluster.cluster_id)
+    paths["denoise"] = f"{root.rstrip('/')}/{msi_session.name}/{run}"
+
+
 def _session_config(session, authors):
     name = session.msi_session.name
     try:
@@ -56,6 +77,7 @@ def _session_config(session, authors):
         raise SubmissionValidationError(f"Session {name!r} has no saved acquisition config.")
 
     config = deepcopy(raw)
+    _apply_denoise_run(config, session)
     annotations = session_annotations(session, authors)
     if annotations:
         config["annotations"] = annotations
