@@ -94,6 +94,12 @@ def cluster_id_from_parameters(parameters, default: str = None) -> str:
     return default if default is not None else get_default_cluster_id()
 
 
+def run_dirname(run: str) -> str:
+    """Add the run prefix when missing, preserving the supplied number."""
+    run = (run or "").strip()
+    return run if run.startswith("run") else f"run{run}"
+
+
 def cluster_id_for_run(session_name: str, run_number: str, default: str = None) -> str:
     """Return cluster_id for the most recent PipeExecution on this session+run.
 

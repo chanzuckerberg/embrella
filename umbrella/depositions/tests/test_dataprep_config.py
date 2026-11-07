@@ -2,10 +2,12 @@
 
 from copy import deepcopy
 from types import SimpleNamespace
+from unittest import mock
 
 import pytest
 import yaml
-from stores.models import PathType
+from processes.models import ProcSoftware
+from stores.models import Cluster, DataKind, PathType
 from tem.models import MsiSession
 
 from depositions.models import (
@@ -30,7 +32,6 @@ RAW_SESSION = {
         "mdoc": "/hpc/mdoc/24nov10",
         "frames": "/hpc/frames/24nov10",
         "gain": "/hpc/gains/reference.gain",
-        "denoise": "/hpc/denoiset/24nov10/run002",
     },
     "acquisition": {
         "pixel_spacing": 1.54,
@@ -49,7 +50,7 @@ def dataset(db, test_msi_session):
     deposition = Deposition.objects.create(title="Dep", deposition_id=101)
     dataset = Dataset.objects.create(deposition=deposition, title="Dataset", dataset_id=202)
     session = DepositionSession.objects.create(
-        dataset=dataset, msi_session=test_msi_session, aretomo_run_name="run001", denoise_run_name="run002"
+        dataset=dataset, msi_session=test_msi_session, aretomo_run_name="run001", denoise_run_name=""
     )
     TiltseriesMetadata.objects.create(
         session=session,
@@ -80,6 +81,32 @@ def test_builds_deployment_config_with_reserved_ids(dataset):
     assert _session(config) == RAW_SESSION
     metadata = config["datasets"]["dataset_202"]["metadata"]
     assert metadata["dataset_title"] == dataset.title
+
+
+def test_denoise_source_resolved_from_selected_run(dataset):
+    Cluster.objects.create(cluster_id="c1", name="C1", is_active=True)
+    root = PathType.objects.create(
+        data_kind=DataKind.objects.create(data_type="test_denoise_root"),
+        overlay_path="/custom/{proc_software}/",
+    )
+    ProcSoftware.objects.update_or_create(
+        processor_class="denoiset",
+        defaults={"name": "denoise", "storage_dirname": "denoise", "processing_root": root},
+    )
+    session = dataset.sessions.get()
+    session.denoise_run_name = "005"
+    session.save(update_fields=["denoise_run_name"])
+    with mock.patch("depositions.services.dataprep_config.cluster_id_for_run", return_value="c1"):
+        config = _build(dataset)
+    assert _session(config)["paths"]["denoise"] == "/custom/denoise/24nov10/run005"
+
+
+def test_skipped_denoise_drops_the_source_path(dataset):
+    session = dataset.sessions.get()  # fixture has denoise_run_name=""
+    # Even a stale saved denoise path is dropped when denoise is skipped.
+    session.tiltseries_metadata.autofill_metadata["paths"]["denoise"] = "/stale/run009"
+    session.tiltseries_metadata.save(update_fields=["autofill_metadata"])
+    assert "denoise" not in _session(_build(dataset))["paths"]
 
 
 def test_includes_every_dataset_in_the_deposition(dataset, test_session_plan):
