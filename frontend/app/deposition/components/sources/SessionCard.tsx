@@ -50,6 +50,11 @@ export function SessionCard({
     aretomo_run_name: '',
     denoise_run_name: '',
     selected_copick_runs: [],
+    // A different session has different tomograms; drop the old subset selection.
+    subset_csv_path: '',
+    subset_selection: undefined,
+    subset_filename: undefined,
+    subset_input_mode: undefined,
   });
   // Confirm before switching a saved session; that deletes its metadata on save.
   const selectSession = (name: string) => {
