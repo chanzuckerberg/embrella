@@ -415,7 +415,7 @@ class DepositionSessionViewSet(
         )
 
         msi_session = session.msi_session
-        cluster_id = cluster_id_for_run(msi_session.name, run_number)
+        cluster_id = cluster_id_for_run(msi_session.name, run_number, processor_class="aretomo3")
         try:
             cluster = Cluster.objects.get(cluster_id=cluster_id, is_active=True)
         except Cluster.DoesNotExist:
