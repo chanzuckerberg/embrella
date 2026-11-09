@@ -82,14 +82,18 @@ def metadata_issues(metadata, deposition_title):
 
 
 def deposition_metadata_issues(metadata):
-    """Deposition-level fields the prep tool requires on the defining dataset's config.
-
-    The deposition title is already covered by metadata_issues; this adds description and authors,
-    which ride in the deposition_metadata block and would otherwise fail late in cluster validation.
-    """
+    """Check required deposition metadata before prep."""
     issues = []
     if not _filled(metadata.get("deposition_description")):
         issues.append("Deposition description is required.")
-    if not metadata.get("authors"):
+    authors = metadata.get("authors") or []
+    if not authors:
         issues.append("Add at least one deposition author.")
+    else:
+        if not any(author.get("primary_author_status") for author in authors):
+            issues.append("Choose at least one primary deposition author.")
+        if not any(author.get("corresponding_author_status") for author in authors):
+            issues.append("Choose at least one corresponding deposition author.")
+    if not (metadata.get("dates") or {}).get("release_date"):
+        issues.append("Deposition release date is required.")
     return issues

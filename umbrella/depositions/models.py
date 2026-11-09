@@ -17,7 +17,7 @@ class Deposition(models.Model):
         default=list,
         blank=True,
         help_text="Ordered list of {author_id, is_primary, is_corresponding, author_list_order}; "
-        "author_id soft-references users.Author (not a FK).",
+        "author_id soft-references people.Person (not a FK). Identity fields live in the people directory.",
     )
     release_date = models.DateField(null=True, blank=True)
     metadata_dataset = models.ForeignKey(

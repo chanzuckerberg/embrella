@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 import yaml
 from stores.paths import resolve_dir
 
-from depositions.models import Deposition, TiltseriesMetadata
+from depositions.models import TiltseriesMetadata
 from depositions.services.annotation_config import session_annotations
 from depositions.services.dataset_metadata import build_dataset_metadata, build_deposition_metadata
 from depositions.services.exceptions import SubmissionValidationError
@@ -143,13 +143,7 @@ def _dataset_block(dataset):
 
 def is_defining_dataset(dataset) -> bool:
     """Include metadata until an upload succeeds, then only for its persisted owner."""
-    owner = (
-        Deposition.objects.using(dataset._state.db)
-        .filter(pk=dataset.deposition_id)
-        .values_list("metadata_dataset_id", flat=True)
-        .get()
-    )
-    return owner is None or owner == dataset.pk
+    return dataset.deposition.metadata_dataset_id in (None, dataset.pk)
 
 
 def build_dataprep_config(dataset, *, output_dir, sync_destination=None):

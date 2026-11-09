@@ -2,7 +2,7 @@
 
 import pytest
 
-from depositions.services.metadata_requirements import metadata_issues
+from depositions.services.metadata_requirements import deposition_metadata_issues, metadata_issues
 
 
 def complete_metadata(sample_type="in_vitro"):
@@ -86,3 +86,15 @@ def test_requires_author_roles_before_launch(role, label):
     metadata = complete_metadata()
     metadata["authors"][0][role] = False
     assert metadata_issues(metadata, "Deposition") == [f"Choose at least one {label} dataset author."]
+
+
+def test_deposition_author_roles_can_be_shared_by_different_authors():
+    metadata = {
+        "deposition_description": "Description",
+        "authors": [
+            {"name": "Ada Lovelace", "primary_author_status": True},
+            {"name": "Grace Hopper", "corresponding_author_status": True},
+        ],
+        "dates": {"release_date": "2026-11-09"},
+    }
+    assert deposition_metadata_issues(metadata) == []

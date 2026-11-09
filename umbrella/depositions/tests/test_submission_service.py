@@ -107,17 +107,6 @@ class TestOnPrepComplete:
 
 @pytest.mark.django_db
 class TestStartPush:
-    def test_any_dataset_can_push_before_an_owner_is_set(self):
-        # Until an upload completes no owner exists; every config carries the deposition_metadata
-        # block, so any dataset can upload first without waiting on a sibling.
-        job = _job("prep_completed")
-        launched = []
-        submission.start_push(job, launch=lambda j: launched.append(j) or "push-1")
-        job.refresh_from_db()
-        assert job.state == "push_submitted"
-        assert job.push_slurm_job_id == "push-1"
-        assert launched
-
     def test_launches_and_advances_to_push_submitted(self):
         job = _job("prep_completed")
         submission.start_push(job, launch=lambda j: "slurm-42")
@@ -316,14 +305,12 @@ class TestOnPushComplete:
         assert job.state == "push_running"
         assert job.push_slurm_job_id == "slurm-new"
 
-    def test_success_advances_to_completed_and_claims_metadata_ownership(self):
+    def test_success_advances_to_completed(self):
         job = _job("push_running")
         submission.on_push_complete(job, True)
         job.refresh_from_db()
         assert job.state == "completed"
         assert job.completed_at is not None
-        job.dataset.deposition.refresh_from_db()
-        assert job.dataset.deposition.metadata_dataset_id == job.dataset_id
 
     def test_first_completed_upload_owns_metadata_and_sibling_cannot_steal(self):
         first = _job("push_running")

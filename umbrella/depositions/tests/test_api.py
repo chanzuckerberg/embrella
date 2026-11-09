@@ -9,6 +9,7 @@ import pytest
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
+from people.models import Person
 from rest_framework.test import APIClient
 
 from depositions.services.exceptions import SubmissionValidationError
@@ -142,37 +143,60 @@ class TestScoping:
 
 @pytest.mark.django_db
 class TestAuthorsJsonValidation:
-    def test_valid_authors_json_accepted(self, auth_client):
+    @pytest.mark.parametrize("dataset_level", [False, True])
+    def test_valid_authors_json_accepted(self, auth_client, dataset_level):
         dep = _make_deposition(auth_client)
+        person = Person.objects.create(given_name="Ada", family_name="Lovelace")
+        target = f"{DEPOSITIONS}{dep['id']}/"
+        if dataset_level:
+            dataset = _make_dataset(auth_client, dep["id"])
+            target = f"{DATASETS}{dataset['id']}/"
         r = auth_client.patch(
-            f"{DEPOSITIONS}{dep['id']}/",
+            target,
             {
                 "authors_json": [
-                    {"author_id": 7, "author_list_order": 1, "is_primary": True, "is_corresponding": False},
+                    {"author_id": person.pk, "author_list_order": 1, "is_primary": True, "is_corresponding": False},
                 ]
             },
             format="json",
         )
         assert r.status_code == 200
+        assert r.json()["authors_json"] == [
+            {"author_id": person.pk, "author_list_order": 1, "is_primary": True, "is_corresponding": False}
+        ]
 
-    def test_free_form_snapshot_author_accepted(self, auth_client):
+    @pytest.mark.parametrize("dataset_level", [False, True])
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            {"full_name": "Test Author", "affiliation": "Example Institute", "orcid": "0000-0002-1825-0097"},
+            {"author_id": 7, "full_name": "Inline override"},
+            {"author_id": 7, "affiliation": "Inline affiliation"},
+            {"author_id": 7, "orcid": "0000-0002-1825-0097"},
+            {"author_id": 7, "identifier_type": "orcid"},
+            {},
+            {"is_primary": True},
+            {"author_id": None},
+            {"author_id": True},
+            {"author_id": 0},
+            {"author_id": -1},
+            {"author_id": "seven"},
+        ],
+    )
+    def test_inline_or_invalid_author_rejected(self, auth_client, dataset_level, entry):
         dep = _make_deposition(auth_client)
+        target = f"{DEPOSITIONS}{dep['id']}/"
+        if dataset_level:
+            dataset = _make_dataset(auth_client, dep["id"])
+            target = f"{DATASETS}{dataset['id']}/"
         r = auth_client.patch(
-            f"{DEPOSITIONS}{dep['id']}/",
-            {
-                "authors_json": [
-                    {
-                        "full_name": "Test Author",
-                        "affiliation": "Example Institute",
-                        "orcid": "0000-0002-1825-0097",
-                        "is_corresponding": True,
-                        "author_list_order": 0,
-                    },
-                ]
-            },
+            target,
+            {"authors_json": [entry]},
             format="json",
         )
-        assert r.status_code == 200, r.content
+        assert r.status_code == 400, r.content
+        assert "authors_json" in r.json()
+        assert auth_client.get(target).json()["authors_json"] == []
 
     def test_authors_json_wrong_field_type_rejected(self, auth_client):
         dep = _make_deposition(auth_client)
@@ -1630,6 +1654,7 @@ class TestMetadataLock:
 @pytest.mark.django_db
 def test_dataset_response_reports_preparation_issues_without_preventing_draft_saves(auth_client):
     deposition = _make_deposition(auth_client)
+    author = Person.objects.create(given_name="Test", family_name="Author")
     dataset = _make_dataset(auth_client, deposition["id"])
     assert "Dataset description is required." in dataset["metadata_issues"]
     response = auth_client.patch(
@@ -1638,7 +1663,7 @@ def test_dataset_response_reports_preparation_issues_without_preventing_draft_sa
             "description": "Reviewed description",
             "sample": {"sample_type": "in_vitro"},
             "is_authors_same_as_deposition": False,
-            "authors_json": [{"full_name": "Test Author", "is_primary": True, "is_corresponding": True}],
+            "authors_json": [{"author_id": author.pk, "is_primary": True, "is_corresponding": True}],
         },
         format="json",
     )

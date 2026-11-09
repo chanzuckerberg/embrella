@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("depositions", "0011_alter_dataset_title_alter_deposition_title"),
+        ("depositions", "0012_directory_authors_only"),
     ]
 
     operations = [

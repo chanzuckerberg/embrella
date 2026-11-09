@@ -25,7 +25,6 @@ set -euo pipefail
 output_dir={{ output_dir }}
 config_path={{ config_path }}
 mkdir -p -- "$output_dir"
-# The config lives in the dataset's own subdir; create it before writing.
 config_dir=$(dirname -- "$config_path")
 mkdir -p -- "$config_dir"
 tmp=$(mktemp "$config_dir/dataprep_config.yaml.tmp.XXXXXX")

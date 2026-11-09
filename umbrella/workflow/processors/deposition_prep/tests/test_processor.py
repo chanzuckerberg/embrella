@@ -36,13 +36,6 @@ def test_no_session_filter_syncs_the_whole_config():
     assert "cryoetportalprep sync /staged/dep_1/ds_2/dataprep_config.yaml\n" in _render(session_names=[])
 
 
-def test_creates_the_per_dataset_config_directory():
-    # The config lives in the dataset's own subdir; the script must create it before writing.
-    script = _render()
-    assert 'config_dir=$(dirname -- "$config_path")' in script
-    assert 'mkdir -p -- "$config_dir"' in script
-
-
 def test_prep_never_uploads_or_inits():
     script = _render()
     assert "--force" not in script

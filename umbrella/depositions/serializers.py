@@ -31,15 +31,23 @@ from .services.progress import serialize_progress, serialize_summary
 
 
 def validate_authors_json(value):
-    """Shape-check authors_json and allow partial rows for autosave."""
+    """Store directory references and deposition-specific roles/order only."""
     if not isinstance(value, list):
         raise serializers.ValidationError("authors_json must be a list of author entries.")
-    int_fields = ("author_id", "author_list_order")
+    int_fields = ("author_list_order",)
     bool_fields = ("is_primary", "is_corresponding")
-    str_fields = ("full_name", "affiliation", "identifier_type", "orcid")
+    allowed_fields = {"author_id", *int_fields, *bool_fields}
     for i, entry in enumerate(value):
         if not isinstance(entry, dict):
             raise serializers.ValidationError(f"authors_json[{i}] must be an object.")
+        if set(entry) - allowed_fields:
+            raise serializers.ValidationError(
+                f"authors_json[{i}] must use a people directory reference; "
+                "only author_id, author_list_order, is_primary and is_corresponding are supported."
+            )
+        person_id = entry.get("author_id")
+        if not isinstance(person_id, int) or isinstance(person_id, bool) or person_id <= 0:
+            raise serializers.ValidationError(f"authors_json[{i}].author_id must be a positive integer.")
         for f in int_fields:
             v = entry.get(f)
             # bool is a subclass of int — reject True/False masquerading as a number.
@@ -48,9 +56,6 @@ def validate_authors_json(value):
         for f in bool_fields:
             if f in entry and not isinstance(entry[f], bool):
                 raise serializers.ValidationError(f"authors_json[{i}].{f} must be a boolean.")
-        for f in str_fields:
-            if f in entry and not isinstance(entry[f], str):
-                raise serializers.ValidationError(f"authors_json[{i}].{f} must be a string.")
     return value
 
 

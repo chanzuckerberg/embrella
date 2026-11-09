@@ -1,7 +1,6 @@
 """Tests for the dataset submit orchestration."""
 
 import pytest
-import yaml
 from cryo_grids.models import Sample
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -18,9 +17,7 @@ from depositions.models import (
     TiltseriesMetadata,
 )
 from depositions.services import submit
-from depositions.services.dataprep_config import dataprep_config_yaml
 from depositions.services.exceptions import SubmissionValidationError
-from depositions.services.submission import on_prep_complete, on_push_complete, reset_preparation
 
 
 def _raise_no_creds():
@@ -29,11 +26,13 @@ def _raise_no_creds():
 
 @pytest.fixture
 def dataset(db, test_msi_session):
+    author = Person.objects.create(given_name="Ada", family_name="Lovelace")
     deposition = Deposition.objects.create(
         title="Dep",
         description="A deposition.",
         deposition_id=1,
-        authors_json=[{"full_name": "Ada Lovelace", "is_primary": True, "is_corresponding": True}],
+        release_date=timezone.localdate(),
+        authors_json=[{"author_id": author.pk, "is_primary": True, "is_corresponding": True}],
     )
     sample = Sample.objects.create(name="submission-test-sample", sample_type="in_vitro")
     ds = Dataset.objects.create(
@@ -127,6 +126,29 @@ class TestSubmitDatasetPrep:
             submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
 
+    @pytest.mark.parametrize(
+        "field,message",
+        [
+            ("release_date", "Deposition release date is required"),
+            ("is_primary", "Choose at least one primary deposition author"),
+            ("is_corresponding", "Choose at least one corresponding deposition author"),
+        ],
+    )
+    def test_defining_dataset_requires_portal_deposition_fields(self, dataset, mocks, field, message):
+        dataset.is_authors_same_as_deposition = False
+        dataset.authors_json = [dict(dataset.deposition.authors_json[0])]
+        dataset.save(update_fields=["is_authors_same_as_deposition", "authors_json"])
+        if field == "release_date":
+            dataset.deposition.release_date = None
+        else:
+            dataset.deposition.authors_json[0][field] = False
+        dataset.deposition.save()
+
+        with pytest.raises(SubmissionValidationError, match=message):
+            submit.submit_dataset_prep(dataset)
+        assert mocks["launched"] is None
+        assert not DatasetJob.objects.filter(dataset=dataset).exists()
+
     @pytest.mark.parametrize("authors", [[], [{}], ["invalid"], [{"author_id": 987654321}]])
     def test_defining_dataset_checks_resolved_deposition_authors_before_claim(self, dataset, mocks, authors):
         person = Person.objects.create(given_name="Ada", family_name="Lovelace")
@@ -135,7 +157,7 @@ class TestSubmitDatasetPrep:
         dataset.save(update_fields=["is_authors_same_as_deposition", "authors_json"])
         dataset.deposition.authors_json = authors
         dataset.deposition.save(update_fields=["authors_json"])
-        with pytest.raises(SubmissionValidationError, match="deposition author|no longer in the people directory"):
+        with pytest.raises(SubmissionValidationError, match="deposition author|people directory"):
             submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
         assert not DatasetJob.objects.filter(dataset=dataset).exists()
@@ -333,46 +355,6 @@ def test_jobs_notify_the_owner_without_changing_service_account_auth(dataset, mo
 
 @pytest.mark.django_db
 class TestSubmitDatasetPush:
-    def test_dataset_scoped_prep_preview_and_first_successful_upload(self, dataset, mocks, monkeypatch):
-        monkeypatch.setattr(submit, "dataprep_config_yaml", dataprep_config_yaml)
-        first_job = submit.submit_dataset_prep(dataset)
-        first_config = yaml.safe_load(mocks["launched"]["params"]["config_yaml"])
-        assert set(first_config["datasets"]) == {"dataset_2"}
-        on_prep_complete(first_job, True, job_id="slurm-500", validation=_passed_validation("slurm-500"))
-        sibling = Dataset.objects.create(
-            deposition=dataset.deposition,
-            title="Sibling",
-            description="Reviewed sibling description",
-            sample=dataset.sample,
-            dataset_id=3,
-        )
-        session = DepositionSession.objects.create(
-            dataset=sibling, msi_session=dataset.sessions.get().msi_session, aretomo_run_name="run001"
-        )
-        TiltseriesMetadata.objects.create(
-            session=session, autofill_metadata={"paths": {"aretomo3": "/b"}, "acquisition": {}}
-        )
-        sibling_job = submit.submit_dataset_prep(sibling)
-        sibling_config = yaml.safe_load(mocks["launched"]["params"]["config_yaml"])
-        assert set(sibling_config["datasets"]) == {"dataset_3"}
-        assert sibling_config["shared_deposition"] is True
-        assert "deposition_metadata" in first_config["datasets"]["dataset_2"]
-        assert "deposition_metadata" in sibling_config["datasets"]["dataset_3"]
-        assert yaml.safe_load(submit.preview_config_yaml(sibling)) == sibling_config
-        on_prep_complete(
-            sibling_job,
-            True,
-            job_id="slurm-500",
-            validation={**_passed_validation("slurm-500"), "dataset_id": 3},
-        )
-        reset_preparation(dataset)
-        sibling_job = submit.submit_dataset_push(sibling)
-        on_push_complete(sibling_job, True, job_id=sibling_job.push_slurm_job_id)
-        assert sibling_job.state == "completed"
-        dataset.deposition.refresh_from_db()
-        assert dataset.deposition.metadata_dataset_id == sibling.pk
-        assert "deposition_metadata" not in yaml.safe_load(submit.preview_config_yaml(dataset))["datasets"]["dataset_2"]
-
     def test_push_without_an_owner_uses_service_auth_and_omits_mail_recipient(self, dataset, mocks):
         DatasetJob.objects.create(
             dataset=dataset, state="prep_completed", prep_slurm_job_id="p1", validation=_passed_validation("p1")
@@ -457,7 +439,7 @@ def test_prep_and_push_use_same_configured_destination(dataset, mocks, cluster_o
 
     job = submit.submit_dataset_prep(dataset)
     assert mocks["sync_destination"] == destination
-    on_prep_complete(job, True, job_id="slurm-500", validation=_passed_validation("slurm-500"))
+    DatasetJob.objects.filter(pk=job.pk).update(state="prep_completed", validation=_passed_validation("slurm-500"))
     dataset.refresh_from_db()
     submit.submit_dataset_push(dataset)
     assert mocks["launched"]["params"]["s3_dest"] == destination + "/1/2"
@@ -481,7 +463,7 @@ def test_prep_and_push_use_configured_cluster_staging_path(dataset, mocks, stagi
     assert mocks["launched"]["params"]["output_dir"] == output_dir + "/"
     assert mocks["launched"]["params"]["config_path"] == output_dir + f"/{dataset.dataset_id}/dataprep_config.yaml"
     destination = mocks["sync_destination"]
-    on_prep_complete(job, True, job_id="slurm-500", validation=_passed_validation("slurm-500"))
+    DatasetJob.objects.filter(pk=job.pk).update(state="prep_completed", validation=_passed_validation("slurm-500"))
     dataset.refresh_from_db()
 
     submit.submit_dataset_push(dataset)

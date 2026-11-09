@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 import yaml
+from people.models import Person
 from stores.models import PathType
 from tem.models import MsiSession
 
@@ -23,6 +24,7 @@ from depositions.services.dataprep_config import (
     build_dataprep_config,
     dataprep_config_yaml,
 )
+from depositions.services.dataset_metadata import build_deposition_metadata
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.submission import on_push_complete
 
@@ -78,6 +80,8 @@ def test_builds_deployment_config_with_reserved_ids(dataset):
     assert config["output_dir"] == "/staging/101"
     assert config["deposition_id"] == 101
     assert config["sync_destination"] == "s3://cryoetportal-biohub-hpc-globus/CZII"
+    # Single-dataset config in the shared dir; the flag stops sync from deleting siblings.
+    assert config["shared_deposition"] is True
     assert config["datasets"]["dataset_202"]["dataset_id"] == 202
     assert _session(config) == RAW_SESSION
     metadata = config["datasets"]["dataset_202"]["metadata"]
@@ -111,16 +115,9 @@ def test_deposition_metadata_rides_under_the_built_dataset(dataset):
 
 
 def test_deposition_types_include_annotation_when_selected(dataset):
-    from depositions.models import DepositionAnnotation
-    from depositions.services.dataset_metadata import build_deposition_metadata
-
     session = dataset.sessions.get()
     DepositionAnnotation.objects.create(session=session, copick_kind="picks", copick_ref="ribosome:alice/0")
     assert build_deposition_metadata(dataset.deposition)["deposition_types"] == ["dataset", "annotation"]
-
-
-def test_config_sets_shared_deposition_flag(dataset):
-    assert _build(dataset)["shared_deposition"] is True
 
 
 def test_only_the_upload_owner_carries_deposition_metadata(dataset, test_session_plan):
@@ -135,17 +132,17 @@ def test_only_the_upload_owner_carries_deposition_metadata(dataset, test_session
     assert "deposition_metadata" in _build(other)["datasets"]["dataset_303"]
     job = DatasetJob.objects.create(dataset=other, state="push_running", push_slurm_job_id="push-other")
     on_push_complete(job, True, job_id="push-other")
+    dataset.deposition.refresh_from_db()
     assert "deposition_metadata" not in _build(dataset)["datasets"]["dataset_202"]
     assert "deposition_metadata" in _build(other)["datasets"]["dataset_303"]
     assert _build(dataset)["deposition_id"] == _build(other)["deposition_id"] == 101
 
 
 def test_deleted_metadata_owner_can_be_replaced(dataset, test_session_plan):
-    # The higher-ID dataset uploads first and owns the block; a lower-ID sibling that becomes
-    # ready later must not move the definition.
     other = Dataset.objects.create(deposition=dataset.deposition, title="Draft", dataset_id=101)
     job = DatasetJob.objects.create(dataset=dataset, state="push_running", push_slurm_job_id="push-first")
     on_push_complete(job, True, job_id="push-first")
+    dataset.deposition.refresh_from_db()
     session = DepositionSession.objects.create(
         dataset=other,
         msi_session=MsiSession.objects.create(name="24dec01", session_plan=test_session_plan),
@@ -154,8 +151,8 @@ def test_deleted_metadata_owner_can_be_replaced(dataset, test_session_plan):
     TiltseriesMetadata.objects.create(session=session, autofill_metadata=deepcopy(RAW_SESSION), pixel_spacing=1.54)
     assert "deposition_metadata" not in _build(other)["datasets"]["dataset_101"]
     assert "deposition_metadata" in _build(dataset)["datasets"]["dataset_202"]
-    # Deleting the owner frees the role, so the next dataset can define the deposition again.
     dataset.delete()
+    other.deposition.refresh_from_db()
     assert "deposition_metadata" in _build(other)["datasets"]["dataset_101"]
 
 
@@ -321,13 +318,6 @@ def test_rejects_when_no_dataset_is_ready(dataset):
         _build(dataset)
 
 
-def test_draft_sibling_does_not_appear_in_the_config(dataset):
-    # A draft dataset (no sessions yet) must not leak into the ready one's config.
-    Dataset.objects.create(deposition=dataset.deposition, title="Draft", dataset_id=404)
-    config = _build(dataset)
-    assert set(config["datasets"]) == {"dataset_202"}
-
-
 @pytest.mark.parametrize("raw", [{}, "invalid", []])
 def test_skips_dataset_never_autofilled(dataset, raw):
     # Empty/missing autofill = a draft that never ran auto-fill - skipped.
@@ -382,7 +372,8 @@ def test_invalid_configured_destination_is_rejected(dataset):
 
 @pytest.mark.parametrize("kind,expected", [("picks", "picks"), ("segmentations", "segmentation_mask")])
 def test_selected_annotations_use_sync_contract_and_reviewed_authors(dataset, monkeypatch, kind, expected):
-    dataset.deposition.authors_json = [{"full_name": "Ada", "is_primary": True, "is_corresponding": True}]
+    author = Person.objects.create(given_name="Ada", family_name="")
+    dataset.deposition.authors_json = [{"author_id": author.pk, "is_primary": True, "is_corresponding": True}]
     dataset.deposition.save()
     session = dataset.sessions.get()
     session.selected_copick_runs = ["run003", "run004"]

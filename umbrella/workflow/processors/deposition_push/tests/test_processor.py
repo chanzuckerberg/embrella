@@ -106,7 +106,7 @@ def test_setup_commands_are_separate_not_chained():
 
 def test_excludes_local_only_artifacts():
     script = _render()
-    # The config and its mktemp sibling now live inside the dataset tree; both must stay out of the upload.
+    # Exclude the config and abandoned temp files from the dataset upload.
     for pattern in ("dataprep_config.yaml", "dataprep_config.yaml.tmp.*", "sync_job.sh", "__pycache__/*"):
         assert f"--exclude '{pattern}'" in script
 
