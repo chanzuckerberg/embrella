@@ -17,9 +17,12 @@ at submission time. These helpers read it consistently with a shared default.
   validate or list against stores.Cluster instead of hardcoding cluster ids.
 """
 
+import logging
 from functools import lru_cache
 
 from stores.models import Cluster
+
+logger = logging.getLogger(__name__)
 
 
 class NoDefaultClusterError(RuntimeError):
@@ -94,25 +97,36 @@ def cluster_id_from_parameters(parameters, default: str = None) -> str:
     return default if default is not None else get_default_cluster_id()
 
 
-def cluster_id_for_run(session_name: str, run_number: str, default: str = None) -> str:
+def cluster_id_for_run(
+    session_name: str, run_number: str, default: str = None, *, processor_class: str | None = None
+) -> str:
     """Return cluster_id for the most recent PipeExecution on this session+run.
 
     Walks the 10 most recent PipeExecutions and returns the first non-empty
     cluster_id found in their parameters. Falls back to `default` for runs
     submitted before cluster_id was persisted.
+
+    `processor_class` scopes the lookup to one software so a run name shared across
+    processors resolves unambiguously.
     """
     from processes.models import PipeExecution
 
-    qs = (
-        PipeExecution.objects.filter(
-            proc_run__msi_session__name=session_name,
-            proc_run__name=run_number,
-        )
-        .order_by("-updated_at")
-        .values_list("parameters", flat=True)[:10]
+    qs = PipeExecution.objects.filter(
+        proc_run__msi_session__name=session_name,
+        proc_run__name=run_number,
     )
-    for params in qs:
+    if processor_class:
+        qs = qs.filter(pipe_in_plan__pipe__software__processor_class=processor_class)
+    params_qs = qs.order_by("-updated_at").values_list("parameters", flat=True)[:10]
+    for params in params_qs:
         cid = cluster_id_from_parameters(params, default="")
         if cid:
             return cid
+    if processor_class:
+        logger.warning(
+            "No %s execution with a cluster_id for %s/%s; using the fallback cluster.",
+            processor_class,
+            session_name,
+            run_number,
+        )
     return default if default is not None else get_default_cluster_id()

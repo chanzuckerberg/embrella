@@ -88,6 +88,14 @@ def mocks(monkeypatch, db):
 
 
 @pytest.mark.django_db
+def test_cluster_for_dataset_scopes_to_aretomo(dataset, monkeypatch):
+    captured = {}
+    monkeypatch.setattr(submit, "cluster_id_for_run", lambda *a, **k: captured.update(k) or "cluster-a")
+    assert submit._cluster_for_dataset(dataset) == "cluster-a"
+    assert captured["processor_class"] == "aretomo3"
+
+
+@pytest.mark.django_db
 class TestSubmitDatasetPrep:
     def test_incomplete_metadata_does_not_claim_or_launch_preparation(self, dataset, mocks):
         dataset.description = " "

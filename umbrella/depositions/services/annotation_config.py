@@ -64,7 +64,9 @@ def session_annotations(session, authors):
             entry["method_type"] = annotation.method_type
         annotations.append(entry)
     aretomo_run = session.aretomo_run_name
-    cluster = cluster_id_for_run(label, aretomo_run if aretomo_run.startswith("run") else f"run{aretomo_run}")
+    cluster = cluster_id_for_run(
+        label, aretomo_run if aretomo_run.startswith("run") else f"run{aretomo_run}", processor_class="aretomo3"
+    )
     base = get_processor("copick").get_processing_base_path(cluster=cluster).rstrip("/")
     configs = [f"{base}/{label}/{copick_run}/config.json" for copick_run in session.selected_copick_runs]
     for entry in annotations:

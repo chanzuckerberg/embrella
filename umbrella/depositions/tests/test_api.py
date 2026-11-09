@@ -385,6 +385,23 @@ class TestAutoFill:
         r = auth_client.post(self._url(owned_session))
         assert r.status_code == 400
 
+    def test_scopes_cluster_lookup_to_aretomo(self, auth_client, owned_session):
+        owned_session.aretomo_run_name = "run001"
+        owned_session.save(update_fields=["aretomo_run_name"])
+        c1, c2, c3 = self._patch_cluster()
+        with (
+            c1 as cluster_lookup,
+            c2,
+            c3,
+            mock.patch(
+                "depositions.views.run_autofill_init",
+                return_value={"filled": True, "session": {"acquisition": {}}, "reason": None},
+            ),
+        ):
+            r = auth_client.post(self._url(owned_session))
+        assert r.status_code == 200, r.content
+        assert cluster_lookup.call_args.kwargs["processor_class"] == "aretomo3"
+
     def test_populates_instrument_from_tem(self, auth_client, owned_session):
         """Facility-record fields come from the session's Microscope/Camera."""
         from tem.models import AcquisitionSettings
