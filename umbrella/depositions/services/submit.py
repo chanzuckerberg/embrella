@@ -47,7 +47,7 @@ def _cluster_for_dataset(dataset):
         return get_default_cluster_id()
     run = session.aretomo_run_name or ""
     run_number = run if run.startswith("run") else f"run{run}"
-    return cluster_id_for_run(session.msi_session.name, run_number)
+    return cluster_id_for_run(session.msi_session.name, run_number, processor_class="aretomo3")
 
 
 def _service_auth():
