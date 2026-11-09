@@ -20,6 +20,15 @@ class Deposition(models.Model):
         "author_id soft-references users.Author (not a FK).",
     )
     release_date = models.DateField(null=True, blank=True)
+    metadata_dataset = models.ForeignKey(
+        "Dataset",
+        null=True,
+        blank=True,
+        editable=False,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="First dataset whose upload completed; owns the deposition metadata in its prep config.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -4,7 +4,6 @@ This is dataprep_config.yaml, separate from the portal metadata built by dataset
 Path resolution, remote writes, and launching jobs belong to the submit service.
 """
 
-import logging
 from copy import deepcopy
 from pathlib import PurePosixPath
 from urllib.parse import urlsplit
@@ -12,13 +11,11 @@ from urllib.parse import urlsplit
 import yaml
 from stores.paths import resolve_dir
 
-from depositions.models import TiltseriesMetadata
+from depositions.models import Deposition, TiltseriesMetadata
 from depositions.services.annotation_config import session_annotations
-from depositions.services.dataset_metadata import build_dataset_metadata
+from depositions.services.dataset_metadata import build_dataset_metadata, build_deposition_metadata
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.subset import selected_positions
-
-logger = logging.getLogger(__name__)
 
 
 def _validate_sync_destination(destination):
@@ -144,7 +141,20 @@ def _dataset_block(dataset):
     return {"dataset_id": dataset.dataset_id, "metadata": metadata, "sessions": sessions}
 
 
-def build_dataprep_config(deposition, *, output_dir, sync_destination=None, required_dataset_ids=None):
+def is_defining_dataset(dataset) -> bool:
+    """Include metadata until an upload succeeds, then only for its persisted owner."""
+    owner = (
+        Deposition.objects.using(dataset._state.db)
+        .filter(pk=dataset.deposition_id)
+        .values_list("metadata_dataset_id", flat=True)
+        .get()
+    )
+    return owner is None or owner == dataset.pk
+
+
+def build_dataprep_config(dataset, *, output_dir, sync_destination=None):
+    """Build this dataset's prep config with its deposition ID and any defining metadata."""
+    deposition = dataset.deposition
     if deposition.deposition_id is None:
         raise SubmissionValidationError("Reserve the deposition_id before preparing.")
     output_dir = str(output_dir) if output_dir is not None else ""
@@ -153,39 +163,24 @@ def build_dataprep_config(deposition, *, output_dir, sync_destination=None, requ
     sync_destination = (
         resolve_sync_destination() if sync_destination is None else _validate_sync_destination(sync_destination)
     )
-
-    datasets = {}
-    for dataset in deposition.datasets.order_by("dataset_id"):
-        is_required = required_dataset_ids is None or dataset.dataset_id in required_dataset_ids
-        if not dataset_is_ready(dataset):
-            if required_dataset_ids is not None and dataset.dataset_id in required_dataset_ids:
-                raise SubmissionValidationError(
-                    f"Dataset {dataset.dataset_id} is staged or in flight but has no usable autofill; "
-                    "fix it before submitting."
-                )
-            continue  # a draft/unready sibling has no tree to protect
-        try:
-            block = _dataset_block(dataset)
-        except SubmissionValidationError:
-            if is_required:
-                raise
-            logger.warning("Skipping malformed sibling dataset %s from the deposition config.", dataset.dataset_id)
-            continue
-        datasets[f"dataset_{dataset.dataset_id}"] = block
-    if not datasets:
-        raise SubmissionValidationError("No dataset in this deposition is ready to prepare.")
-
+    if not dataset_is_ready(dataset):
+        raise SubmissionValidationError(
+            f"Dataset {dataset.dataset_id} isn't ready to prepare; add sessions and run auto-fill first."
+        )
+    block = _dataset_block(dataset)
+    if is_defining_dataset(dataset):
+        block["deposition_metadata"] = build_deposition_metadata(deposition)
     return {
         "output_dir": output_dir,
         "sync_destination": sync_destination,
         "deposition_id": deposition.deposition_id,
-        "datasets": datasets,
+        # Preserve sibling dataset directories.
+        "shared_deposition": True,
+        "datasets": {f"dataset_{dataset.dataset_id}": block},
     }
 
 
-def dataprep_config_yaml(deposition, *, output_dir, sync_destination=None, required_dataset_ids=None):
+def dataprep_config_yaml(dataset, *, output_dir, sync_destination=None):
     """Render the prep deployment config as YAML for a later remote write."""
-    config = build_dataprep_config(
-        deposition, output_dir=output_dir, sync_destination=sync_destination, required_dataset_ids=required_dataset_ids
-    )
+    config = build_dataprep_config(dataset, output_dir=output_dir, sync_destination=sync_destination)
     return yaml.safe_dump(config, sort_keys=False, allow_unicode=True, default_flow_style=False)

@@ -5,7 +5,7 @@ import logging
 from django.db import transaction
 from django.utils import timezone
 
-from depositions.models import DatasetJob
+from depositions.models import DatasetJob, Deposition
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.validation import require_validation
 
@@ -58,6 +58,11 @@ def _record_completion(job, *, active_states, attempt_field, job_id, fields, req
         )
         return job
     job.refresh_from_db()
+    if attempt_field == "push_slurm_job_id" and fields.get("state") == "completed":
+        # The first successful upload atomically claims metadata ownership.
+        Deposition.objects.using(job._state.db).filter(
+            pk=job.dataset.deposition_id, metadata_dataset__isnull=True
+        ).update(metadata_dataset_id=job.dataset_id)
     apply_status(job)
     return job
 

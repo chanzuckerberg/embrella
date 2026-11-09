@@ -79,3 +79,17 @@ def metadata_issues(metadata, deposition_title):
     if not _filled(deposition_title):
         issues.insert(0, "Deposition title is required.")
     return issues
+
+
+def deposition_metadata_issues(metadata):
+    """Deposition-level fields the prep tool requires on the defining dataset's config.
+
+    The deposition title is already covered by metadata_issues; this adds description and authors,
+    which ride in the deposition_metadata block and would otherwise fail late in cluster validation.
+    """
+    issues = []
+    if not _filled(metadata.get("deposition_description")):
+        issues.append("Deposition description is required.")
+    if not metadata.get("authors"):
+        issues.append("Add at least one deposition author.")
+    return issues

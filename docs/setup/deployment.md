@@ -251,18 +251,15 @@ five-digit deposition and dataset IDs; bucket roots and shared prefixes are reje
 
 ### Pre-flight validation {#deposition-validation}
 
-Embrella includes saved wizard metadata in each dataset's `metadata` block of
-`dataprep_config.yaml`. `cryoetportalprep sync` uses it to write
-`portal_dataset_config.yaml`. Prep then runs
-`cryoetportalprep push <config> --dry-run --format json` for the current dataset.
-Upload requires a successful exit code and a JSON report with no errors for the
-current attempt. Warnings do not block upload. Failed, missing or unavailable
-results block upload. Retry preparation, or choose **Edit metadata** and prepare
-again. Diagnostics are visible only to the submission owner.
+Each dataset uses `{deposition_staging}/{dataset_id}/dataprep_config.yaml` and
+`shared_deposition: true` to preserve siblings. Require `deposition-prep`
+`0.1.dev18+ga6ee5e9c5` or a later compatible build.
 
-Install `deposition_prep` in the cluster environment used for preparation, with
-support for per-dataset metadata, per-session `positions` subsets, and JSON
-validation reports.
+Prep runs `cryoetportalprep push <config> --dry-run --format json` after sync.
+Upload requires passing validation for the current attempt; warnings are allowed.
+
+Configs include deposition metadata until the first successful upload fixes its
+owner. Later sibling configs carry only the deposition ID.
 
 ## Bare Metal Install {#bare-metal-legacy}
 
