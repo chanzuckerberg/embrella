@@ -25,25 +25,19 @@ def _name_id(name, oid):
 
 
 def _map_author(entry, people):
-    """Resolve directory references, retaining support for saved inline authors."""
-    if not isinstance(entry, dict):
-        return None
-    email = None
-    person_id = entry.get("author_id")
-    if person_id is not None:
-        person = people.get(person_id)
-        if person is None:
-            raise SubmissionValidationError(
-                "An author is no longer in the people directory. Review the authors before preparing."
-            )
-        name = str(person)
-        orcid = person.orcid
-        affiliation = person.institution.name if person.institution else ""
-        email = person.contact_email
-    else:
-        name = (entry.get("full_name") or "").strip()
-        orcid = entry.get("orcid")
-        affiliation = entry.get("affiliation")
+    """Resolve an author's identity from the people directory."""
+    person_id = entry.get("author_id") if isinstance(entry, dict) else None
+    if person_id is None:
+        raise SubmissionValidationError("Choose each author from the people directory before preparing.")
+    person = people.get(person_id)
+    if person is None:
+        raise SubmissionValidationError(
+            "An author is no longer in the people directory. Review the authors before preparing."
+        )
+    name = str(person)
+    orcid = person.orcid
+    affiliation = person.institution.name if person.institution else ""
+    email = person.contact_email
     if not name:
         return None
     author = {"name": name}
@@ -123,7 +117,7 @@ def build_dataset_metadata(dataset) -> dict:
         .select_related("institution")
         .in_bulk(e["author_id"] for e in source_authors if isinstance(e, dict) and e.get("author_id") is not None)
     )
-    authors = [a for a in (_map_author(e, people) for e in source_authors if isinstance(e, dict)) if a]
+    authors = [a for a in (_map_author(e, people) for e in source_authors) if a]
     if authors:
         meta["authors"] = authors
 

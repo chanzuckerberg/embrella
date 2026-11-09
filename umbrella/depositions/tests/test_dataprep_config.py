@@ -7,6 +7,7 @@ from unittest import mock
 import pytest
 import yaml
 from django.core.exceptions import ImproperlyConfigured
+from people.models import Person
 from processes.models import Pipe, PipeExecution, PipeInPlan, ProcRun, ProcSoftware
 from processes.services.cluster_resolver import get_default_cluster_id
 from stores.models import Cluster, DataKind, PathType
@@ -468,7 +469,8 @@ def test_invalid_configured_destination_is_rejected(dataset):
 
 @pytest.mark.parametrize("kind,expected", [("picks", "picks"), ("segmentations", "segmentation_mask")])
 def test_selected_annotations_use_sync_contract_and_reviewed_authors(dataset, monkeypatch, kind, expected):
-    dataset.deposition.authors_json = [{"full_name": "Ada", "is_primary": True, "is_corresponding": True}]
+    author = Person.objects.create(given_name="Ada", family_name="")
+    dataset.deposition.authors_json = [{"author_id": author.pk, "is_primary": True, "is_corresponding": True}]
     dataset.deposition.save()
     session = dataset.sessions.get()
     session.selected_copick_runs = ["run003", "run004"]
