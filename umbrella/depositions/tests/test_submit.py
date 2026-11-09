@@ -5,6 +5,7 @@ import yaml
 from cryo_grids.models import Sample
 from django.contrib.auth.models import User
 from django.utils import timezone
+from people.models import Person
 from stores.models import Cluster, DataKind, PathType
 from stores.paths import resolve_dir
 
@@ -28,10 +29,11 @@ def _raise_no_creds():
 
 @pytest.fixture
 def dataset(db, test_msi_session):
+    author = Person.objects.create(given_name="Ada", family_name="Lovelace")
     deposition = Deposition.objects.create(
         title="Dep",
         deposition_id=1,
-        authors_json=[{"full_name": "Ada Lovelace", "is_primary": True, "is_corresponding": True}],
+        authors_json=[{"author_id": author.pk, "is_primary": True, "is_corresponding": True}],
     )
     sample = Sample.objects.create(name="submission-test-sample", sample_type="in_vitro")
     ds = Dataset.objects.create(
