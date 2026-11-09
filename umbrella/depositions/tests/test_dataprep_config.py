@@ -378,11 +378,15 @@ def test_selected_annotations_use_sync_contract_and_reviewed_authors(dataset, mo
     DepositionAnnotationMethodLink.objects.create(
         annotation=selected, link_type="source_code", link="https://example.org/code"
     )
-    monkeypatch.setattr(annotation_config, "cluster_id_for_run", lambda *a: "cluster-a")
+    cluster_kwargs = {}
+    monkeypatch.setattr(
+        annotation_config, "cluster_id_for_run", lambda *a, **k: cluster_kwargs.update(k) or "cluster-a"
+    )
     monkeypatch.setattr(
         annotation_config, "get_processor", lambda _: SimpleNamespace(get_processing_base_path=lambda **kw: "/copick")
     )
     annotations = _session(_build(dataset))["annotations"]
+    assert cluster_kwargs["processor_class"] == "aretomo3"
     assert len(annotations) == 1
     entry = annotations[0]
     assert entry["kind"] == expected and entry["copick_ref"] == "ribosome:alice/0"
