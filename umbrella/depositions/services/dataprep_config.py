@@ -10,8 +10,9 @@ from pathlib import PurePosixPath
 from urllib.parse import urlsplit
 
 import yaml
-from processes.services.cluster_resolver import cluster_id_for_run, run_dirname
-from stores.models import Cluster
+from django.core.exceptions import ImproperlyConfigured
+from processes.services.cluster_resolver import cluster_id_for_run
+from stores.models import Cluster, PathType
 from stores.paths import resolve_dir
 from workflow.processors import get_processor
 
@@ -43,20 +44,33 @@ ACQUISITION_FIELDS = {
 
 
 def _apply_denoise_run(config, session):
-    """Resolve the selected denoise output on the preparation cluster."""
+    """Resolve the selected denoise run, requiring it to share the AreTomo prep cluster."""
     paths = config["paths"]
     run = (session.denoise_run_name or "").strip()
     if not run:
         paths.pop("denoise", None)
         return
     msi_session = session.msi_session
-    run = run_dirname(run)
-    cluster_id = cluster_id_for_run(msi_session.name, run_dirname(session.aretomo_run_name))
+    run = run if run.startswith("run") else f"run{run}"
+    aretomo_run = (session.aretomo_run_name or "").strip()
+    aretomo_run = aretomo_run if aretomo_run.startswith("run") else f"run{aretomo_run}"
+    prep_cluster_id = cluster_id_for_run(msi_session.name, aretomo_run, processor_class="aretomo3")
+    cluster_id = cluster_id_for_run(msi_session.name, run, default=prep_cluster_id, processor_class="denoiset")
+    if cluster_id != prep_cluster_id:
+        raise SubmissionValidationError(
+            f"Session {msi_session.name!r} denoise run {run!r} is on cluster {cluster_id!r}, "
+            f"but preparation runs on AreTomo cluster {prep_cluster_id!r}. "
+            "Select a denoise run on the preparation cluster."
+        )
     try:
         cluster = Cluster.objects.get(cluster_id=cluster_id, is_active=True)
     except Cluster.DoesNotExist:
         raise SubmissionValidationError(f"Unknown cluster for session {msi_session.name!r}: {cluster_id}.")
-    root = get_processor("denoiset").get_processing_base_path(cluster=cluster.cluster_id)
+    try:
+        root = get_processor("denoiset").get_processing_base_path(cluster=cluster.cluster_id)
+    except (ImproperlyConfigured, PathType.DoesNotExist) as exc:
+        logger.exception("Cannot resolve denoise source for session %r on cluster %r.", msi_session.name, cluster_id)
+        raise SubmissionValidationError("Denoise isn't configured on this cluster.") from exc
     paths["denoise"] = f"{root.rstrip('/')}/{msi_session.name}/{run}"
 
 

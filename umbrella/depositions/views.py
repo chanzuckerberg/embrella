@@ -8,7 +8,7 @@ import time
 from django.http import HttpResponse
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema, extend_schema_view
-from processes.services.cluster_resolver import cluster_id_for_run, run_dirname
+from processes.services.cluster_resolver import cluster_id_for_run
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -410,7 +410,9 @@ class DepositionSessionViewSet(
                 {"detail": "Select an AreTomo run for this session before auto-filling."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        run_number = run_dirname(session.aretomo_run_name)
+        run_number = (
+            session.aretomo_run_name if session.aretomo_run_name.startswith("run") else f"run{session.aretomo_run_name}"
+        )
 
         msi_session = session.msi_session
         cluster_id = cluster_id_for_run(msi_session.name, run_number)
