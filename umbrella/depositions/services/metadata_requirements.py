@@ -28,6 +28,19 @@ def _filled(value):
     return isinstance(value, str) and bool(value.strip())
 
 
+def _author_issues(authors, noun, empty_message):
+    """At least one author, with a primary and a corresponding — shared by dataset and deposition."""
+    authors = authors or []
+    if not authors:
+        return [empty_message]
+    issues = []
+    if not any(a.get("primary_author_status") for a in authors):
+        issues.append(f"Choose at least one primary {noun} author.")
+    if not any(a.get("corresponding_author_status") for a in authors):
+        issues.append(f"Choose at least one corresponding {noun} author.")
+    return issues
+
+
 def dataset_metadata_issues(metadata):
     """Return user-facing issues; optional empty fields never create placeholders."""
     issues = []
@@ -37,14 +50,9 @@ def dataset_metadata_issues(metadata):
     ):
         if not _filled(value):
             issues.append(f"{label} is required.")
-    authors = metadata.get("authors") or []
-    if not authors:
-        issues.append("Add at least one dataset author, or use the deposition authors.")
-    else:
-        if not any(author.get("primary_author_status") for author in authors):
-            issues.append("Choose at least one primary dataset author.")
-        if not any(author.get("corresponding_author_status") for author in authors):
-            issues.append("Choose at least one corresponding dataset author.")
+    issues += _author_issues(
+        metadata.get("authors"), "dataset", "Add at least one dataset author, or use the deposition authors."
+    )
 
     sample_type = metadata.get("sample_type")
     if sample_type not in dict(SAMPLE_TYPE_CHOICES):
@@ -78,4 +86,15 @@ def metadata_issues(metadata, deposition_title):
     issues = dataset_metadata_issues(metadata)
     if not _filled(deposition_title):
         issues.insert(0, "Deposition title is required.")
+    return issues
+
+
+def deposition_metadata_issues(metadata):
+    """Check required deposition metadata before prep."""
+    issues = []
+    if not _filled(metadata.get("deposition_description")):
+        issues.append("Deposition description is required.")
+    issues += _author_issues(metadata.get("authors"), "deposition", "Add at least one deposition author.")
+    if not (metadata.get("dates") or {}).get("release_date"):
+        issues.append("Deposition release date is required.")
     return issues
