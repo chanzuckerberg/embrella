@@ -5,7 +5,6 @@ import logging
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import transaction
-from django.db.models import Q
 from django.utils import timezone
 from processes.services.cluster_resolver import cluster_id_for_run, get_default_cluster_id
 from stores.paths import resolve_dir
@@ -16,13 +15,14 @@ from depositions.models import DatasetJob, Deposition
 from depositions.services.dataprep_config import (
     dataprep_config_yaml,
     dataset_is_ready,
+    is_defining_dataset,
     require_custom_positions,
     resolve_sync_destination,
 )
-from depositions.services.dataset_metadata import build_dataset_metadata
+from depositions.services.dataset_metadata import build_dataset_metadata, build_deposition_metadata
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
-from depositions.services.metadata_requirements import metadata_issues
+from depositions.services.metadata_requirements import deposition_metadata_issues, metadata_issues
 from depositions.services.submission import PREP_ACTIVE, PUSH_ACTIVE, apply_status, on_push_complete, start_push
 from depositions.services.validation import require_validation
 
@@ -59,25 +59,13 @@ def _service_auth():
         raise SubmissionValidationError("Deposition submission isn't configured on this server.") from error
 
 
-def _required_dataset_ids(deposition, dataset, *, db):
-    """This dataset plus any staged/in-flight sibling - the datasets a prep run must not drop."""
-    staged = (
-        DatasetJob.objects.using(db)
-        .filter(dataset__deposition=deposition)
-        .filter(Q(staged_at__isnull=False) | Q(state__in=DatasetJob.CLUSTER_FROZEN_STATES))
-        .values_list("dataset__dataset_id", flat=True)
-    )
-    return set(staged) | {dataset.dataset_id}
-
-
 def submit_dataset_prep(dataset):
     """Write the deposition config and launch this dataset's prep job. Returns the DatasetJob."""
     deposition = dataset.deposition
     if deposition.deposition_id is None or dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before submitting.")
     db = dataset._state.db
-    # Claim one queued/running prep per deposition before freezing the shared config.
-    # Otherwise an older queued job could overwrite a newer sibling's config.
+    # Serialize prep claims within the shared deposition staging directory.
     with transaction.atomic(using=db):
         Deposition.objects.using(db).select_for_update().get(pk=deposition.pk)
         deposition.refresh_from_db()
@@ -99,10 +87,13 @@ def submit_dataset_prep(dataset):
             )
         portal_metadata = build_dataset_metadata(dataset)
         issues = metadata_issues(portal_metadata, deposition.title)
+        # The defining dataset's config carries the deposition_metadata block; validate it up front.
+        if is_defining_dataset(dataset):
+            issues += deposition_metadata_issues(build_deposition_metadata(deposition))
         if issues:
             raise SubmissionValidationError("Complete the metadata before preparation:\n" + "\n".join(issues))
         # Fail fast (pre-claim) if a custom dataset has an unusable selection; dataprep_config
-        # re-checks every included dataset (siblings) as the backstop.
+        # re-checks it as the backstop.
         if dataset.tomogram_subset_mode == "custom":
             for session in dataset.sessions.select_related("msi_session"):
                 require_custom_positions(session)
@@ -136,13 +127,11 @@ def submit_dataset_prep(dataset):
     try:
         # Resolve paths inside the try so a resolution failure rolls the claim back, not strands it.
         output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
-        config_path = f"{output_dir.rstrip('/')}/{CONFIG_FILENAME}"
-        required_ids = _required_dataset_ids(deposition, dataset, db=db)
+        config_path = f"{output_dir.rstrip('/')}/{dataset.dataset_id}/{CONFIG_FILENAME}"
         config_yaml = dataprep_config_yaml(
-            deposition,
+            dataset,
             output_dir=output_dir,
             sync_destination=resolve_sync_destination(cluster=cluster_id),
-            required_dataset_ids=required_ids,
         )
         params = {
             "dataset_id": dataset.dataset_id,
@@ -257,20 +246,16 @@ def submit_dataset_push(dataset):
 
 
 def preview_config_yaml(dataset):
-    """Render the dataprep_config.yaml submit would upload for THIS dataset (download endpoint).
-    Uses submit's required_dataset_ids so it includes this dataset.
-    """
+    """Render the dataprep_config.yaml submit would upload for THIS dataset."""
     deposition = dataset.deposition
     if deposition.deposition_id is None or dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before downloading the config.")
-    db = dataset._state.db
     job = getattr(dataset, "job", None)
     # Show the staged cluster only while the job is locked; otherwise derive it the way a resubmit will.
     cluster_id = (job.cluster_id if job and job.cluster_is_frozen else "") or _cluster_for_dataset(dataset)
     output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
     return dataprep_config_yaml(
-        deposition,
+        dataset,
         output_dir=output_dir,
         sync_destination=resolve_sync_destination(cluster=cluster_id),
-        required_dataset_ids=_required_dataset_ids(deposition, dataset, db=db),
     )

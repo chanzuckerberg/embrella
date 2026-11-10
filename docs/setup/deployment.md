@@ -261,8 +261,8 @@ results block upload. Retry preparation, or choose **Edit metadata** and prepare
 again. Diagnostics are visible only to the submission owner.
 
 Install `deposition_prep` in the cluster environment used for preparation, with
-support for per-dataset metadata, per-session `positions` subsets, and JSON
-validation reports.
+support for per-dataset preparation configs and metadata, per-session `positions`
+subsets, JSON validation reports, and deposition metadata.
 
 ## Bare Metal Install {#bare-metal-legacy}
 

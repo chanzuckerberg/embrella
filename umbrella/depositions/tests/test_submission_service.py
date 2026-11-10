@@ -31,6 +31,8 @@ class TestOnPrepComplete:
         assert job.state == "prep_completed"
         assert not job.error_message
         assert job.completed_at is None  # prep done != submission done
+        job.dataset.deposition.refresh_from_db()
+        assert job.dataset.deposition.metadata_dataset_id is None  # ownership is claimed on upload, not prep
 
     def test_failure_marks_failed_with_error_and_timestamp(self):
         job = _job("prep_running")
@@ -309,6 +311,15 @@ class TestOnPushComplete:
         job.refresh_from_db()
         assert job.state == "completed"
         assert job.completed_at is not None
+
+    def test_first_completed_upload_owns_metadata_and_sibling_cannot_steal(self):
+        first = _job("push_running")
+        submission.on_push_complete(first, True)
+        sibling = Dataset.objects.create(deposition=first.dataset.deposition, title="Sibling")
+        later = DatasetJob.objects.create(dataset=sibling, state="push_running", push_slurm_job_id="push-2")
+        submission.on_push_complete(later, True, job_id="push-2")
+        first.dataset.deposition.refresh_from_db()
+        assert first.dataset.deposition.metadata_dataset_id == first.dataset_id
 
     def test_failure_marks_failed_with_error(self):
         job = _job("push_running")
