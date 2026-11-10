@@ -300,6 +300,33 @@ class TestDatasetSessionGuard:
         assert r.status_code == 400
         assert "sessions" in r.json()
 
+    def test_omitting_a_session_does_not_delete_it(self, auth_client, owned_session):
+        """A dataset edit that omits a session must leave it (and its metadata) intact (#1457)."""
+        from depositions.models import DepositionSession, TiltseriesMetadata
+
+        metadata = TiltseriesMetadata.objects.create(session=owned_session, acceleration_voltage=300)
+        r = auth_client.patch(f"{DATASETS}{owned_session.dataset_id}/", {"sessions": []}, format="json")
+        assert r.status_code == 200, r.content
+        assert DepositionSession.objects.filter(pk=owned_session.pk).exists()
+        assert TiltseriesMetadata.objects.filter(pk=metadata.pk).exists()
+
+    def test_delete_session_removes_it(self, auth_client, owned_session):
+        from depositions.models import DepositionSession
+
+        r = auth_client.delete(f"{SESSIONS}{owned_session.id}/")
+        assert r.status_code == 204
+        assert not DepositionSession.objects.filter(pk=owned_session.pk).exists()
+
+    # A running job blocks; a failed one must be reset (Edit metadata) to pending before deleting.
+    @pytest.mark.parametrize("state", ["prep_running", "failed"])
+    def test_delete_session_blocked_until_reset(self, auth_client, owned_session, state):
+        from depositions.models import DatasetJob, DepositionSession
+
+        DatasetJob.objects.create(dataset=owned_session.dataset, state=state)
+        r = auth_client.delete(f"{SESSIONS}{owned_session.id}/")
+        assert r.status_code == 409
+        assert DepositionSession.objects.filter(pk=owned_session.pk).exists()
+
 
 @pytest.fixture
 def owned_session(user):

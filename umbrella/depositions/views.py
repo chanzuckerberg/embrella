@@ -151,8 +151,10 @@ class DepositionViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
     ),
     partial_update=extend_schema(
         summary="Update a dataset (fields + nested funding / sessions)",
-        description="Nested `funding` and `sessions` are FULL-REPLACE: any row omitted from the "
-        "array is deleted. Each session entry must include `msi_session` (the MsiSession's id).",
+        description="Nested `funding` is FULL-REPLACE: any row omitted from the array is deleted. "
+        "Nested `sessions` is additive — entries are added or updated by `msi_session` and omitted "
+        "sessions are left intact; remove one with DELETE /sessions/<id>. Each session entry must "
+        "include `msi_session` (the MsiSession's id).",
         examples=[
             OpenApiExample(
                 "Patch with funding + sessions",
@@ -383,9 +385,13 @@ class DatasetViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
     ),
 )
 class DepositionSessionViewSet(
-    MetadataLockedMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
+    MetadataLockedMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
 ):
-    """Session detail save. No create/list/delete — managed via dataset nested sessions."""
+    """Session detail save and explicit remove (DELETE is lock-guarded)."""
 
     permission_classes = [IsAuthenticated]
     http_method_names = HTTP_METHODS_NO_PUT
