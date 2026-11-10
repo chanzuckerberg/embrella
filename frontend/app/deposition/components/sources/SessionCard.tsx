@@ -56,7 +56,7 @@ export function SessionCard({
     subset_filename: undefined,
     subset_input_mode: undefined,
   });
-  // Confirm before switching a saved session; that deletes its metadata on save.
+  // Confirm before deleting the saved session and its metadata.
   const selectSession = (name: string) => {
     if (name === session) return;
     if (row.id != null) {

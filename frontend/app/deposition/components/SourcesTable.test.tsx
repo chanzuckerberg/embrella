@@ -31,6 +31,8 @@ beforeEach(() => jest.clearAllMocks());
 
 function setup(rows: SourceRow[]) {
   const onChange = jest.fn();
+  const onRemoveSession = jest.fn();
+  const onChangeSession = jest.fn();
   render(
     <SourcesTable
       rows={rows}
@@ -38,11 +40,13 @@ function setup(rows: SourceRow[]) {
       subsetMode="all"
       readOnly={false}
       onChange={onChange}
+      onRemoveSession={onRemoveSession}
+      onChangeSession={onChangeSession}
       onSubsetModeChange={jest.fn()}
       onUploadSubset={jest.fn()}
     />
   );
-  return onChange;
+  return { onChange, onRemoveSession, onChangeSession };
 }
 
 it('excludes sessions selected by other rows while retaining the current selection', () => {
@@ -53,38 +57,45 @@ it('excludes sessions selected by other rows while retaining the current selecti
 });
 
 it('requires confirmation to remove a saved session and allows cancellation', () => {
-  const onChange = setup([row]);
+  const { onChange, onRemoveSession } = setup([row]);
   fireEvent.click(screen.getByText('Remove row'));
   expect(onChange).not.toHaveBeenCalled();
+  expect(onRemoveSession).not.toHaveBeenCalled();
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'No' }));
   expect(onChange).not.toHaveBeenCalled();
+  expect(onRemoveSession).not.toHaveBeenCalled();
   fireEvent.click(screen.getByText('Remove row'));
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Yes' }));
-  expect(onChange).toHaveBeenCalledWith([]);
+  expect(onRemoveSession).toHaveBeenCalledWith(row);
+  expect(onChange).not.toHaveBeenCalled();
 });
 
 it('requires confirmation to switch a saved session and applies it on confirm', () => {
-  const onChange = setup([row]);
+  const { onChange, onChangeSession } = setup([row]);
   fireEvent.click(screen.getByText('Change row'));
   expect(onChange).not.toHaveBeenCalled();
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'No' }));
   expect(onChange).not.toHaveBeenCalled();
+  expect(onChangeSession).not.toHaveBeenCalled();
   fireEvent.click(screen.getByText('Change row'));
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Yes' }));
-  expect(onChange).toHaveBeenCalledWith([
-    expect.objectContaining({ key: 'saved', id: 1, msi_session_name: 'session-c', msi_session: null }),
-  ]);
+  expect(onChangeSession).toHaveBeenCalledWith(
+    row,
+    expect.objectContaining({ key: 'saved', id: 1, msi_session_name: 'session-c', msi_session: null })
+  );
+  expect(onChange).not.toHaveBeenCalled();
 });
 
 it('removes an unsaved row without confirmation', () => {
-  const onChange = setup([{ ...row, id: undefined }]);
+  const { onChange, onRemoveSession } = setup([{ ...row, id: undefined }]);
   fireEvent.click(screen.getByText('Remove row'));
   expect(onChange).toHaveBeenCalledWith([]);
+  expect(onRemoveSession).not.toHaveBeenCalled();
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
 it('gives each added row a unique key', () => {
-  const onChange = setup([]);
+  const { onChange } = setup([]);
   const add = screen.getByRole('button', { name: /add another session/i });
   fireEvent.click(add);
   fireEvent.click(add);
