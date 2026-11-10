@@ -93,9 +93,10 @@ class TestDepositionCrud:
 
     def test_create_does_not_swallow_a_misconfigured_reservation(self, auth_client):
         # #1445: a config error must surface, not become an id-less draft.
-        with mock.patch(
-            "depositions.views.get_reservation_service", side_effect=ImproperlyConfigured("no url")
-        ), pytest.raises(ImproperlyConfigured):
+        with (
+            mock.patch("depositions.views.get_reservation_service", side_effect=ImproperlyConfigured("no url")),
+            pytest.raises(ImproperlyConfigured),
+        ):
             auth_client.post(DEPOSITIONS, {"title": "x"}, format="json")
 
     def test_create_allows_blank_title_draft(self, auth_client):
