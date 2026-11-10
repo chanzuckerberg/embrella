@@ -4,19 +4,19 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { ReservationModal } from './ReservationModal';
 import { useSubmissions } from '../../hooks/useSubmissions';
-import { createDataset, createDeposition } from '../../services/depositionApi';
+import { createDataset, startSubmission } from '../../services/depositionApi';
 import type { Deposition } from '../../types';
 
 jest.mock('../../hooks/useSubmissions', () => ({ useSubmissions: jest.fn() }));
 jest.mock('../../services/depositionApi', () => ({
-  createDeposition: jest.fn(),
+  startSubmission: jest.fn(),
   createDataset: jest.fn(),
 }));
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
 
 const mockUseSubmissions = useSubmissions as jest.Mock;
-const mockCreateDeposition = createDeposition as jest.Mock;
+const mockStartSubmission = startSubmission as jest.Mock;
 const mockCreateDataset = createDataset as jest.Mock;
 
 const DEP = {
@@ -38,7 +38,7 @@ function renderModal(props: Partial<React.ComponentProps<typeof ReservationModal
 beforeEach(() => {
   mockPush.mockClear();
   mockUseSubmissions.mockReturnValue({ data: { submissions: [DEP], total_count: 1 } });
-  mockCreateDeposition.mockReset().mockResolvedValue({ id: 42 });
+  mockStartSubmission.mockReset().mockResolvedValue({ id: 99 });
   mockCreateDataset.mockReset().mockResolvedValue({ id: 99 });
 });
 
@@ -80,11 +80,11 @@ describe('ReservationModal', () => {
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/deposition/wizard/5'));
   });
 
-  it('reserving a new deposition + dataset creates both and routes to the wizard', async () => {
+  it('reserving a new submission creates it in one call and routes to the wizard', async () => {
     renderModal(); // defaults to the 'new' mode
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/deposition/wizard/99'));
-    expect(mockCreateDeposition).toHaveBeenCalledWith({ title: '' });
-    expect(mockCreateDataset).toHaveBeenCalledWith({ deposition: 42, title: '' });
+    expect(mockStartSubmission).toHaveBeenCalled();
+    expect(mockCreateDataset).not.toHaveBeenCalled();
   });
 });
