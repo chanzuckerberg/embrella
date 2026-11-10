@@ -1,5 +1,11 @@
 import { API, DJANGO_URL } from '@app/common/constants/api';
-import { fetchResource, patchResource, postFormData, postResource } from '@app/common/queries/fetchResource';
+import {
+  deleteResource,
+  fetchResource,
+  patchResource,
+  postFormData,
+  postResource,
+} from '@app/common/queries/fetchResource';
 
 import type { ScanResult } from '../components/annotations/scan';
 import type {
@@ -132,6 +138,10 @@ export async function fetchDatasetLogs(id: number, phase?: 'prep' | 'push'): Pro
 
 export async function updateSession(id: number, data: Partial<DepositionSession>): Promise<DepositionSession> {
   return parse(await patchResource(url(`${API.DEPOSITION_SESSIONS}${id}/`), data));
+}
+
+export async function deleteSession(id: number): Promise<void> {
+  return parse(await deleteResource(url(`${API.DEPOSITION_SESSIONS}${id}/`)));
 }
 
 /** Runs cryoetportalprep init on the cluster; returns the session with metadata populated. */

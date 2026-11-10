@@ -436,17 +436,13 @@ class DatasetSerializer(serializers.ModelSerializer):
         dataset.funding.exclude(id__in=seen).delete()
 
     def _sync_sessions(self, dataset, sessions):
-        """Upsert session links by msi_session, drop deselected ones."""
-        seen = set()
+        """Add or update sessions by msi_session; never deletes. Remove one with DELETE /sessions/<id> (#1457)."""
         for row in sessions:
             row.pop("id", None)
             msi_session = row.pop("msi_session", None)
             if msi_session is None:
                 raise serializers.ValidationError({"sessions": "Each session entry requires msi_session."})
-            obj, _ = DepositionSession.objects.update_or_create(dataset=dataset, msi_session=msi_session, defaults=row)
-            seen.add(obj.id)
-        # Omitted sessions are removed on purpose (Remove session), cascading metadata and annotations.
-        dataset.sessions.exclude(id__in=seen).delete()
+            DepositionSession.objects.update_or_create(dataset=dataset, msi_session=msi_session, defaults=row)
 
 
 def _is_owner(serializer, obj) -> bool:

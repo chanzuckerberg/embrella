@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, CircularProgress } from '@mui/material';
 
-import { getMsiSessionId, updateDataset, uploadSubsetCsv } from '../../services/depositionApi';
+import { deleteSession, getMsiSessionId, updateDataset, uploadSubsetCsv } from '../../services/depositionApi';
 import { depositionKeys } from '../../queryKeys';
 import { useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useMsiSessions } from '../../hooks/useSources';
@@ -49,6 +49,10 @@ export function SourcesStep({ dataset, reportSave, readOnly }: StepProps) {
   const [rows, setRows] = useState<SourceRow[]>(() => toRows(dataset));
   const [subsetMode, setSubsetMode] = useState<TomogramSubsetMode>(dataset.tomogram_subset_mode ?? 'all');
   const sessions = useMsiSessions();
+  // Read at call time in the reported saveNow to refuse navigation mid-delete (state lags a tick).
+  const deletingSession = useRef(false);
+  const [isDeletingSession, setIsDeletingSession] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   const save = useCallback(
     async (state: SourcesState) => {
@@ -94,8 +98,42 @@ export function SourcesStep({ dataset, reportSave, readOnly }: StepProps) {
     enabled: !readOnly,
   });
   useEffect(() => {
-    reportSave?.({ status, isDirty, lastSavedAt, error, saveNow, discardChanges });
-  }, [status, isDirty, lastSavedAt, error, saveNow, discardChanges, reportSave]);
+    reportSave?.({
+      status: isDeletingSession ? 'saving' : status,
+      isDirty: isDirty || isDeletingSession,
+      lastSavedAt,
+      error,
+      // Refuse navigation mid-delete; the replacement saves on the next autosave. Keep the promise
+      // unwrapped - an async wrapper adds ticks that delay navigation.
+      saveNow: () => (deletingSession.current ? Promise.resolve(false) : saveNow()),
+      discardChanges,
+    });
+  }, [status, isDirty, isDeletingSession, lastSavedAt, error, saveNow, discardChanges, reportSave]);
+
+  const removeSavedSession = async (row: SourceRow, replacement?: SourceRow) => {
+    if (deletingSession.current || row.id == null) return;
+    deletingSession.current = true;
+    setIsDeletingSession(true);
+    setSessionError(null);
+    try {
+      // Finish pending autosaves before deleting, so an older PATCH cannot recreate the session.
+      if (!(await saveNow())) throw new Error('Save the current changes before removing or switching a session.');
+      await deleteSession(row.id);
+      queryClient.invalidateQueries({ queryKey: depositionKeys.dataset(dataset.id) });
+      queryClient.invalidateQueries({ queryKey: [...depositionKeys.all, 'submissions'] });
+      // A switch leaves the replacement row dirty; autosave then saves it. saveNow refuses until then.
+      setRows((prev) =>
+        replacement
+          ? prev.map((r) => (r.key === row.key ? { ...replacement, id: undefined } : r))
+          : prev.filter((r) => r.key !== row.key)
+      );
+    } catch (cause) {
+      setSessionError(cause instanceof Error ? cause.message : 'Could not remove the session. Please try again.');
+    } finally {
+      deletingSession.current = false;
+      setIsDeletingSession(false);
+    }
+  };
 
   const handleUploadSubset = async (row: SourceRow, file: File) => {
     if (!row.id) return;
@@ -110,6 +148,11 @@ export function SourcesStep({ dataset, reportSave, readOnly }: StepProps) {
 
   return (
     <Box>
+      {sessionError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {sessionError}
+        </Alert>
+      )}
       {validationError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {validationError}
@@ -129,8 +172,10 @@ export function SourcesStep({ dataset, reportSave, readOnly }: StepProps) {
           rows={rows}
           sessionOptions={sessions.data ?? []}
           subsetMode={subsetMode}
-          readOnly={readOnly}
+          readOnly={readOnly || isDeletingSession}
           onChange={setRows}
+          onRemoveSession={(row) => void removeSavedSession(row)}
+          onChangeSession={(row, replacement) => void removeSavedSession(row, replacement)}
           onSubsetModeChange={setSubsetMode}
           onUploadSubset={handleUploadSubset}
         />
