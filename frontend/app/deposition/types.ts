@@ -244,6 +244,7 @@ export interface Dataset {
   id: number;
   deposition: number;
   dataset_id?: number | null;
+  deposition_id?: number | null;
   title: string;
   description?: string;
   sample_preparation?: string;

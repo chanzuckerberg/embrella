@@ -10,6 +10,8 @@ import requests
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 from botocore.session import Session
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 
 # Function URLs look like <id>.lambda-url.<region>.on.aws - the host carries the signing region.
 _FUNCTION_URL_REGION = re.compile(r"\.lambda-url\.([a-z0-9-]+)\.on\.aws$")
@@ -131,8 +133,13 @@ class LambdaReservationService(ReservationService):
 
 
 def get_reservation_service() -> ReservationService:
-    """Factory: RESERVATION_LAMBDA_URL set → lambda client; else stub (local dev)."""
+    """Factory: RESERVATION_LAMBDA_URL set → lambda client; else the in-memory stub (local dev only)."""
     lambda_url = os.environ.get("RESERVATION_LAMBDA_URL", "").strip()
     if lambda_url:
         return LambdaReservationService(lambda_url)
-    return StubReservationService()
+    # The stub's IDs reset on restart and aren't shared across workers, so they can collide with real ones.
+    if settings.DEBUG:
+        return StubReservationService()
+    raise ImproperlyConfigured(
+        "RESERVATION_LAMBDA_URL is not set; refusing to hand out in-memory reservation IDs outside local dev."
+    )

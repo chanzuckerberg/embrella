@@ -89,16 +89,22 @@ export async function fetchDeposition(id: number): Promise<Deposition> {
   return parse(await fetchResource(url(`${API.DEPOSITIONS}${id}/`)));
 }
 
-export async function createDeposition(data: Partial<Deposition>): Promise<Deposition> {
-  return parse(await postResource(url(API.DEPOSITIONS), data as Record<string, unknown>));
-}
-
 export async function updateDeposition(id: number, data: Partial<Deposition>): Promise<Deposition> {
   return parse(await patchResource(url(`${API.DEPOSITIONS}${id}/`), data));
 }
 
 export async function createDataset(data: Partial<Dataset>): Promise<Dataset> {
   return parse(await postResource(url(API.DEPOSITION_DATASETS), data as Record<string, unknown>));
+}
+
+// Create the deposition and its first dataset in one call so a failure can't orphan the deposition.
+export async function startSubmission(): Promise<Dataset> {
+  return parse(await postResource(url(`${API.DEPOSITIONS}start/`), {}));
+}
+
+// Backfill IDs a failed reservation left blank on an existing draft.
+export async function reserveDatasetIds(id: number): Promise<Dataset> {
+  return parse(await postResource(url(`${API.DEPOSITION_DATASETS}${id}/reserve-ids/`), {}));
 }
 
 export async function fetchDataset(id: number): Promise<Dataset> {

@@ -50,10 +50,10 @@ comma-separated.
 
 The CryoET Data Portal deposition feature reserves dataset and deposition IDs from a Lambda.
 
-| Variable                 | Required | Default | Notes                                                                   |
-| ------------------------ | -------- | ------- | ----------------------------------------------------------------------- |
-| `RESERVATION_LAMBDA_URL` |          | unset   | Reservation lambda URL. Unset: IDs come from a local in-memory counter. |
-| `AWS_PROFILE`            |          | unset   | Profile for signing reservation calls, read by the backend container.   |
+| Variable                 | Required | Default | Notes                                                                                          |
+| ------------------------ | -------- | ------- | ---------------------------------------------------------------------------------------------- |
+| `RESERVATION_LAMBDA_URL` |          | unset   | Reservation lambda URL. Required unless `DJANGO_ENV=development` (dev uses an in-memory stub). |
+| `AWS_PROFILE`            |          | unset   | Profile for signing reservation calls, read by the backend container.                          |
 
 !!! note
 

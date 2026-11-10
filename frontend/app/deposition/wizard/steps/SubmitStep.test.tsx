@@ -15,6 +15,7 @@ jest.mock('../../hooks/useSources', () => ({ useTomogramSelectionCounts: jest.fn
 const mockFlow = useSubmitFlow as jest.Mock;
 const mockLogs = useDatasetLogs as jest.Mock;
 const cancel = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isSuccess: false, error: null };
+const reserveIds = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
 
 function setLogs(data: JobLogs | undefined) {
   mockLogs.mockReturnValue({ data });
@@ -25,12 +26,25 @@ const prepared: DatasetJob = { id: 1, state: 'prep_completed', prep_slurm_job_id
 
 function setup(
   job: DatasetJob | null,
-  { readOnly = false, sessions = [] }: { readOnly?: boolean; sessions?: Dataset['sessions'] } = {}
+  {
+    readOnly = false,
+    sessions = [],
+    dataset: overrides = {},
+  }: { readOnly?: boolean; sessions?: Dataset['sessions']; dataset?: Partial<Dataset> } = {}
 ) {
   const submit = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
   const push = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
-  const dataset = { id: 1, title: 'DS', dataset_id: 2, status: 'draft', job, sessions } as Dataset;
-  mockFlow.mockReturnValue({ cancel, submit, push });
+  const dataset = {
+    id: 1,
+    title: 'DS',
+    dataset_id: 2,
+    deposition_id: 3,
+    status: 'draft',
+    job,
+    sessions,
+    ...overrides,
+  } as Dataset;
+  mockFlow.mockReturnValue({ cancel, submit, push, reserveIds });
   const view = render(<SubmitStep dataset={dataset} readOnly={readOnly} reportSave={jest.fn()} />);
   return { submit, push, dataset, view };
 }
@@ -82,6 +96,7 @@ it('surfaces a rejected attempt and lets the user retry instead of re-showing St
       error: new Error('Complete the metadata before preparation:\nDataset title is required.'),
     },
     push,
+    reserveIds,
   });
   view.rerender(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
   expect(screen.getByRole('alert')).toHaveTextContent('Dataset title is required.');
@@ -89,6 +104,19 @@ it('surfaces a rejected attempt and lets the user retry instead of re-showing St
   expect(screen.queryByRole('button', { name: /start preparation/i })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Retry sync' }));
   expect(submit.mutate).toHaveBeenCalledTimes(2);
+});
+
+it('shows the Reserve ID card instead of Start when an id is missing', () => {
+  const { submit } = setup(null, { dataset: { dataset_id: null } });
+  expect(screen.getByText(/no reserved ID/i)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /start preparation/i })).toBeNull();
+  expect(submit.mutate).not.toHaveBeenCalled();
+});
+
+it('reserves an id when the Reserve ID button is clicked', () => {
+  setup(null, { dataset: { deposition_id: null } });
+  fireEvent.click(screen.getByRole('button', { name: /reserve id/i }));
+  expect(reserveIds.mutate).toHaveBeenCalled();
 });
 
 it('offers Upload to S3 once prep is complete', () => {
@@ -143,8 +171,8 @@ it('offers retry when the launch is rejected before a job exists', () => {
     error: new Error('Missing dataset ids'),
   };
   const push = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
-  const dataset = { id: 1, title: 'DS', dataset_id: 2, status: 'draft', job: null } as Dataset;
-  mockFlow.mockReturnValue({ cancel, submit, push });
+  const dataset = { id: 1, title: 'DS', dataset_id: 2, deposition_id: 3, status: 'draft', job: null } as Dataset;
+  mockFlow.mockReturnValue({ cancel, submit, push, reserveIds });
   render(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
   expect(screen.getByText('Missing dataset ids')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /retry sync/i })).toBeInTheDocument();
@@ -397,6 +425,8 @@ it.each(['prep', 'push'])('shows one request error instead of the saved %s failu
   const dataset = {
     id: 1,
     title: 'DS',
+    dataset_id: 2,
+    deposition_id: 3,
     status: 'failed',
     job: {
       id: 1,
@@ -405,7 +435,7 @@ it.each(['prep', 'push'])('shows one request error instead of the saved %s failu
       push_slurm_job_id: phase === 'push' ? '99' : null,
     },
   } as Dataset;
-  mockFlow.mockReturnValue({ cancel, submit, push });
+  mockFlow.mockReturnValue({ cancel, submit, push, reserveIds });
   render(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
   expect(screen.getAllByRole('alert')).toHaveLength(1);
   expect(screen.getByRole('alert')).toHaveTextContent("Couldn't reach the cluster to submit. Please try again.");
@@ -450,8 +480,8 @@ it('does not offer an upload action when viewing validation before sync complete
 
 it('keeps a manually selected sync log open when prep completes', () => {
   const job: DatasetJob = { id: 1, state: 'prep_running' };
-  const dataset = { id: 1, title: 'DS', status: 'syncing', job } as Dataset;
-  mockFlow.mockReturnValue({ cancel, submit: { isPending: false }, push: {} });
+  const dataset = { id: 1, title: 'DS', dataset_id: 2, deposition_id: 3, status: 'syncing', job } as Dataset;
+  mockFlow.mockReturnValue({ cancel, submit: { isPending: false }, push: {}, reserveIds });
   const props = { dataset, readOnly: false, reportSave: jest.fn() };
   const view = render(<SubmitStep {...props} />);
   fireEvent.click(screen.getByRole('button', { name: /Sync on cluster/ }));

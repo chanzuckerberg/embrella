@@ -295,6 +295,7 @@ class DatasetSampleSerializer(serializers.ModelSerializer):
 
 class DatasetSerializer(serializers.ModelSerializer):
     metadata_issues = serializers.SerializerMethodField()
+    deposition_id = serializers.IntegerField(source="deposition.deposition_id", read_only=True)
     funding = DatasetFundingSerializer(many=True, required=False)
     sessions = DepositionSessionLinkSerializer(many=True, required=False)
     sample = DatasetSampleSerializer(required=False)

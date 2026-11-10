@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { createDataset, createDeposition } from '../../../services/depositionApi';
+import { createDataset, startSubmission } from '../../../services/depositionApi';
 import { depositionKeys } from '../../../queryKeys';
 import type { DatasetChoice, Mode } from './types';
 
@@ -23,8 +23,7 @@ export function useReserve(onDone: () => void) {
       if (mode === 'reuse_dataset') return Number(existingDatasetId);
 
       if (mode === 'new') {
-        const dep = await createDeposition({ title: '' });
-        const ds = await createDataset({ deposition: dep.id, title: '' });
+        const ds = await startSubmission();
         return ds.id;
       }
 
