@@ -27,7 +27,7 @@ function renderDialog() {
 
 function Harness() {
   const [open, setOpen] = useState(true);
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
   return (
     <QueryClientProvider client={client}>
       <button onClick={() => setOpen(true)}>reopen</button>

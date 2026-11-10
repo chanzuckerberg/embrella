@@ -14,6 +14,16 @@ jest.mock('../services/depositionApi', () => ({
   resetDatasetPreparation: jest.fn(),
   submitDataset: jest.fn(),
   fetchDatasetLogs: jest.fn(async () => ({ logs: '', source: 'none' })),
+  // Steps fetch these on mount; stub them so the suite never touches the network (slow + flaky in CI).
+  fetchDeposition: jest.fn(async () => ({
+    id: 1,
+    title: 'Deposition title',
+    description: '',
+    authors_json: [],
+    datasets: [mockServerDataset],
+  })),
+  fetchPeopleByIds: jest.fn(async () => []),
+  listMsiSessions: jest.fn(async () => []),
 }));
 
 const mockPush = jest.fn();
@@ -34,6 +44,47 @@ jest.mock('../hooks/useDraftAutoSave', () => ({
   }),
 }));
 
+// DatasetForm is the heavy form and has its own suite, so stub it here to keep its large MUI tree
+// out of the render path. DepositionForm stays real (it has no own test, and costs ~0.4s). The real
+// DatasetStep/DepositionStep wrappers still run, so the sibling-lock notice and gating are real.
+jest.mock('../datasets/[id]/DatasetForm', () => {
+  const { useEffect } = jest.requireActual('react');
+  return {
+    DatasetForm: ({
+      dataset,
+      reportSave,
+      reportBlocking,
+      readOnly,
+    }: {
+      dataset: { metadata_issues?: string[]; title?: string };
+      reportSave?: (s: unknown) => void;
+      reportBlocking?: (n: number) => void;
+      readOnly?: boolean;
+    }) => {
+      const issues = dataset.metadata_issues ?? [];
+      useEffect(() => reportBlocking?.(readOnly ? 0 : issues.length), [readOnly, issues.length, reportBlocking]);
+      useEffect(
+        () =>
+          reportSave?.({
+            status: mockSaveError ? 'error' : 'saved',
+            isDirty: mockIsDirty,
+            lastSavedAt: null,
+            error: mockSaveError,
+            saveNow: mockSaveNow,
+            discardChanges: mockDiscardChanges,
+          }),
+        [reportSave]
+      );
+      return (
+        <div>
+          <input aria-label="Title" defaultValue={dataset.title ?? ''} readOnly={readOnly} />
+          {!readOnly && issues.map((m, i) => <p key={i}>{m}</p>)}
+        </div>
+      );
+    },
+  };
+});
+
 const DATASET = {
   id: 5,
   deposition: 1,
@@ -50,7 +101,11 @@ const DATASET = {
 
 function renderWizard(dataset: Dataset = DATASET) {
   mockServerDataset = dataset;
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // staleTime Infinity: seeded setQueryData is never refetched, so steps read the test's data
+  // instead of racing a network refetch that overwrites it or errors.
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime: Infinity } },
+  });
   function ConnectedWizard() {
     const { data } = useQuery({
       queryKey: depositionKeys.dataset(dataset.id),
@@ -115,35 +170,36 @@ describe('WizardLayout', () => {
     expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
   });
 
-  it('jumps to a step from the stepper', async () => {
-    renderWizard();
-    fireEvent.click(screen.getByRole('button', { name: /Step 3: Dataset/ }));
-    expect(await screen.findByRole('heading', { name: 'Dataset' })).toBeInTheDocument();
-  });
-
   it('blocks Next for missing Dataset metadata while still allowing draft exit', async () => {
     const { client } = renderWizard({ ...DATASET, metadata_issues: ['Dataset title is required.'] });
-    fireEvent.click(screen.getByRole('button', { name: /Step 3: Dataset/ }));
-    const title = await screen.findByRole('textbox', { name: /^Title/ });
-    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
-    expect(screen.getByText('Dataset title is required.')).toBeInTheDocument();
+    // Navigation stays mounted across steps; avoid rescanning the full Dataset form for each assertion.
+    const next = screen.getByRole('button', { name: 'Next' });
     const finalize = screen.getByRole('button', { name: /Step 6:/ });
+    const sources = screen.getByRole('button', { name: /Step 1:/ });
+    const exit = screen.getByRole('button', { name: 'Save draft & exit' });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Step 3: Dataset/ }));
+    });
+    const title = screen.getByLabelText(/^Title/);
+    expect(next).toBeDisabled();
+    expect(screen.getByText('Dataset title is required.')).toBeInTheDocument();
     expect(finalize).toBeDisabled();
     fireEvent.click(finalize);
     expect(screen.getByRole('heading', { name: 'Dataset' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Step 1:/ })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Save draft & exit' })).toBeEnabled();
+    expect(sources).toBeEnabled();
+    expect(exit).toBeEnabled();
     fireEvent.change(title, { target: { value: 'Corrected title' } });
     // Only the saved backend result can clear the gate.
-    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    expect(next).toBeDisabled();
     await act(async () => {
       client.setQueryData(depositionKeys.dataset(DATASET.id), { ...DATASET, metadata_issues: [] });
     });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled());
+    await waitFor(() => expect(next).toBeEnabled());
   });
 
   it('requires the Deposition title but allows an empty optional description', async () => {
     const { client } = renderWizard();
+    const next = screen.getByRole('button', { name: 'Next' });
     client.setQueryData(depositionKeys.deposition(1), {
       id: 1,
       title: '',
@@ -151,12 +207,14 @@ describe('WizardLayout', () => {
       authors_json: [],
       datasets: [DATASET],
     });
-    fireEvent.click(screen.getByRole('button', { name: /Step 2: Deposition/ }));
-    const title = await screen.findByRole('textbox', { name: /^Title/ });
-    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Step 2: Deposition/ }));
+    });
+    const title = screen.getByLabelText(/^Title/);
+    expect(next).toBeDisabled();
     expect(screen.getByText('Deposition title is required.')).toBeInTheDocument();
     fireEvent.change(title, { target: { value: 'Saved deposition title' } });
-    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+    expect(next).toBeEnabled();
   });
 
   it('reaches Finalize without preparing, then starts on the Start button', async () => {
@@ -286,7 +344,7 @@ describe('WizardLayout', () => {
     expect(await screen.findByText('Waiting in queue')).toBeInTheDocument();
     expect(mockSaveNow).toHaveBeenCalledTimes(2);
     expect(submitDataset).toHaveBeenCalledTimes(2);
-  }, 15000);
+  });
 
   it('retains dirty edits after a lock and requires confirmation before discarding', async () => {
     mockIsDirty = true;
@@ -320,7 +378,7 @@ describe('WizardLayout', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Discard changes & close' }));
     expect(mockDiscardChanges).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith('/deposition/submissions');
-  }, 15000);
+  });
 
   it('allows an explicit discard after a save failure without retrying the save', () => {
     mockIsDirty = true;
@@ -337,19 +395,23 @@ describe('WizardLayout', () => {
     'keeps shared metadata read-only with a %s sibling and allows continuing',
     async (state) => {
       const { client } = renderWizard({ ...DATASET, is_owner: true });
-      client.setDefaultOptions({ queries: { retry: false, staleTime: Infinity } });
+      const next = screen.getByRole('button', { name: 'Next' });
       client.setQueryData(depositionKeys.deposition(1), {
         id: 1,
         title: 'Shared deposition',
         authors_json: [],
         datasets: [DATASET, { ...DATASET, id: 6, job: { id: 2, state } }],
       });
-      fireEvent.click(screen.getByRole('button', { name: /Step 2: Deposition/ }));
-      expect(await screen.findByRole('textbox', { name: /^Title/ })).toHaveAttribute('readonly');
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Step 2: Deposition/ }));
+      });
+      expect(screen.getByLabelText(/^Title/)).toHaveAttribute('readonly');
       expect(screen.getByText(/Editing is paused because another dataset in this submission/)).toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-      expect(await screen.findByRole('heading', { name: 'Dataset' })).toBeInTheDocument();
-      expect(screen.getByRole('textbox', { name: /^Title/ })).not.toHaveAttribute('readonly');
+      await act(async () => {
+        fireEvent.click(next);
+      });
+      expect(screen.getByRole('heading', { name: 'Dataset' })).toBeInTheDocument();
+      expect(screen.getByLabelText(/^Title/)).not.toHaveAttribute('readonly');
     }
   );
 });

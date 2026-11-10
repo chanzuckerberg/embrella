@@ -29,6 +29,8 @@ export function RunSelect({
   noneLabel?: string;
   onChange: (value: string) => void;
 }) {
+  // Keep a saved run selectable while options load or when it is absent from the run list.
+  const runOptions = value && !options.includes(value) ? [value, ...options] : options;
   return (
     <Box>
       <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -60,7 +62,7 @@ export function RunSelect({
           >
             {allowNone && <MenuItem value={NONE_RUN}>{noneLabel}</MenuItem>}
             {loading && <MenuItem disabled>Loading…</MenuItem>}
-            {options.map((o) => (
+            {runOptions.map((o) => (
               <MenuItem key={o} value={o}>
                 {o}
               </MenuItem>

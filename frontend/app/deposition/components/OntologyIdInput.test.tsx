@@ -10,6 +10,8 @@ jest.mock('../services/ols', () => ({
   searchOntology: jest.fn(),
   validateOntologyId: jest.fn(),
 }));
+// Skip the real debounce wait; these tests assert on the settled value, not the debounce timing.
+jest.mock('../hooks/useDebounced', () => ({ useDebounced: (value: unknown) => value }));
 
 const mockSearch = searchOntology as jest.Mock;
 const mockValidate = validateOntologyId as jest.Mock;
