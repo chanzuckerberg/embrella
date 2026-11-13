@@ -1,4 +1,4 @@
-"""GET /cdpp/v1/pipelines/: one row per cdpp run, limited to the user's own runs unless staff."""
+"""GET /cdpp/v1/pipelines/: one row per cdpp run, visible to every authenticated user."""
 
 import pytest
 from django.contrib.auth.models import User
@@ -116,20 +116,11 @@ def test_output_dir_falls_back_to_the_processing_root(logged_in_client, cdpp_ste
 
 
 @pytest.mark.django_db
-def test_users_see_their_own_runs_and_staff_see_all(
-    client, logged_in_client, cdpp_step, test_msi_session, test_user, other_user
-):
+def test_users_see_every_run(logged_in_client, cdpp_step, test_msi_session, test_user, other_user):
     _pipeline(cdpp_step, test_msi_session, "run001", test_user, "901")
     _pipeline(cdpp_step, test_msi_session, "run002", other_user, "902")
-    # Relaunched by someone else: the earlier attempt was the user's, so it is still theirs to see.
-    _pipeline(cdpp_step, test_msi_session, "run003", other_user, "904", attempts=["903"])
-    JobLog.objects.create(user=test_user, job_id="903", job_name="cdpp_24nov10_run003")
 
-    assert sorted(_names(logged_in_client.get(URL))) == ["run001", "run003"]
-
-    staff = User.objects.create_user(username="staffer", password="pw", is_staff=True)
-    client.force_login(staff)
-    assert sorted(_names(client.get(URL))) == ["run001", "run002", "run003"]
+    assert sorted(_names(logged_in_client.get(URL))) == ["run001", "run002"]
 
 
 @pytest.mark.django_db

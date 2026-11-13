@@ -10,7 +10,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from processes.models import JobLog, PipeInPlan, ProcRun
+from processes.models import PipeInPlan, ProcRun
 from processes.services.cluster_resolver import cluster_id_from_parameters
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -50,14 +50,6 @@ def _latest_execution(proc_run):
     """The run's current execution (each relaunch restarts it in place), or None."""
     executions = sorted(proc_run.pipe_executions.all(), key=lambda execution: execution.updated_at, reverse=True)
     return executions[0] if executions else None
-
-
-def _job_ids(execution) -> set:
-    """The execution's job and every earlier attempt's: whoever launched any of them launched the run."""
-    if execution is None:
-        return set()
-    attempts = (execution.parameters or {}).get("_attempts") or []
-    return {execution.job_id, *(attempt.get("job_id") for attempt in attempts)} - {None}
 
 
 def _plan_dirname(plan_name: str):
@@ -130,7 +122,7 @@ def _build_pipeline(proc_run, execution) -> dict:
         "List cdpp pipeline runs (one row per ProcRun under the czii-cdpp plan), with the config path, "
         "output directory and the tool-tree runs each wrote into, plus their file-server URLs "
         "(`output_url`, `config_url`, `trees.*.url`; null where the cluster's proc_url doesn't resolve). "
-        "Staff see every run; other users see the runs they launched."
+        "Every authenticated user sees every run."
     ),
     parameters=[
         OpenApiParameter(
