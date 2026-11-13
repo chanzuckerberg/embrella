@@ -24,7 +24,7 @@ from umbrella_logger import logger
 
 from common import clusterio
 from workflow.defaults import resolve_defaults
-from workflow.execution import PipelineExecutor, ValidationError
+from workflow.execution import DuplicateExecutionError, PipelineExecutor, ValidationError, duplicate_execution_message
 from workflow.processors import get_processor, list_processors
 from workflow.run_numbers import next_run_name_from, plan_softwares, software_run_names
 
@@ -295,6 +295,14 @@ def execute_pipe(request):
             "ssh_setup_required": true,
             "cluster_id": "czii"
         }
+
+        OR 409 (if the run already has an execution of this pipe; nothing is submitted):
+
+        {
+            "success": false,
+            "error": "Run run001 already has an execution of vol001 (...)",
+            "pipe_execution_id": 789
+        }
     """
     try:
         # Parse request body
@@ -473,6 +481,18 @@ def execute_pipe(request):
                     "validation_errors": e.errors,
                 },
                 status=400,
+            )
+
+        except DuplicateExecutionError as e:
+            # The message is built from the existing record, not from the exception.
+            existing = e.pipe_execution
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": duplicate_execution_message(existing),
+                    "pipe_execution_id": existing.id,
+                },
+                status=409,
             )
 
         except ValueError as e:
@@ -1501,6 +1521,7 @@ Used to determine the next available run number when submitting jobs.
 - `copick-import` → copick-import plan (import tomograms)
 - `membraneseg` → membraneseg plan (membrane segmentation)
 - `octopi` → czii-octopi plan
+- `cdpp` → czii-cdpp plan (CryoET Data Portal Pipeline)
 
 **Example response:**
 ```json
@@ -1523,7 +1544,16 @@ with no runs of this plan is still listed, with empty `run_numbers`.
             required=False,
             type=OpenApiTypes.STR,
             description="Processing plan type. Defaults to 'aretomo3'.",
-            enum=["aretomo3", "denoiset", "copick", "copick-add-object", "copick-import", "membraneseg", "octopi"],
+            enum=[
+                "aretomo3",
+                "denoiset",
+                "copick",
+                "copick-add-object",
+                "copick-import",
+                "membraneseg",
+                "octopi",
+                "cdpp",
+            ],
         ),
         OpenApiParameter(
             name="session_name",
@@ -1556,6 +1586,7 @@ def get_plan_runs(request):
             "copick-import": "copick-import",
             "membraneseg": "membraneseg",
             "octopi": "czii-octopi",
+            "cdpp": "czii-cdpp",
         }
         if plan_type not in plan_map:
             return JsonResponse({"error": f'Unsupported plan_type "{plan_type}"'}, status=400)

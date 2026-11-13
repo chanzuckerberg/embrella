@@ -127,3 +127,11 @@ def test_seed_migration_enables_launched_flags():
     assert flags["review"] is True
     assert flags["manage_data"] is False
     assert flags["deposition"] is False
+
+
+@pytest.mark.django_db
+def test_seed_migration_adds_cdpp_web_flag_disabled():
+    # Migration 0008 seeds the cdpp-web viewer flag off, so the top-nav entry and
+    # job-monitor links stay hidden until an admin turns it on.
+    flag = SystemFeatureFlag.objects.get(name="cdpp-web")
+    assert flag.enabled is False
