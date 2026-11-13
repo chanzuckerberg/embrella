@@ -165,11 +165,6 @@ def list_cdpp_pipelines(request) -> JsonResponse:
 
     runs = [(proc_run, _latest_execution(proc_run)) for proc_run in qs]
 
-    if not request.user.is_staff:
-        job_ids = set().union(*(_job_ids(execution) for _, execution in runs))
-        mine = set(JobLog.objects.filter(job_id__in=job_ids, user=request.user).values_list("job_id", flat=True))
-        runs = [(proc_run, execution) for proc_run, execution in runs if _job_ids(execution) & mine]
-
     pipelines = [_build_pipeline(proc_run, execution) for proc_run, execution in runs]
 
     statuses = {s.strip() for s in request.GET.get("status", "").split(",") if s.strip()} - {"all"}
