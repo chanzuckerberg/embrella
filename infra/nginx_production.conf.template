@@ -61,6 +61,8 @@ http {
             # Variable forces nginx to use the resolver instead of caching at startup.
             set $upstream_backend backend;
             proxy_pass http://$upstream_backend:8000;
+            # Match gunicorn --timeout: cdpp /execute/ plans over SSH in-request.
+            proxy_read_timeout 240s;
             proxy_set_header X-Forwarded-For  $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_set_header Host             $http_host;
