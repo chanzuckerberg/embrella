@@ -77,4 +77,5 @@ FROM app AS runtime
 EXPOSE 8000
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]
-CMD ["gunicorn", "umbrella.wsgi", "--chdir", "umbrella", "--bind", "0.0.0.0:8000", "--workers", "4", "--access-logfile", "-", "--error-logfile", "-"]
+# --timeout must exceed cdpp PLAN_TIMEOUT (180s): /execute/ plans over SSH in-request.
+CMD ["gunicorn", "umbrella.wsgi", "--chdir", "umbrella", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "240", "--access-logfile", "-", "--error-logfile", "-"]
