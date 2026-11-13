@@ -25,7 +25,9 @@ set -euo pipefail
 output_dir={{ output_dir }}
 config_path={{ config_path }}
 mkdir -p -- "$output_dir"
-tmp=$(mktemp "$output_dir/dataprep_config.yaml.tmp.XXXXXX")
+config_dir=$(dirname -- "$config_path")
+mkdir -p -- "$config_dir"
+tmp=$(mktemp "$config_dir/dataprep_config.yaml.tmp.XXXXXX")
 trap 'rm -f -- "$tmp"; if [ -n "${progress_pid:-}" ]; then kill "$progress_pid" 2>/dev/null || true; fi' EXIT
 cat > "$tmp" <<'{{ config_delimiter }}'
 {{ config_yaml }}

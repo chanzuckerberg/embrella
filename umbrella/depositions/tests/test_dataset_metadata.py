@@ -12,6 +12,7 @@ from depositions.services.exceptions import SubmissionValidationError
 @pytest.mark.django_db
 def test_maps_core_fields():
     dep = Deposition.objects.create(title="Dep")
+    author = Person.objects.create(given_name="Ada", family_name="Lovelace", orcid="0000-0002-1825-0097")
     sample = Sample.objects.create(
         name="deposition-sample-1",
         sample_type="cell_line",
@@ -20,7 +21,8 @@ def test_maps_core_fields():
         tissue_name="brain",
         tissue_id="UBERON:0000955",
         cell_component_name="membrane",
-        ontology="GO:0016020",
+        cell_component_id="GO:0016020",
+        ontology="GO:9999999",  # legacy grid field must not leak into cell_component
     )
     ds = Dataset.objects.create(
         deposition=dep,
@@ -34,7 +36,7 @@ def test_maps_core_fields():
         dataset_publications="10.1234/abc",
         is_authors_same_as_deposition=False,
         authors_json=[
-            {"full_name": "Ada Lovelace", "orcid": "0000-0002-1825-0097", "is_corresponding": True},
+            {"author_id": author.pk, "is_corresponding": True},
         ],
     )
     DatasetFunding.objects.create(dataset=ds, funding_agency_name="NIH", grant_id="R01-1")
@@ -46,7 +48,6 @@ def test_maps_core_fields():
     assert meta["sample_type"] == "cell_line"
     assert meta["organism"] == {"name": "Homo sapiens", "taxonomy_id": 9606}
     assert meta["tissue"] == {"name": "brain", "id": "UBERON:0000955"}
-    # cell_component id maps from Sample.ontology
     assert meta["cell_component"] == {"name": "membrane", "id": "GO:0016020"}
     assert meta["assay"] == {"name": "cryo-electron tomography", "id": "EFO:0010961"}
     assert meta["sample_preparation"] == "plunge-frozen"
@@ -107,6 +108,18 @@ def test_missing_directory_author_is_an_actionable_error():
     ds = Dataset.objects.create(deposition=dep, title="DS", description="d", is_authors_same_as_deposition=True)
     with pytest.raises(SubmissionValidationError, match="Review the authors"):
         build_dataset_metadata(ds)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("inherit_authors", [True, False])
+def test_inline_authors_cannot_be_exported(inherit_authors):
+    authors = [{"full_name": "Legacy Author", "is_primary": True}]
+    dep = Deposition.objects.create(title="Dep", authors_json=authors if inherit_authors else [])
+    dataset = Dataset.objects.create(
+        deposition=dep, is_authors_same_as_deposition=inherit_authors, authors_json=[] if inherit_authors else authors
+    )
+    with pytest.raises(SubmissionValidationError, match="Choose each author from the people directory"):
+        build_dataset_metadata(dataset)
 
 
 @pytest.mark.django_db

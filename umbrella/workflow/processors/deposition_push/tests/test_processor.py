@@ -106,7 +106,8 @@ def test_setup_commands_are_separate_not_chained():
 
 def test_excludes_local_only_artifacts():
     script = _render()
-    for pattern in ("dataprep_config.yaml", "sync_job.sh", "__pycache__/*"):
+    # Exclude the config and abandoned temp files from the dataset upload.
+    for pattern in ("dataprep_config.yaml", "dataprep_config.yaml.tmp.*", "sync_job.sh", "__pycache__/*"):
         assert f"--exclude '{pattern}'" in script
 
 

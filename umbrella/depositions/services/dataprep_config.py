@@ -1,7 +1,7 @@
 """Build the prep deployment config from saved autofill data and reviewed DB values.
 
 This is dataprep_config.yaml, separate from the portal metadata built by dataset_metadata.
-Path resolution, remote writes, and launching jobs belong to the submit service.
+Remote writes and launching jobs belong to the submit service.
 """
 
 import logging
@@ -10,12 +10,17 @@ from pathlib import PurePosixPath
 from urllib.parse import urlsplit
 
 import yaml
+from django.core.exceptions import ImproperlyConfigured
+from processes.services.cluster_resolver import cluster_id_for_run
+from stores.models import Cluster, PathType
 from stores.paths import resolve_dir
+from workflow.processors import get_processor
 
 from depositions.models import TiltseriesMetadata
 from depositions.services.annotation_config import session_annotations
-from depositions.services.dataset_metadata import build_dataset_metadata
+from depositions.services.dataset_metadata import build_dataset_metadata, build_deposition_metadata
 from depositions.services.exceptions import SubmissionValidationError
+from depositions.services.subset import selected_positions
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +43,37 @@ ACQUISITION_FIELDS = {
 }
 
 
+def _apply_denoise_run(config, session):
+    """Resolve the selected denoise run, requiring it to share the AreTomo prep cluster."""
+    paths = config["paths"]
+    run = (session.denoise_run_name or "").strip()
+    if not run:
+        paths.pop("denoise", None)
+        return
+    msi_session = session.msi_session
+    run = run if run.startswith("run") else f"run{run}"
+    aretomo_run = (session.aretomo_run_name or "").strip()
+    aretomo_run = aretomo_run if aretomo_run.startswith("run") else f"run{aretomo_run}"
+    prep_cluster_id = cluster_id_for_run(msi_session.name, aretomo_run, processor_class="aretomo3")
+    cluster_id = cluster_id_for_run(msi_session.name, run, default=prep_cluster_id, processor_class="denoiset")
+    if cluster_id != prep_cluster_id:
+        raise SubmissionValidationError(
+            f"Session {msi_session.name!r} denoise run {run!r} is on cluster {cluster_id!r}, "
+            f"but preparation runs on AreTomo cluster {prep_cluster_id!r}. "
+            "Select a denoise run on the preparation cluster."
+        )
+    try:
+        cluster = Cluster.objects.get(cluster_id=cluster_id, is_active=True)
+    except Cluster.DoesNotExist:
+        raise SubmissionValidationError(f"Unknown cluster for session {msi_session.name!r}: {cluster_id}.")
+    try:
+        root = get_processor("denoiset").get_processing_base_path(cluster=cluster.cluster_id)
+    except (ImproperlyConfigured, PathType.DoesNotExist) as exc:
+        logger.exception("Cannot resolve denoise source for session %r on cluster %r.", msi_session.name, cluster_id)
+        raise SubmissionValidationError("Denoise isn't configured on this cluster.") from exc
+    paths["denoise"] = f"{root.rstrip('/')}/{msi_session.name}/{run}"
+
+
 def _session_config(session, authors):
     name = session.msi_session.name
     try:
@@ -55,6 +91,7 @@ def _session_config(session, authors):
         raise SubmissionValidationError(f"Session {name!r} has no saved acquisition config.")
 
     config = deepcopy(raw)
+    _apply_denoise_run(config, session)
     annotations = session_annotations(session, authors)
     if annotations:
         config["annotations"] = annotations
@@ -107,6 +144,21 @@ def dataset_is_ready(dataset):
     return bool(sessions) and all(_session_has_autofill(s) for s in sessions)
 
 
+def require_custom_positions(session) -> list[str]:
+    """Positions to keep for a custom-mode session; raise if it has no usable selection or uses an
+    unsupported cluster CSV path. Shared by submit (pre-claim) and the config builder (backstop)."""
+    name = session.msi_session.name
+    if session.subset_csv_path:
+        raise SubmissionValidationError(
+            f"Session {name} uses a cluster CSV path for its subset, which isn't supported yet - "
+            "re-upload the selection in the Sources step."
+        )
+    positions = selected_positions(session.subset_selection)
+    if not positions:
+        raise SubmissionValidationError(f"Session {name} has no custom subset selected.")
+    return positions
+
+
 def _dataset_block(dataset):
     if dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve the dataset_id before preparing the dataset.")
@@ -118,13 +170,24 @@ def _dataset_block(dataset):
         .order_by("msi_session__name")
     )
     for session in selected_sessions:
-        sessions[session.msi_session.name] = _session_config(session, metadata.get("authors", []))
+        config = _session_config(session, metadata.get("authors", []))
+        if dataset.tomogram_subset_mode == "custom":
+            # Custom selections must not fall back to processing all positions.
+            config["positions"] = require_custom_positions(session)
+        sessions[session.msi_session.name] = config
     if not sessions:
         raise SubmissionValidationError("Select at least one session before preparing the dataset.")
     return {"dataset_id": dataset.dataset_id, "metadata": metadata, "sessions": sessions}
 
 
-def build_dataprep_config(deposition, *, output_dir, sync_destination=None, required_dataset_ids=None):
+def is_defining_dataset(dataset) -> bool:
+    """Include metadata until an upload succeeds, then only for its persisted owner."""
+    return dataset.deposition.metadata_dataset_id in (None, dataset.pk)
+
+
+def build_dataprep_config(dataset, *, output_dir, sync_destination=None):
+    """Build this dataset's prep config with its deposition ID and any defining metadata."""
+    deposition = dataset.deposition
     if deposition.deposition_id is None:
         raise SubmissionValidationError("Reserve the deposition_id before preparing.")
     output_dir = str(output_dir) if output_dir is not None else ""
@@ -133,39 +196,24 @@ def build_dataprep_config(deposition, *, output_dir, sync_destination=None, requ
     sync_destination = (
         resolve_sync_destination() if sync_destination is None else _validate_sync_destination(sync_destination)
     )
-
-    datasets = {}
-    for dataset in deposition.datasets.order_by("dataset_id"):
-        is_required = required_dataset_ids is None or dataset.dataset_id in required_dataset_ids
-        if not dataset_is_ready(dataset):
-            if required_dataset_ids is not None and dataset.dataset_id in required_dataset_ids:
-                raise SubmissionValidationError(
-                    f"Dataset {dataset.dataset_id} is staged or in flight but has no usable autofill; "
-                    "fix it before submitting."
-                )
-            continue  # a draft/unready sibling has no tree to protect
-        try:
-            block = _dataset_block(dataset)
-        except SubmissionValidationError:
-            if is_required:
-                raise
-            logger.warning("Skipping malformed sibling dataset %s from the deposition config.", dataset.dataset_id)
-            continue
-        datasets[f"dataset_{dataset.dataset_id}"] = block
-    if not datasets:
-        raise SubmissionValidationError("No dataset in this deposition is ready to prepare.")
-
+    if not dataset_is_ready(dataset):
+        raise SubmissionValidationError(
+            f"Dataset {dataset.dataset_id} isn't ready to prepare; add sessions and run auto-fill first."
+        )
+    block = _dataset_block(dataset)
+    if is_defining_dataset(dataset):
+        block["deposition_metadata"] = build_deposition_metadata(deposition)
     return {
         "output_dir": output_dir,
         "sync_destination": sync_destination,
         "deposition_id": deposition.deposition_id,
-        "datasets": datasets,
+        # Preserve sibling dataset directories.
+        "shared_deposition": True,
+        "datasets": {f"dataset_{dataset.dataset_id}": block},
     }
 
 
-def dataprep_config_yaml(deposition, *, output_dir, sync_destination=None, required_dataset_ids=None):
+def dataprep_config_yaml(dataset, *, output_dir, sync_destination=None):
     """Render the prep deployment config as YAML for a later remote write."""
-    config = build_dataprep_config(
-        deposition, output_dir=output_dir, sync_destination=sync_destination, required_dataset_ids=required_dataset_ids
-    )
+    config = build_dataprep_config(dataset, output_dir=output_dir, sync_destination=sync_destination)
     return yaml.safe_dump(config, sort_keys=False, allow_unicode=True, default_flow_style=False)

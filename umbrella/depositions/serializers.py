@@ -23,7 +23,6 @@ from .models import (
     TiltseriesMetadata,
     TomogramMetadata,
 )
-from .permissions import deposition_owner_id
 from .services.autofill import TILTSERIES_PIPELINE_VALUES
 from .services.dataset_metadata import build_dataset_metadata
 from .services.exceptions import SubmissionValidationError
@@ -32,15 +31,23 @@ from .services.progress import serialize_progress, serialize_summary
 
 
 def validate_authors_json(value):
-    """Shape-check authors_json and allow partial rows for autosave."""
+    """Store directory references and deposition-specific roles/order only."""
     if not isinstance(value, list):
         raise serializers.ValidationError("authors_json must be a list of author entries.")
-    int_fields = ("author_id", "author_list_order")
+    int_fields = ("author_list_order",)
     bool_fields = ("is_primary", "is_corresponding")
-    str_fields = ("full_name", "affiliation", "identifier_type", "orcid")
+    allowed_fields = {"author_id", *int_fields, *bool_fields}
     for i, entry in enumerate(value):
         if not isinstance(entry, dict):
             raise serializers.ValidationError(f"authors_json[{i}] must be an object.")
+        if set(entry) - allowed_fields:
+            raise serializers.ValidationError(
+                f"authors_json[{i}] must use a people directory reference; "
+                "only author_id, author_list_order, is_primary and is_corresponding are supported."
+            )
+        person_id = entry.get("author_id")
+        if not isinstance(person_id, int) or isinstance(person_id, bool) or person_id <= 0:
+            raise serializers.ValidationError(f"authors_json[{i}].author_id must be a positive integer.")
         for f in int_fields:
             v = entry.get(f)
             # bool is a subclass of int — reject True/False masquerading as a number.
@@ -49,9 +56,6 @@ def validate_authors_json(value):
         for f in bool_fields:
             if f in entry and not isinstance(entry[f], bool):
                 raise serializers.ValidationError(f"authors_json[{i}].{f} must be a boolean.")
-        for f in str_fields:
-            if f in entry and not isinstance(entry[f], str):
-                raise serializers.ValidationError(f"authors_json[{i}].{f} must be a string.")
     return value
 
 
@@ -116,24 +120,6 @@ class DatasetJobSerializer(serializers.ModelSerializer):
     sync_progress = serializers.SerializerMethodField()
     sync_summary = serializers.SerializerMethodField()
     push_progress = serializers.SerializerMethodField()
-    validation = serializers.SerializerMethodField()
-
-    def get_validation(self, obj):
-        result = obj.validation
-        if result is None or _is_owner(self, obj.dataset):
-            return result
-        # CLI text can contain private paths; only the owner sees it.
-        return {
-            **{key: result[key] for key in ("status", "attempt", "dataset_id", "duration_seconds") if key in result},
-            "warnings": [
-                {"message": "Validation warning. Details are available to the submission owner."}
-                for _ in result.get("warnings", [])
-            ],
-            "blocking_issues": [
-                {"message": "Validation issue. Details are available to the submission owner."}
-                for _ in result.get("blocking_issues", [])
-            ],
-        }
 
     def get_sync_progress(self, obj):
         return serialize_progress(obj.sync_progress)
@@ -146,7 +132,7 @@ class DatasetJobSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DatasetJob
-        # Full log excerpts are available only through the owner-gated logs endpoint.
+        # Full log excerpts are served via the logs endpoint (readable by any user).
         exclude = ["log_excerpt"]
 
 
@@ -284,7 +270,7 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
 
 
 class DatasetSampleSerializer(serializers.ModelSerializer):
-    """Nested writable cryo_grids.Sample fields. Sample.name is auto-set, cell-component id is `ontology`."""
+    """Nested writable cryo_grids.Sample fields. Sample.name is auto-set."""
 
     class Meta:
         model = Sample
@@ -299,7 +285,7 @@ class DatasetSampleSerializer(serializers.ModelSerializer):
             "cell_strain_name",
             "cell_strain_id",
             "cell_component_name",
-            "ontology",
+            "cell_component_id",
             "development_stage_name",
             "development_stage_ontology_id",
             "disease_name",
@@ -449,25 +435,20 @@ class DatasetSerializer(serializers.ModelSerializer):
         dataset.funding.exclude(id__in=seen).delete()
 
     def _sync_sessions(self, dataset, sessions):
-        """Upsert session links by msi_session, drop deselected ones."""
-        seen = set()
+        """Add or update sessions by msi_session; never deletes. Remove one with DELETE /sessions/<id> (#1457)."""
         for row in sessions:
             row.pop("id", None)
             msi_session = row.pop("msi_session", None)
             if msi_session is None:
                 raise serializers.ValidationError({"sessions": "Each session entry requires msi_session."})
-            obj, _ = DepositionSession.objects.update_or_create(dataset=dataset, msi_session=msi_session, defaults=row)
-            seen.add(obj.id)
-        # Omitted sessions are removed on purpose (Remove session), cascading metadata and annotations.
-        dataset.sessions.exclude(id__in=seen).delete()
+            DepositionSession.objects.update_or_create(dataset=dataset, msi_session=msi_session, defaults=row)
 
 
 def _is_owner(serializer, obj) -> bool:
+    # Any authenticated user can edit; replaced by project permissions.
     request = serializer.context.get("request")
     user = getattr(request, "user", None)
-    if not (user and user.is_authenticated):
-        return False
-    return deposition_owner_id(obj) == user.id
+    return bool(user and user.is_authenticated)
 
 
 class DepositionSerializer(serializers.ModelSerializer):

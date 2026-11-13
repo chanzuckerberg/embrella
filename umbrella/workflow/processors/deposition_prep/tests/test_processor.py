@@ -80,7 +80,7 @@ def test_script_writes_config_without_shell_expansion_and_preserves_group_access
     import subprocess
 
     output_dir = tmp_path / "deposition with spaces"
-    config_path = output_dir / "dataprep_config.yaml"
+    config_path = output_dir / "20002" / "dataprep_config.yaml"
     unwanted = tmp_path / "expanded"
     payload = f'END_CONFIG\n$(touch "{unwanted}")\n`touch "{unwanted}"`\n$HOME'
     script = _render(

@@ -63,13 +63,16 @@ it.each([true, false])(
   }
 );
 
-it('auto-starts preparation once on arrival', () => {
+it('starts preparation only when the Start button is clicked', () => {
   const { submit } = setup(null);
+  expect(submit.mutate).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: /start preparation/i }));
   expect(submit.mutate).toHaveBeenCalledTimes(1);
 });
 
-it('keeps a rejected pending attempt from retrying on rerenders, but allows manual retry and re-entry', () => {
+it('surfaces a rejected attempt and lets the user retry instead of re-showing Start', () => {
   const { submit, push, dataset, view } = setup({ id: 1, state: 'pending' });
+  fireEvent.click(screen.getByRole('button', { name: /start preparation/i }));
   expect(submit.mutate).toHaveBeenCalledTimes(1);
   mockFlow.mockReturnValue({
     cancel,
@@ -83,13 +86,9 @@ it('keeps a rejected pending attempt from retrying on rerenders, but allows manu
   view.rerender(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
   expect(screen.getByRole('alert')).toHaveTextContent('Dataset title is required.');
   expect(screen.getByRole('alert')).toHaveStyle({ whiteSpace: 'pre-line' });
-  expect(submit.mutate).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('button', { name: /start preparation/i })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Retry sync' }));
   expect(submit.mutate).toHaveBeenCalledTimes(2);
-  view.unmount();
-
-  const reentered = setup({ id: 1, state: 'pending' });
-  expect(reentered.submit.mutate).toHaveBeenCalledTimes(1);
 });
 
 it('offers Upload to S3 once prep is complete', () => {

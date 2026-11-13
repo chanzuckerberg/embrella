@@ -223,7 +223,7 @@ export interface DatasetSample {
   cell_strain_name?: string;
   cell_strain_id?: string;
   cell_component_name?: string;
-  ontology?: string; // cell-component ontology id (e.g. GO:0005886)
+  cell_component_id?: string;
   development_stage_name?: string;
   development_stage_ontology_id?: string;
   disease_name?: string;

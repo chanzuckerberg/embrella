@@ -23,8 +23,11 @@ function modeHelp(mode: TomogramSubsetMode, excluded: number): string {
   return 'Filtered against copick ExperimentRuns - tomograms without annotations are excluded.';
 }
 
-const emptyRow = (key: string): SourceRow => ({
-  key,
+// Unique key for client-only rows; a counter avoids the reuse the old length-based key caused.
+let nextRowKey = 0;
+
+const emptyRow = (): SourceRow => ({
+  key: `new-${nextRowKey++}`,
   msi_session: null,
   msi_session_name: '',
   aretomo_run_name: '',
@@ -39,6 +42,8 @@ export function SourcesTable({
   subsetMode,
   readOnly,
   onChange,
+  onRemoveSession,
+  onChangeSession,
   onSubsetModeChange,
   onUploadSubset,
 }: {
@@ -47,6 +52,8 @@ export function SourcesTable({
   subsetMode: TomogramSubsetMode;
   readOnly: boolean;
   onChange: (rows: SourceRow[]) => void;
+  onRemoveSession: (row: SourceRow) => void;
+  onChangeSession: (row: SourceRow, replacement: SourceRow) => void;
   onSubsetModeChange: (v: TomogramSubsetMode) => void;
   onUploadSubset: (row: SourceRow, file: File) => void;
 }) {
@@ -61,7 +68,7 @@ export function SourcesTable({
   const changingFrom = pendingSessionChange
     ? rows.find((r) => r.key === pendingSessionChange.key)?.msi_session_name
     : undefined;
-  const addRow = () => onChange([...rows, emptyRow(`new-${rows.length}-${sessionOptions.length}`)]);
+  const addRow = () => onChange([...rows, emptyRow()]);
 
   const [counts, setCounts] = useState<Record<string, number | undefined>>({});
   const reportCount = useCallback((key: string, total: number | undefined) => {
@@ -98,7 +105,7 @@ export function SourcesTable({
         open={pendingRemoval !== null}
         onClose={() => setPendingRemoval(null)}
         onConfirm={() => {
-          if (pendingRemoval) onChange(rows.filter((r) => r.key !== pendingRemoval.key));
+          if (pendingRemoval) onRemoveSession(pendingRemoval);
           setPendingRemoval(null);
         }}
         intent="danger"
@@ -112,7 +119,8 @@ export function SourcesTable({
         open={pendingSessionChange !== null}
         onClose={() => setPendingSessionChange(null)}
         onConfirm={() => {
-          if (pendingSessionChange) updateRow(pendingSessionChange.key, pendingSessionChange);
+          const original = rows.find((r) => r.key === pendingSessionChange?.key);
+          if (original && pendingSessionChange) onChangeSession(original, pendingSessionChange);
           setPendingSessionChange(null);
         }}
         intent="warning"

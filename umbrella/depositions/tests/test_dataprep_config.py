@@ -2,14 +2,20 @@
 
 from copy import deepcopy
 from types import SimpleNamespace
+from unittest import mock
 
 import pytest
 import yaml
-from stores.models import PathType
+from django.core.exceptions import ImproperlyConfigured
+from people.models import Person
+from processes.models import Pipe, PipeExecution, PipeInPlan, ProcRun, ProcSoftware
+from processes.services.cluster_resolver import get_default_cluster_id
+from stores.models import Cluster, DataKind, PathType
 from tem.models import MsiSession
 
 from depositions.models import (
     Dataset,
+    DatasetJob,
     Deposition,
     DepositionAnnotation,
     DepositionAnnotationMethodLink,
@@ -22,7 +28,9 @@ from depositions.services.dataprep_config import (
     build_dataprep_config,
     dataprep_config_yaml,
 )
+from depositions.services.dataset_metadata import build_deposition_metadata
 from depositions.services.exceptions import SubmissionValidationError
+from depositions.services.submission import on_push_complete
 
 RAW_SESSION = {
     "paths": {
@@ -30,7 +38,6 @@ RAW_SESSION = {
         "mdoc": "/hpc/mdoc/24nov10",
         "frames": "/hpc/frames/24nov10",
         "gain": "/hpc/gains/reference.gain",
-        "denoise": "/hpc/denoiset/24nov10/run002",
     },
     "acquisition": {
         "pixel_spacing": 1.54,
@@ -49,7 +56,7 @@ def dataset(db, test_msi_session):
     deposition = Deposition.objects.create(title="Dep", deposition_id=101)
     dataset = Dataset.objects.create(deposition=deposition, title="Dataset", dataset_id=202)
     session = DepositionSession.objects.create(
-        dataset=dataset, msi_session=test_msi_session, aretomo_run_name="run001", denoise_run_name="run002"
+        dataset=dataset, msi_session=test_msi_session, aretomo_run_name="run001", denoise_run_name=""
     )
     TiltseriesMetadata.objects.create(
         session=session,
@@ -64,7 +71,7 @@ def dataset(db, test_msi_session):
 
 
 def _build(dataset, **kwargs):
-    return build_dataprep_config(dataset.deposition, output_dir="/staging/101", **kwargs)
+    return build_dataprep_config(dataset, output_dir="/staging/101", **kwargs)
 
 
 def _session(config, name="24nov10"):
@@ -76,13 +83,109 @@ def test_builds_deployment_config_with_reserved_ids(dataset):
     assert config["output_dir"] == "/staging/101"
     assert config["deposition_id"] == 101
     assert config["sync_destination"] == "s3://cryoetportal-biohub-hpc-globus/CZII"
+    # Single-dataset config in the shared dir; the flag stops sync from deleting siblings.
+    assert config["shared_deposition"] is True
     assert config["datasets"]["dataset_202"]["dataset_id"] == 202
     assert _session(config) == RAW_SESSION
     metadata = config["datasets"]["dataset_202"]["metadata"]
     assert metadata["dataset_title"] == dataset.title
 
 
-def test_includes_every_dataset_in_the_deposition(dataset, test_session_plan):
+@pytest.fixture
+def denoise_dataset(dataset):
+    Cluster.objects.create(cluster_id="c1", name="C1", is_active=True)
+    root = PathType.objects.create(
+        data_kind=DataKind.objects.create(data_type="test_denoise_root"),
+        overlay_path="/custom/{proc_software}/",
+    )
+    ProcSoftware.objects.update_or_create(
+        processor_class="denoiset",
+        defaults={"name": "denoise", "storage_dirname": "denoise", "processing_root": root},
+    )
+    session = dataset.sessions.get()
+    session.denoise_run_name = "005"
+    session.save(update_fields=["denoise_run_name"])
+    return dataset
+
+
+def _record_execution(session, plan, processor_class, run, cluster_id):
+    software, _ = ProcSoftware.objects.get_or_create(
+        processor_class=processor_class, defaults={"name": processor_class}
+    )
+    pipe = Pipe.objects.create(name=processor_class, software=software)
+    step = PipeInPlan.objects.create(plan=plan, pipe=pipe, step=1, name=processor_class)
+    proc_run = ProcRun.objects.create(name=run, proc_plan=plan, msi_session=session.msi_session)
+    return PipeExecution.objects.create(proc_run=proc_run, pipe_in_plan=step, parameters={"cluster_id": cluster_id})
+
+
+def test_denoise_source_resolved_from_selected_run(denoise_dataset):
+    session = denoise_dataset.sessions.get()
+    with mock.patch("depositions.services.dataprep_config.cluster_id_for_run", return_value="c1") as lookup:
+        config = _build(denoise_dataset)
+    assert _session(config)["paths"]["denoise"] == "/custom/denoise/24nov10/run005"
+    assert lookup.call_args_list == [
+        mock.call(session.msi_session.name, "run001", processor_class="aretomo3"),
+        mock.call(session.msi_session.name, "run005", default="c1", processor_class="denoiset"),
+    ]
+
+
+@pytest.mark.parametrize("denoise_run", ["005", "run005"])
+def test_denoise_missing_execution_falls_back_to_prep_cluster(denoise_dataset, test_proc_plan, denoise_run):
+    session = denoise_dataset.sessions.get()
+    session.aretomo_run_name = "001"
+    session.denoise_run_name = denoise_run
+    session.save()
+    assert get_default_cluster_id() != "c1"
+    _record_execution(session, test_proc_plan, "aretomo3", "run001", "c1")
+    # An unrelated execution with the denoise run's name must not determine its cluster.
+    _record_execution(session, test_proc_plan, "aretomo3", "run005", get_default_cluster_id())
+    ProcSoftware.objects.filter(processor_class="denoiset").update(processing_root=None)
+    PathType.objects.update_or_create(
+        data_kind=DataKind.objects.get(data_type="processing_root"),
+        cluster=Cluster.objects.get(cluster_id="c1"),
+        defaults={"overlay_path": "/cluster-c1/{proc_software}"},
+    )
+    config = _build(denoise_dataset)
+    assert _session(config)["paths"]["denoise"] == "/cluster-c1/denoise/24nov10/run005"
+
+
+def test_denoise_on_another_cluster_is_rejected(denoise_dataset, test_proc_plan):
+    session = denoise_dataset.sessions.get()
+    _record_execution(session, test_proc_plan, "aretomo3", "run001", "c1")
+    _record_execution(session, test_proc_plan, "denoiset", "run005", "c2")
+    with pytest.raises(SubmissionValidationError, match="denoise run 'run005'.*'c2'.*AreTomo cluster 'c1'"):
+        _build(denoise_dataset)
+
+
+@pytest.mark.parametrize("error", [ImproperlyConfigured("No denoise root"), PathType.DoesNotExist("Missing root")])
+def test_misconfigured_denoise_raises_actionable_error(denoise_dataset, error, caplog):
+    with (
+        mock.patch("depositions.services.dataprep_config.cluster_id_for_run", return_value="c1"),
+        mock.patch("depositions.services.dataprep_config.get_processor") as processor,
+    ):
+        processor.return_value.get_processing_base_path.side_effect = error
+        with pytest.raises(SubmissionValidationError) as raised:
+            _build(denoise_dataset)
+        assert raised.value.public_message == "Denoise isn't configured on this cluster."
+        assert str(error) not in raised.value.public_message
+    record = next(record for record in caplog.records if record.exc_info)
+    assert record.name == "depositions.services.dataprep_config"
+    assert record.levelname == "ERROR"
+    assert "session '24nov10' on cluster 'c1'" in record.getMessage()
+    assert record.exc_info[1] is error
+    assert str(error) in caplog.text
+
+
+def test_skipped_denoise_drops_the_source_path(dataset):
+    session = dataset.sessions.get()  # fixture has denoise_run_name=""
+    # Even a stale saved denoise path is dropped when denoise is skipped.
+    session.tiltseries_metadata.autofill_metadata["paths"]["denoise"] = "/stale/run009"
+    session.tiltseries_metadata.save(update_fields=["autofill_metadata"])
+    assert "denoise" not in _session(_build(dataset))["paths"]
+
+
+def test_config_contains_only_the_built_dataset(dataset, test_session_plan):
+    # A sibling in the same deposition must not leak into this dataset's config.
     other = Dataset.objects.create(deposition=dataset.deposition, title="Dataset 2", dataset_id=303)
     session = DepositionSession.objects.create(
         dataset=other,
@@ -90,9 +193,96 @@ def test_includes_every_dataset_in_the_deposition(dataset, test_session_plan):
         aretomo_run_name="run009",
     )
     TiltseriesMetadata.objects.create(session=session, autofill_metadata=deepcopy(RAW_SESSION), pixel_spacing=1.54)
+    assert set(_build(dataset)["datasets"]) == {"dataset_202"}
+    assert set(_build(other)["datasets"]) == {"dataset_303"}
+
+
+def test_deposition_metadata_rides_under_the_built_dataset(dataset):
+    dataset.deposition.description = "A deposition."
+    dataset.deposition.deposition_publications = "https://doi.org/10.1/x"
+    dataset.deposition.save()
+    block = _build(dataset)["datasets"]["dataset_202"]["deposition_metadata"]
+    assert block["deposition_title"] == dataset.deposition.title
+    assert block["deposition_description"] == "A deposition."
+    assert block["cross_references"] == {"publications": "https://doi.org/10.1/x"}
+    assert "authors" in block
+    assert set(block["dates"]) >= {"deposition_date", "last_modified_date"}
+    assert block["deposition_types"] == ["dataset"]
+
+
+def test_deposition_types_include_annotation_when_selected(dataset):
+    session = dataset.sessions.get()
+    DepositionAnnotation.objects.create(session=session, copick_kind="picks", copick_ref="ribosome:alice/0")
+    assert build_deposition_metadata(dataset.deposition)["deposition_types"] == ["dataset", "annotation"]
+
+
+def test_only_the_upload_owner_carries_deposition_metadata(dataset, test_session_plan):
+    other = Dataset.objects.create(deposition=dataset.deposition, title="Dataset 2", dataset_id=303)
+    session = DepositionSession.objects.create(
+        dataset=other,
+        msi_session=MsiSession.objects.create(name="24dec01", session_plan=test_session_plan),
+        aretomo_run_name="run009",
+    )
+    TiltseriesMetadata.objects.create(session=session, autofill_metadata=deepcopy(RAW_SESSION), pixel_spacing=1.54)
+    assert "deposition_metadata" in _build(dataset)["datasets"]["dataset_202"]
+    assert "deposition_metadata" in _build(other)["datasets"]["dataset_303"]
+    job = DatasetJob.objects.create(dataset=other, state="push_running", push_slurm_job_id="push-other")
+    on_push_complete(job, True, job_id="push-other")
+    dataset.deposition.refresh_from_db()
+    assert "deposition_metadata" not in _build(dataset)["datasets"]["dataset_202"]
+    assert "deposition_metadata" in _build(other)["datasets"]["dataset_303"]
+    assert _build(dataset)["deposition_id"] == _build(other)["deposition_id"] == 101
+
+
+def test_deleted_metadata_owner_can_be_replaced(dataset, test_session_plan):
+    other = Dataset.objects.create(deposition=dataset.deposition, title="Draft", dataset_id=101)
+    job = DatasetJob.objects.create(dataset=dataset, state="push_running", push_slurm_job_id="push-first")
+    on_push_complete(job, True, job_id="push-first")
+    dataset.deposition.refresh_from_db()
+    session = DepositionSession.objects.create(
+        dataset=other,
+        msi_session=MsiSession.objects.create(name="24dec01", session_plan=test_session_plan),
+        aretomo_run_name="run009",
+    )
+    TiltseriesMetadata.objects.create(session=session, autofill_metadata=deepcopy(RAW_SESSION), pixel_spacing=1.54)
+    assert "deposition_metadata" not in _build(other)["datasets"]["dataset_101"]
+    assert "deposition_metadata" in _build(dataset)["datasets"]["dataset_202"]
+    dataset.delete()
+    other.deposition.refresh_from_db()
+    assert "deposition_metadata" in _build(other)["datasets"]["dataset_101"]
+
+
+def test_custom_positions_are_per_session_and_omitted_outside_custom_mode(dataset, test_session_plan):
+    session = dataset.sessions.get()
+    session.subset_selection = {"Selected positions": ["Position_1.mrc"]}
+    session.save()
+    other = DepositionSession.objects.create(
+        dataset=dataset,
+        msi_session=MsiSession.objects.create(name="24dec01", session_plan=test_session_plan),
+        aretomo_run_name="run009",
+        subset_selection=[{"Tilt_Series": "Position_2.mrc"}],
+    )
+    TiltseriesMetadata.objects.create(session=other, autofill_metadata=deepcopy(RAW_SESSION), pixel_spacing=1.54)
+    dataset.tomogram_subset_mode = "custom"
+    dataset.save()
     config = _build(dataset)
-    assert set(config["datasets"]) == {"dataset_202", "dataset_303"}
-    assert config["datasets"]["dataset_303"]["dataset_id"] == 303
+    assert _session(config)["positions"] == ["Position_1"]
+    assert _session(config, "24dec01")["positions"] == ["Position_2"]
+
+    dataset.tomogram_subset_mode = "all"
+    dataset.save()
+    config = _build(dataset)
+    assert "positions" not in _session(config)
+    assert "positions" not in _session(config, "24dec01")
+
+
+def test_custom_mode_rejects_an_empty_selection(dataset):
+    """Empty positions in custom mode would mean "process all" to the CLI, so it must be rejected
+    at config build - not silently omitted - which also stops a shared-session sibling leaking."""
+    dataset.tomogram_subset_mode = "custom"
+    dataset.save()
+    with pytest.raises(SubmissionValidationError, match="no custom subset selected"):
+        _build(dataset)
 
 
 def test_user_edits_override_autofill_without_changing_saved_raw_data(dataset):
@@ -199,9 +389,7 @@ def test_assembles_all_sessions_and_round_trips_yaml(dataset, test_session_plan)
     raw = deepcopy(RAW_SESSION)
     raw["paths"]["aretomo3"] = "/hpc/aretomo3/24nov11/run003"
     TiltseriesMetadata.objects.create(session=second, autofill_metadata=raw, pixel_spacing=2)
-    text = dataprep_config_yaml(
-        dataset.deposition, output_dir="/staging/101", sync_destination="s3://test-bucket/review"
-    )
+    text = dataprep_config_yaml(dataset, output_dir="/staging/101", sync_destination="s3://test-bucket/review")
     parsed = yaml.safe_load(text)
     assert list(parsed["datasets"]["dataset_202"]["sessions"]) == ["24nov10", "24nov11"]
     assert _session(parsed, "24nov11")["paths"]["aretomo3"] == raw["paths"]["aretomo3"]
@@ -213,38 +401,32 @@ def test_assembles_all_sessions_and_round_trips_yaml(dataset, test_session_plan)
 @pytest.mark.parametrize("missing_id", ["deposition", "dataset"])
 def test_rejects_missing_reservations(dataset, missing_id):
     if missing_id == "deposition":
-        dataset.deposition.deposition_id = None  # checked on the passed deposition object
+        dataset.deposition.deposition_id = None
     else:
-        Dataset.objects.filter(pk=dataset.pk).update(dataset_id=None)  # datasets are read from the db
+        dataset.dataset_id = None
     with pytest.raises(SubmissionValidationError, match="Reserve"):
-        build_dataprep_config(dataset.deposition, output_dir="/staging/101")
+        build_dataprep_config(dataset, output_dir="/staging/101")
 
 
-def test_rejects_when_no_dataset_is_ready(dataset):
-    dataset.sessions.all().delete()
-    with pytest.raises(SubmissionValidationError, match="ready to prepare"):
-        _build(dataset)
-
-
-def test_skips_a_not_ready_dataset(dataset):
-    # A draft dataset (no sessions yet) must not block the ready one.
-    Dataset.objects.create(deposition=dataset.deposition, title="Draft", dataset_id=404)
-    config = _build(dataset)
-    assert set(config["datasets"]) == {"dataset_202"}
-
-
-@pytest.mark.parametrize("raw", [{}, "invalid", []])
-def test_skips_dataset_never_autofilled(dataset, raw):
-    # Empty/missing autofill = a draft that never ran auto-fill - skipped.
-    metadata = TiltseriesMetadata.objects.get(session__dataset=dataset)
-    metadata.autofill_metadata = raw
-    metadata.save()
-    with pytest.raises(SubmissionValidationError, match="ready to prepare"):
-        _build(dataset)
-
-
-def test_skips_dataset_without_autofill_metadata(dataset):
-    TiltseriesMetadata.objects.filter(session__dataset=dataset).delete()
+@pytest.mark.parametrize(
+    "missing,raw",
+    [
+        pytest.param("sessions", None, id="no-sessions"),
+        pytest.param("autofill", None, id="no-autofill-record"),
+        pytest.param(None, {}, id="empty-autofill-mapping"),
+        pytest.param(None, "invalid", id="invalid-autofill-string"),
+        pytest.param(None, [], id="empty-autofill-list"),
+    ],
+)
+def test_rejects_dataset_not_ready_to_prepare(dataset, missing, raw):
+    if missing == "sessions":
+        dataset.sessions.all().delete()
+    elif missing == "autofill":
+        TiltseriesMetadata.objects.filter(session__dataset=dataset).delete()
+    else:
+        metadata = TiltseriesMetadata.objects.get(session__dataset=dataset)
+        metadata.autofill_metadata = raw
+        metadata.save()
     with pytest.raises(SubmissionValidationError, match="ready to prepare"):
         _build(dataset)
 
@@ -258,48 +440,10 @@ def test_rejects_malformed_saved_autofill(dataset, raw):
         _build(dataset)
 
 
-def test_malformed_sibling_is_skipped_when_not_required(dataset, test_session_plan):
-    other = Dataset.objects.create(deposition=dataset.deposition, title="Broken", dataset_id=303)
-    session = DepositionSession.objects.create(
-        dataset=other,
-        msi_session=MsiSession.objects.create(name="24dec02", session_plan=test_session_plan),
-        aretomo_run_name="run009",
-    )
-    TiltseriesMetadata.objects.create(session=session, autofill_metadata={"paths": {"aretomo3": "/a"}})  # malformed
-    config = build_dataprep_config(dataset.deposition, output_dir="/staging/101", required_dataset_ids={202})
-    assert set(config["datasets"]) == {"dataset_202"}
-
-
-def test_required_dataset_without_autofill_raises(dataset):
-    TiltseriesMetadata.objects.filter(session__dataset=dataset).delete()
-    with pytest.raises(SubmissionValidationError, match="no usable autofill"):
-        build_dataprep_config(dataset.deposition, output_dir="/staging/101", required_dataset_ids={202})
-
-
-def test_required_dataset_without_sessions_raises(dataset):
-    dataset.sessions.all().delete()
-    with pytest.raises(SubmissionValidationError, match="no usable autofill"):
-        build_dataprep_config(dataset.deposition, output_dir="/staging/101", required_dataset_ids={202})
-
-
-def test_unrequired_draft_sibling_is_skipped(dataset):
-    Dataset.objects.create(deposition=dataset.deposition, title="Draft", dataset_id=303)  # no sessions
-    config = build_dataprep_config(dataset.deposition, output_dir="/staging/101", required_dataset_ids={202})
-    assert set(config["datasets"]) == {"dataset_202"}
-
-
-def test_malformed_required_dataset_still_raises(dataset):
-    metadata = TiltseriesMetadata.objects.get(session__dataset=dataset)
-    metadata.autofill_metadata = {"paths": {"aretomo3": "/a"}}
-    metadata.save()
-    with pytest.raises(SubmissionValidationError, match="saved"):
-        build_dataprep_config(dataset.deposition, output_dir="/staging/101", required_dataset_ids={202})
-
-
 @pytest.mark.parametrize("output_dir", [None, "", "relative/path"])
 def test_rejects_invalid_output_dir(dataset, output_dir):
     with pytest.raises(SubmissionValidationError, match="absolute cluster path"):
-        build_dataprep_config(dataset.deposition, output_dir=output_dir)
+        build_dataprep_config(dataset, output_dir=output_dir)
 
 
 @pytest.mark.parametrize("destination", ["", "/local/path", "s3://", "s3:///missing-bucket"])
@@ -325,7 +469,8 @@ def test_invalid_configured_destination_is_rejected(dataset):
 
 @pytest.mark.parametrize("kind,expected", [("picks", "picks"), ("segmentations", "segmentation_mask")])
 def test_selected_annotations_use_sync_contract_and_reviewed_authors(dataset, monkeypatch, kind, expected):
-    dataset.deposition.authors_json = [{"full_name": "Ada", "is_primary": True, "is_corresponding": True}]
+    author = Person.objects.create(given_name="Ada", family_name="")
+    dataset.deposition.authors_json = [{"author_id": author.pk, "is_primary": True, "is_corresponding": True}]
     dataset.deposition.save()
     session = dataset.sessions.get()
     session.selected_copick_runs = ["run003", "run004"]
@@ -345,11 +490,15 @@ def test_selected_annotations_use_sync_contract_and_reviewed_authors(dataset, mo
     DepositionAnnotationMethodLink.objects.create(
         annotation=selected, link_type="source_code", link="https://example.org/code"
     )
-    monkeypatch.setattr(annotation_config, "cluster_id_for_run", lambda *a: "cluster-a")
+    cluster_kwargs = {}
+    monkeypatch.setattr(
+        annotation_config, "cluster_id_for_run", lambda *a, **k: cluster_kwargs.update(k) or "cluster-a"
+    )
     monkeypatch.setattr(
         annotation_config, "get_processor", lambda _: SimpleNamespace(get_processing_base_path=lambda **kw: "/copick")
     )
     annotations = _session(_build(dataset))["annotations"]
+    assert cluster_kwargs["processor_class"] == "aretomo3"
     assert len(annotations) == 1
     entry = annotations[0]
     assert entry["kind"] == expected and entry["copick_ref"] == "ribosome:alice/0"

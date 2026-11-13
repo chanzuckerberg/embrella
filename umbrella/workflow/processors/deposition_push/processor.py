@@ -23,6 +23,8 @@ DEFAULT_PROLOGUE = "ml load anaconda\nml load awscli"
 # Local-only artifacts kept out of the upload (mirrors cryoetportalprep SYNC_EXCLUDE_PATTERNS).
 EXCLUDE_PATTERNS = [
     "dataprep_config.yaml",
+    # Leftovers from killed prep jobs.
+    "dataprep_config.yaml.tmp.*",
     "sync_job.sh",
     "cryoetprep_push_*",
     "notes.md",

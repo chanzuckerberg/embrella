@@ -2,13 +2,14 @@
 
 from people.models import Person
 
+from depositions.models import DepositionAnnotation
 from depositions.services.exceptions import SubmissionValidationError
 
 _ONTOLOGY_FIELDS = [
     ("tissue", "tissue_name", "tissue_id"),
     ("cell_type", "cell_name", "cell_type_id"),
     ("cell_strain", "cell_strain_name", "cell_strain_id"),
-    ("cell_component", "cell_component_name", "ontology"),
+    ("cell_component", "cell_component_name", "cell_component_id"),
     ("development_stage", "development_stage_name", "development_stage_ontology_id"),
     ("disease", "disease_name", "disease_ontology_id"),
 ]
@@ -25,25 +26,19 @@ def _name_id(name, oid):
 
 
 def _map_author(entry, people):
-    """Resolve directory references, retaining support for saved inline authors."""
-    if not isinstance(entry, dict):
-        return None
-    email = None
-    person_id = entry.get("author_id")
-    if person_id is not None:
-        person = people.get(person_id)
-        if person is None:
-            raise SubmissionValidationError(
-                "An author is no longer in the people directory. Review the authors before preparing."
-            )
-        name = str(person)
-        orcid = person.orcid
-        affiliation = person.institution.name if person.institution else ""
-        email = person.contact_email
-    else:
-        name = (entry.get("full_name") or "").strip()
-        orcid = entry.get("orcid")
-        affiliation = entry.get("affiliation")
+    """Resolve an author's identity from the people directory."""
+    person_id = entry.get("author_id") if isinstance(entry, dict) else None
+    if person_id is None:
+        raise SubmissionValidationError("Choose each author from the people directory before preparing.")
+    person = people.get(person_id)
+    if person is None:
+        raise SubmissionValidationError(
+            "An author is no longer in the people directory. Review the authors before preparing."
+        )
+    name = str(person)
+    orcid = person.orcid
+    affiliation = person.institution.name if person.institution else ""
+    email = person.contact_email
     if not name:
         return None
     author = {"name": name}
@@ -58,6 +53,18 @@ def _map_author(entry, people):
     if entry.get("is_corresponding"):
         author["corresponding_author_status"] = True
     return author
+
+
+def _resolve_authors(source_authors, db) -> list:
+    """Map stored author entries to portal author blocks, resolving directory references."""
+    source_authors = source_authors or []
+    people = (
+        Person.objects.using(db)
+        .select_related("institution")
+        .in_bulk(e["author_id"] for e in source_authors if isinstance(e, dict) and e.get("author_id") is not None)
+    )
+    # No dict filter: a malformed entry must raise via _map_author, not be silently dropped.
+    return [a for a in (_map_author(e, people) for e in source_authors) if a]
 
 
 def build_dataset_metadata(dataset) -> dict:
@@ -115,16 +122,43 @@ def build_dataset_metadata(dataset) -> dict:
     if funding:
         meta["funding"] = funding
 
-    source_authors = (
-        dataset.deposition.authors_json if dataset.is_authors_same_as_deposition else dataset.authors_json
-    ) or []
-    people = (
-        Person.objects.using(dataset._state.db)
-        .select_related("institution")
-        .in_bulk(e["author_id"] for e in source_authors if isinstance(e, dict) and e.get("author_id") is not None)
-    )
-    authors = [a for a in (_map_author(e, people) for e in source_authors if isinstance(e, dict)) if a]
+    source_authors = dataset.deposition.authors_json if dataset.is_authors_same_as_deposition else dataset.authors_json
+    authors = _resolve_authors(source_authors, dataset._state.db)
     if authors:
         meta["authors"] = authors
 
+    return meta
+
+
+def build_deposition_metadata(deposition) -> dict:
+    """Build portal deposition metadata from the saved wizard fields."""
+    db = deposition._state.db
+    meta = {
+        "deposition_title": deposition.title or "",
+        "deposition_description": deposition.description or "",
+        "authors": _resolve_authors(deposition.authors_json, db),
+    }
+    cross = {}
+    if deposition.deposition_publications:
+        cross["publications"] = deposition.deposition_publications
+    if deposition.related_database_entries:
+        cross["related_database_entries"] = deposition.related_database_entries
+    if cross:
+        meta["cross_references"] = cross
+    dates = {
+        "deposition_date": deposition.created_at.date().isoformat(),
+        "last_modified_date": deposition.updated_at.date().isoformat(),
+    }
+    if deposition.release_date:
+        dates["release_date"] = deposition.release_date.isoformat()
+    meta["dates"] = dates
+    # Always a dataset deposition; copick picks/segmentations/meshes add annotations.
+    deposition_types = ["dataset"]
+    if (
+        DepositionAnnotation.objects.using(db)
+        .filter(session__dataset__deposition=deposition, is_selected=True)
+        .exists()
+    ):
+        deposition_types.append("annotation")
+    meta["deposition_types"] = deposition_types
     return meta

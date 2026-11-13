@@ -159,16 +159,17 @@ describe('WizardLayout', () => {
     expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
   });
 
-  it('starts preparation when leaving Annotations for Finalize', async () => {
+  it('reaches Finalize without preparing, then starts on the Start button', async () => {
     (submitDataset as jest.Mock).mockImplementation(async () => {
       mockServerDataset = { ...mockServerDataset, status: 'syncing', job: { id: 1, state: 'prep_submitted' } };
       return { state: 'prep_submitted', dataset_status: 'syncing' };
     });
     renderWizard();
     fireEvent.click(screen.getByRole('button', { name: /Step 5: Annotations/ }));
-    expect(await screen.findByRole('button', { name: 'Next: prepare & validate' })).toBeEnabled();
+    fireEvent.click(await screen.findByRole('button', { name: 'Next' }));
+    // Finalize screen must not start preparation on its own.
     expect(submitDataset).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Next: prepare & validate' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Start preparation' }));
     await waitFor(() => expect(submitDataset).toHaveBeenCalledTimes(1));
     expect(submitDataset).toHaveBeenCalledWith(DATASET.id);
   });
@@ -233,7 +234,7 @@ describe('WizardLayout', () => {
     expect(mockSaveNow).toHaveBeenCalledTimes(1);
   });
 
-  it('confirms correction after failed validation and automatically prepares again after reset', async () => {
+  it('confirms correction after failed validation and prepares again on Start after reset', async () => {
     (submitDataset as jest.Mock)
       .mockImplementationOnce(async () => {
         mockServerDataset = {
@@ -259,6 +260,7 @@ describe('WizardLayout', () => {
       });
     renderWizard({ ...DATASET, is_owner: true });
     fireEvent.click(screen.getByRole('button', { name: /Step 6:/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Start preparation' }));
     expect(await screen.findByText('Validation found blocking issues')).toBeInTheDocument();
     expect(resetDatasetPreparation).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: /Step 3: Dataset/ }));
@@ -280,6 +282,7 @@ describe('WizardLayout', () => {
     expect(mockServerDataset.job?.validation).toBeNull();
     fireEvent.change(screen.getByLabelText(/Title/), { target: { value: 'Corrected title' } });
     fireEvent.click(screen.getByRole('button', { name: /Step 6:/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Start preparation' }));
     expect(await screen.findByText('Waiting in queue')).toBeInTheDocument();
     expect(mockSaveNow).toHaveBeenCalledTimes(2);
     expect(submitDataset).toHaveBeenCalledTimes(2);

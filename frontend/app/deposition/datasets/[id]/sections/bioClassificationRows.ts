@@ -61,7 +61,7 @@ export const BIO_ROWS: BioRow[] = [
     ontology: 'go',
     pattern: '^GO:[0-9]{7}$',
     nameKey: 'cell_component_name',
-    idKey: 'ontology',
+    idKey: 'cell_component_id',
     lookup: 'https://www.ebi.ac.uk/ols4/ontologies/go',
     childrenOf: GO_CELLULAR_COMPONENT_IRI,
     description: 'The subcellular structure or organelle imaged',

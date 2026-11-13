@@ -1,5 +1,6 @@
 """Copick scan processor — read-only enumeration of picks/segmentations/meshes."""
 
+import json
 import logging
 import os
 from typing import Any, Dict, List
@@ -51,12 +52,15 @@ class CopickScanProcessor(CopickProcessor):
         env = Environment(loader=FileSystemLoader(template_dir))
         template = env.get_template("copick_scan.sh.j2")
 
+        # Empty positions scan the whole project.
+        scan_positions = [name for name in (params.get("scan_positions") or []) if name]
         script = template.render(
             configPath=f"{copick_dir}/config.json",
             scanOutPath=f"{copick_dir}/scan.json",
             copickEnv=resolve_dir("dataportal_env", cluster=run_context.cluster_id),
             session=run_context.msi_session.name,
             run=run_context.run_number,
+            scanPositions=json.dumps(scan_positions),
             slurm_directives=context.get("slurm_directives", []),
         )
         logger.info("Rendered copick scan script for %s/%s", run_context.msi_session.name, run_context.run_number)

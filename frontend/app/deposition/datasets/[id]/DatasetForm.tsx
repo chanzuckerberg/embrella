@@ -82,7 +82,7 @@ function toForm(d: Dataset): FormState {
       cell_strain_name: s.cell_strain_name ?? '',
       cell_strain_id: s.cell_strain_id ?? '',
       cell_component_name: s.cell_component_name ?? '',
-      ontology: s.ontology ?? '',
+      cell_component_id: s.cell_component_id ?? '',
       development_stage_name: s.development_stage_name ?? '',
       development_stage_ontology_id: s.development_stage_ontology_id ?? '',
       disease_name: s.disease_name ?? '',
