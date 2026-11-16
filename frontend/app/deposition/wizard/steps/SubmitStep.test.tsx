@@ -119,12 +119,6 @@ it('reserves an id when the Reserve ID button is clicked', () => {
   expect(reserveIds.mutate).toHaveBeenCalled();
 });
 
-it('offers Upload to S3 once prep is complete', () => {
-  const { push } = setup(prepared);
-  fireEvent.click(screen.getByRole('button', { name: /upload to s3/i }));
-  expect(push.mutate).toHaveBeenCalled();
-});
-
 it('shows a retry action and the error when sync failed', () => {
   setup({ id: 1, state: 'failed', error_message: 'sync blew up' });
   expect(screen.getByText('sync blew up')).toBeInTheDocument();
@@ -148,12 +142,15 @@ it('shows success and no submit actions once pushed', () => {
   const banner = screen.getByRole('alert');
   expect(within(banner).getByText('Upload complete')).toBeInTheDocument();
   expect(within(banner).getByText('Files have been uploaded to S3.')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /submit/i })).toBeNull();
+  expect(
+    screen.queryByRole('button', { name: /start preparation|upload to s3|retry sync|restart preparation/i })
+  ).toBeNull();
 });
 
 it('hides submit actions and does not auto-start in read-only mode', () => {
   const { submit } = setup(null, { readOnly: true });
   expect(screen.queryByRole('button', { name: /upload to s3/i })).toBeNull();
+  expect(screen.queryByRole('button', { name: /start preparation/i })).toBeNull();
   expect(submit.mutate).not.toHaveBeenCalled();
 });
 
