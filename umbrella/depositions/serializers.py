@@ -409,7 +409,7 @@ class DatasetSerializer(serializers.ModelSerializer):
 
     def _sync_sample(self, dataset, sample_data):
         """Update a deposition-owned Sample only (name=deposition-dataset-<id>), never mutate shared grid samples."""
-        owned_name = f"deposition-dataset-{dataset.id}"
+        owned_name = dataset.owned_sample_name()
         sample = dataset.sample
         if sample is None or sample.name != owned_name:
             sample, _ = Sample.objects.get_or_create(name=owned_name)

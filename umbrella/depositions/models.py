@@ -101,6 +101,10 @@ class Dataset(models.Model):
     def __str__(self):
         return f"Dataset {self.dataset_id or self.pk} — {self.title}"
 
+    def owned_sample_name(self):
+        """Name of the Sample this dataset owns (vs. a shared grid sample)."""
+        return f"deposition-dataset-{self.id}"
+
 
 class DatasetFunding(models.Model):
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="funding")
