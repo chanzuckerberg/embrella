@@ -41,13 +41,37 @@ def _notification_parameters(deposition):
     return {"slurm_mail_user": address}
 
 
+def _session_clusters(dataset):
+    """Resolve each session's cluster, keyed by session name (ordered for stable messages)."""
+    clusters = {}
+    for session in dataset.sessions.select_related("msi_session").order_by("msi_session__name"):
+        run = session.aretomo_run_name or ""
+        run_number = run if run.startswith("run") else f"run{run}"
+        clusters[session.msi_session.name] = cluster_id_for_run(
+            session.msi_session.name, run_number, processor_class="aretomo3"
+        )
+    return clusters
+
+
 def _cluster_for_dataset(dataset):
-    session = dataset.sessions.select_related("msi_session").order_by("msi_session__name").first()
-    if session is None:
+    """A single cluster for display/push paths; first by session name, site default if there are none."""
+    clusters = _session_clusters(dataset)
+    return next(iter(clusters.values()), get_default_cluster_id())
+
+
+def require_single_cluster(dataset):
+    """The dataset's single cluster; raises if its sessions span more than one."""
+    clusters = _session_clusters(dataset)
+    if not clusters:
         return get_default_cluster_id()
-    run = session.aretomo_run_name or ""
-    run_number = run if run.startswith("run") else f"run{run}"
-    return cluster_id_for_run(session.msi_session.name, run_number, processor_class="aretomo3")
+    distinct = set(clusters.values())
+    if len(distinct) > 1:
+        spread = ", ".join(f"{name} ({cid})" for name, cid in clusters.items())
+        raise SubmissionValidationError(
+            "This dataset's sessions span more than one cluster, so preparation can't run them together: "
+            f"{spread}. Split them into one dataset per cluster."
+        )
+    return next(iter(distinct))
 
 
 def _service_auth():
@@ -75,7 +99,7 @@ def submit_dataset_prep(dataset):
                 "This dataset isn't ready to submit - add sessions and run auto-fill first."
             )
         auth = _service_auth()
-        cluster_id = _cluster_for_dataset(dataset)
+        cluster_id = require_single_cluster(dataset)
         if (
             DatasetJob.objects.using(db)
             .filter(dataset__deposition=deposition, state__in=PREP_ACTIVE)
@@ -251,8 +275,8 @@ def preview_config_yaml(dataset):
     if deposition.deposition_id is None or dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before downloading the config.")
     job = getattr(dataset, "job", None)
-    # Show the staged cluster only while the job is locked; otherwise derive it the way a resubmit will.
-    cluster_id = (job.cluster_id if job and job.cluster_is_frozen else "") or _cluster_for_dataset(dataset)
+    # Frozen job keeps its staged cluster; otherwise guard like submit so a download can't sidestep it.
+    cluster_id = (job.cluster_id if job and job.cluster_is_frozen else "") or require_single_cluster(dataset)
     output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
     return dataprep_config_yaml(
         dataset,

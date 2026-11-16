@@ -7,6 +7,7 @@ from django.utils import timezone
 from people.models import Person
 from stores.models import Cluster, DataKind, PathType
 from stores.paths import resolve_dir
+from tem.models import MsiSession
 
 from depositions.models import (
     Dataset,
@@ -92,6 +93,58 @@ def test_cluster_for_dataset_scopes_to_aretomo(dataset, monkeypatch):
     monkeypatch.setattr(submit, "cluster_id_for_run", lambda *a, **k: captured.update(k) or "cluster-a")
     assert submit._cluster_for_dataset(dataset) == "cluster-a"
     assert captured["processor_class"] == "aretomo3"
+
+
+def _add_second_session(dataset):
+    other = MsiSession.objects.create(name="24nov11", session_plan=dataset.sessions.first().msi_session.session_plan)
+    session = DepositionSession.objects.create(dataset=dataset, msi_session=other, aretomo_run_name="run002")
+    TiltseriesMetadata.objects.create(
+        session=session, autofill_metadata={"paths": {"aretomo3": "/b"}, "acquisition": {}}
+    )
+
+
+def _split_by_session(monkeypatch):
+    monkeypatch.setattr(
+        submit,
+        "cluster_id_for_run",
+        lambda session_name, *a, **k: "cluster-a" if session_name == "24nov10" else "cluster-b",
+    )
+
+
+@pytest.mark.django_db
+def test_require_single_cluster_rejects_sessions_across_clusters(dataset, monkeypatch):
+    """A dataset whose sessions resolve to different clusters is blocked, naming both."""
+    _add_second_session(dataset)
+    _split_by_session(monkeypatch)
+    with pytest.raises(SubmissionValidationError, match="span more than one cluster"):
+        submit.require_single_cluster(dataset)
+
+
+@pytest.mark.django_db
+def test_submit_blocks_a_mixed_cluster_dataset_without_launching(dataset, mocks, monkeypatch):
+    """The guard is wired into prep: a mixed-cluster dataset never reaches launch."""
+    _add_second_session(dataset)
+    _split_by_session(monkeypatch)
+    with pytest.raises(SubmissionValidationError, match="span more than one cluster"):
+        submit.submit_dataset_prep(dataset)
+    assert mocks["launched"] is None
+
+
+@pytest.mark.django_db
+def test_preview_config_rejects_a_mixed_cluster_dataset(dataset, mocks, monkeypatch):
+    """A config download rejects mixed clusters too."""
+    _add_second_session(dataset)
+    _split_by_session(monkeypatch)
+    with pytest.raises(SubmissionValidationError, match="span more than one cluster"):
+        submit.preview_config_yaml(dataset)
+
+
+@pytest.mark.django_db
+def test_multiple_sessions_on_one_cluster_still_submit(dataset, mocks):
+    """Several sessions on the same cluster aren't mistaken for a mixed dataset."""
+    _add_second_session(dataset)  # `mocks` resolves every session to cluster-a
+    submit.submit_dataset_prep(dataset)
+    assert mocks["launched"]["cluster"] == "cluster-a"
 
 
 @pytest.mark.django_db
