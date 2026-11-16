@@ -38,6 +38,7 @@ const DATASET = {
   id: 5,
   deposition: 1,
   dataset_id: 100,
+  deposition_id: 1,
   title: 'My dataset',
   description: 'Reviewed description',
   status: 'draft',
