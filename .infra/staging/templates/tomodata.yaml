@@ -150,7 +150,7 @@ spec:
                   number: 80
     - host: maximum-mastiff.staging-biohub.staging.czi.team
       http: *tomodata-http
-{{- with (((.Values.global).gateway).host) }}
+{{- with ((((.Values.stack).global).gateway).host) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
