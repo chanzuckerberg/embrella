@@ -31,6 +31,7 @@ function renderCard(over: Partial<SourceRow> = {}) {
   render(
     <SessionCard
       index={1}
+      datasetId={1}
       row={{ ...row, ...over }}
       sessionOptions={['sess']}
       subsetMode="annotated"
@@ -90,6 +91,7 @@ it('routes a saved-card session switch through confirmation instead of applying 
   render(
     <SessionCard
       index={1}
+      datasetId={1}
       row={{
         ...row,
         id: 10,
@@ -134,6 +136,7 @@ it('leaves a saved card untouched when its session is cleared, keeping run setti
   render(
     <SessionCard
       index={1}
+      datasetId={1}
       row={{ ...row, id: 10, msi_session: 1, msi_session_name: 'sess', aretomo_run_name: 'run1' }}
       sessionOptions={['sess', 'sess-2']}
       subsetMode="annotated"

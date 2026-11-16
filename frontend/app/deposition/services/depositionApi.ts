@@ -186,9 +186,16 @@ export async function getCopickRunObjects(sessionName: string, run: string): Pro
 }
 
 /* Annotated-tomogram count for a session's selected copick configs, from the cached scan.json. */
-export async function getAnnotatedCount(sessionName: string, runs: string[]): Promise<AnnotatedCount> {
+export async function getAnnotatedCount(
+  sessionName: string,
+  runs: string[],
+  datasetId: number
+): Promise<AnnotatedCount> {
   if (runs.length === 0) return { count: 0, scanned: true };
-  const q = `?session_id=${encodeURIComponent(sessionName)}&runs=${encodeURIComponent(runs.join(','))}`;
+  const q =
+    `?session_id=${encodeURIComponent(sessionName)}` +
+    `&runs=${encodeURIComponent(runs.join(','))}` +
+    `&dataset=${datasetId}`;
   const data = await parse<{ annotated_count?: number; scanned?: boolean }>(
     await fetchResource(url(`${API.COPICK_ANNOTATED_COUNT}${q}`))
   );
@@ -205,13 +212,15 @@ export interface CopickAretomoCompat {
 export async function fetchCopickAretomoCompat(
   sessionName: string,
   aretomoRun: string,
-  copickRuns: string[]
+  copickRuns: string[],
+  datasetId: number
 ): Promise<CopickAretomoCompat> {
   const run = aretomoRun.startsWith('run') ? aretomoRun : `run${aretomoRun}`;
   const q =
     `?session_name=${encodeURIComponent(sessionName)}` +
     `&run_number=${encodeURIComponent(run)}` +
-    `&copick_runs=${encodeURIComponent(copickRuns.join(','))}`;
+    `&copick_runs=${encodeURIComponent(copickRuns.join(','))}` +
+    `&dataset=${datasetId}`;
   const data = await parse<Partial<CopickAretomoCompat>>(await fetchResource(url(`${API.COPICK_ARETOMO_COMPAT}${q}`)));
   return {
     compatible: data.compatible ?? true,
@@ -222,10 +231,16 @@ export async function fetchCopickAretomoCompat(
 }
 
 /* Read the cached scan.json for each selected run and merge its picks/segmentations/meshes. */
-export async function scanCopickAnnotations(sessionName: string, runs: string[]): Promise<ScanResult> {
+export async function scanCopickAnnotations(
+  sessionName: string,
+  runs: string[],
+  datasetId: number
+): Promise<ScanResult> {
   const merged: ScanResult = { scanned: true, pending: false, picks: [], segmentations: [], meshes: [] };
   for (const run of runs) {
-    const path = `${API.COPICK_PROJECT_DETAIL}${encodeURIComponent(sessionName)}/${encodeURIComponent(run)}/?scan=true`;
+    const path =
+      `${API.COPICK_PROJECT_DETAIL}${encodeURIComponent(sessionName)}/${encodeURIComponent(run)}/` +
+      `?scan=true&dataset=${datasetId}`;
     const res = await fetchResource(url(path));
     if (!res.ok) {
       merged.scanned = false;
@@ -249,9 +264,15 @@ export async function scanCopickAnnotations(sessionName: string, runs: string[])
   return merged;
 }
 
-export async function rescanCopick(sessionName: string, runs: string[], positions: string[] = []): Promise<void> {
+export async function rescanCopick(
+  sessionName: string,
+  runs: string[],
+  datasetId: number,
+  positions: string[] = []
+): Promise<void> {
   // Empty positions scan the whole project.
-  const body = positions.length ? { positions } : {};
+  const body: { dataset: number; positions?: string[] } = { dataset: datasetId };
+  if (positions.length) body.positions = positions;
   const results = await Promise.allSettled(
     runs.map(async (run) => {
       const res = await postResource(

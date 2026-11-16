@@ -134,14 +134,18 @@ def get_copick_aretomo_compat(request):
         return _error("Required files not found", HTTP_NOT_FOUND)
 
     # Lazy import: the copick scan helpers live in the copick processor module.
-    from workflow.processors.copick.views import _copick_root_url, _read_scan_json
+    from workflow.processors.copick.views import _copick_root_url, _parse_dataset_id, _read_scan_json
+
+    dataset_id = _parse_dataset_id(request.GET.get("dataset"))
+    if dataset_id is None:
+        return _error("a numeric dataset is required", HTTP_BAD_REQUEST)
 
     copick_runs = [r.strip() for r in request.GET.get("copick_runs", "").split(",") if r.strip()]
     annotated: set[str] = set()
     scanned = True
     for run in copick_runs:
         try:
-            result = _read_scan_json(_copick_root_url(loc.msi_session, run))
+            result = _read_scan_json(_copick_root_url(loc.msi_session, run), dataset_id)
         except Exception as exc:  # a bad run degrades to "not scanned", never a 500
             logger.warning("copick-compat: resolve failed for %s/%s: %s", loc.msi_session.name, run, exc)
             result = {"scanned": False}
