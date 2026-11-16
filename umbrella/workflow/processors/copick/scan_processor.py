@@ -54,9 +54,11 @@ class CopickScanProcessor(CopickProcessor):
 
         # Empty positions scan the whole project.
         scan_positions = [name for name in (params.get("scan_positions") or []) if name]
+        # Per-dataset output so datasets sharing a (session, run) don't overwrite each other (#1441).
+        dataset_id = params.get("dataset_id")
         script = template.render(
             configPath=f"{copick_dir}/config.json",
-            scanOutPath=f"{copick_dir}/scan.json",
+            scanOutPath=f"{copick_dir}/scan-{dataset_id}.json",
             copickEnv=resolve_dir("dataportal_env", cluster=run_context.cluster_id),
             session=run_context.msi_session.name,
             run=run_context.run_number,

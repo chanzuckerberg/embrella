@@ -170,6 +170,7 @@ export function SourcesStep({ dataset, reportSave, readOnly }: StepProps) {
       ) : (
         <SourcesTable
           rows={rows}
+          datasetId={dataset.id}
           sessionOptions={sessions.data ?? []}
           subsetMode={subsetMode}
           readOnly={readOnly || isDeletingSession}

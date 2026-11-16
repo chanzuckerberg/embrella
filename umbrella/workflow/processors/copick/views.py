@@ -71,10 +71,24 @@ def _copick_config_description(session, run_name: str) -> str:
         return ""
 
 
-def _read_scan_json(root_url: str) -> dict:
-    """Read the aggregated scan.json."""
+def _scan_filename(dataset_id: int) -> str:
+    """Per-dataset scan filename so datasets sharing a (session, run) don't overwrite each other (#1441)."""
+    return f"scan-{dataset_id}.json"
+
+
+def _parse_dataset_id(raw) -> int | None:
+    """Coerce a request's dataset id to int; it lands in cluster paths and the sbatch script, so a
+    non-int (e.g. '../x' or '1; cmd') must be rejected, not interpolated. None on invalid input."""
     try:
-        return {**_empty_scan(), **json.loads(fetch_remote_text(root_url + "scan.json"))}
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _read_scan_json(root_url: str, dataset_id) -> dict:
+    """Read a dataset's aggregated scan.json."""
+    try:
+        return {**_empty_scan(), **json.loads(fetch_remote_text(root_url + _scan_filename(dataset_id)))}
     except FileNotFoundError:
         return _empty_scan()
     except Exception as exc:
@@ -720,9 +734,12 @@ def get_copick_runs(request) -> JsonResponse:
 def get_copick_annotated_count(request) -> JsonResponse:
     """Annotated-tomogram count for a session"""
     session_id = request.GET.get("session_id")
+    dataset_id = _parse_dataset_id(request.GET.get("dataset"))
     runs = [r.strip() for r in request.GET.get("runs", "").split(",") if r.strip()]
     if not session_id:
         return JsonResponse({"success": False, "error": "session_id is required", "annotated_count": 0})
+    if dataset_id is None:
+        return JsonResponse({"success": False, "error": "a numeric dataset is required", "annotated_count": 0})
     if not runs:
         return JsonResponse({"success": True, "annotated_count": 0, "annotated_runs": [], "scanned": True})
 
@@ -735,7 +752,7 @@ def get_copick_annotated_count(request) -> JsonResponse:
     scanned = True
     for run in runs:
         try:
-            result = _read_scan_json(_copick_root_url(session, run))
+            result = _read_scan_json(_copick_root_url(session, run), dataset_id)
         except Exception as exc:
             logger.warning("copick annotated-count: resolve failed for %s/%s: %s", session_id, run, exc)
             result = {"scanned": False}
@@ -950,31 +967,34 @@ def get_copick_project_detail(request, session_name: str, run_name: str) -> Json
         project = {"session_name": session_name, "run_name": run_name, "root_url": root_url}
 
     if request.GET.get("scan", "").lower() in ("1", "true", "yes"):
-        project["annotations"] = _read_scan_json(project["root_url"])
+        dataset_id = _parse_dataset_id(request.GET.get("dataset"))
+        if dataset_id is None:
+            return JsonResponse({"success": False, "error": "a numeric dataset is required for scan"}, status=400)
+        project["annotations"] = _read_scan_json(project["root_url"], dataset_id)
 
     return JsonResponse({"success": True, "project": project})
 
 
-def _write_scan_marker(cluster_id: str, session_name: str, run_name: str, marker: dict) -> None:
-    """Write a small scan.json marker (pending / error) beside config.json."""
+def _write_scan_marker(cluster_id: str, session_name: str, run_name: str, dataset_id, marker: dict) -> None:
+    """Write a small per-dataset scan marker (pending / error) beside config.json."""
     from workflow.processors import get_processor
 
     base = get_processor("copick").get_processing_base_path(cluster=cluster_id).rstrip("/")
-    scan_path = f"{base}/{session_name}/{run_name}/scan.json"
+    scan_path = f"{base}/{session_name}/{run_name}/{_scan_filename(dataset_id)}"
     try:
         clusterio.write_remote_file(cluster_id, scan_path, json.dumps({**_empty_scan(), **marker}))
     except Exception as exc:  # noqa: BLE001 - non-fatal; the job overwrites scan.json on success
         logger.warning("copick scan.json marker write skipped for %s/%s: %s", session_name, run_name, exc)
 
 
-def _invalidate_scan_json(cluster_id: str, session_name: str, run_name: str) -> None:
-    """Mark the previous scan.json pending BEFORE submitting a new job."""
-    _write_scan_marker(cluster_id, session_name, run_name, {"pending": True})
+def _invalidate_scan_json(cluster_id: str, session_name: str, run_name: str, dataset_id) -> None:
+    """Mark the previous scan pending BEFORE submitting a new job."""
+    _write_scan_marker(cluster_id, session_name, run_name, dataset_id, {"pending": True})
 
 
-def _mark_scan_failed(cluster_id: str, session_name: str, run_name: str, message: str) -> None:
+def _mark_scan_failed(cluster_id: str, session_name: str, run_name: str, dataset_id, message: str) -> None:
     """Submit failed before SLURM ran, so no job will overwrite the pending marker."""
-    _write_scan_marker(cluster_id, session_name, run_name, {"error": message})
+    _write_scan_marker(cluster_id, session_name, run_name, dataset_id, {"error": message})
 
 
 @extend_schema(
@@ -1011,6 +1031,10 @@ def trigger_copick_scan(request, session_name: str, run_name: str) -> JsonRespon
     if not isinstance(request.data, dict):
         return JsonResponse({"success": False, "error": "Expected a JSON object."}, status=400)
 
+    dataset_id = _parse_dataset_id(request.data.get("dataset"))
+    if dataset_id is None:
+        return JsonResponse({"success": False, "error": "a numeric dataset is required"}, status=400)
+
     # Empty positions scan the whole project.
     raw_positions = request.data.get("positions")
     scan_positions = [str(name) for name in raw_positions if name] if isinstance(raw_positions, list) else []
@@ -1029,7 +1053,7 @@ def trigger_copick_scan(request, session_name: str, run_name: str) -> JsonRespon
         cluster_id = cluster_id_for_run(session_name, run_name, default=_copick_default_cluster_id())
 
         # Mark the old result pending BEFORE submit so polling can tell a running job from the last one.
-        _invalidate_scan_json(cluster_id, session_name, run_name)
+        _invalidate_scan_json(cluster_id, session_name, run_name, dataset_id)
 
         # filter().first()-or-create (not get_or_create) avoids MultipleObjectsReturned on dup ProcRuns.
         proc_run = (
@@ -1047,19 +1071,19 @@ def trigger_copick_scan(request, session_name: str, run_name: str) -> JsonRespon
             pipe_in_plan=pipe_in_plan,
             proc_run=proc_run,
             user=request.user,
-            parameters={"scan_positions": scan_positions},
+            parameters={"scan_positions": scan_positions, "dataset_id": str(dataset_id)},
             auth=clusterio.get_auth_service_user(),
             cluster_id=cluster_id,
         )
     except clusterio.SSHDisabledError:
         if cluster_id:
-            _mark_scan_failed(cluster_id, session_name, run_name, "Cluster access is unavailable.")
+            _mark_scan_failed(cluster_id, session_name, run_name, dataset_id, "Cluster access is unavailable.")
         return JsonResponse({"success": False, "error": "Cluster access is unavailable."}, status=503)
     except Exception:
         # Log the detail server-side; return a generic message to the client
         logger.exception("copick scan submit failed for %s/%s", session_name, run_name)
         if cluster_id:
-            _mark_scan_failed(cluster_id, session_name, run_name, "Submitting the copick scan failed.")
+            _mark_scan_failed(cluster_id, session_name, run_name, dataset_id, "Submitting the copick scan failed.")
         return JsonResponse({"success": False, "error": "Submitting the copick scan failed."}, status=502)
 
     return JsonResponse(
