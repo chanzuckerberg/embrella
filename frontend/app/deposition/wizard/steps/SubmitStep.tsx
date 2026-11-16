@@ -364,7 +364,9 @@ function WarningsList({ warnings, blocking }: { warnings: ValidationWarning[]; b
 }
 
 export function SubmitStep({ dataset, readOnly }: StepProps) {
-  const { submit, push, cancel: cancelUpload } = useSubmitFlow(dataset.id, dataset.deposition);
+  const { submit, push, cancel: cancelUpload, reserveIds } = useSubmitFlow(dataset.id, dataset.deposition);
+  // A failed reservation leaves a draft with no ID; it can't be submitted until one is reserved.
+  const missingIds = dataset.dataset_id == null || dataset.deposition_id == null;
   const [cancelJobId, setCancelJobId] = useState<string | null>(null);
   const [selection, setSelection] = useState<{ datasetId: number; phase: 1 | 2 | 3 } | null>(null);
 
@@ -695,7 +697,27 @@ export function SubmitStep({ dataset, readOnly }: StepProps) {
             </Box>
           )}
 
-          {!readOnly && sync === 'idle' && !submit.isError && (
+          {!readOnly && missingIds && (
+            <Box sx={DETAIL_CARD_SX}>
+              <Alert severity="warning" sx={{ mb: '16px' }}>
+                This draft has no reserved ID yet, so it can&apos;t be submitted. Reserve one to continue.
+              </Alert>
+              <Button
+                sdsType="primary"
+                sdsStyle="solid"
+                disabled={reserveIds.isPending}
+                onClick={() => reserveIds.mutate()}
+              >
+                {reserveIds.isPending ? 'Reserving…' : 'Reserve ID'}
+              </Button>
+              {reserveIds.isError && (
+                <Alert severity="error" sx={{ mt: '16px' }}>
+                  {(reserveIds.error as Error).message}
+                </Alert>
+              )}
+            </Box>
+          )}
+          {!readOnly && !missingIds && sync === 'idle' && !submit.isError && (
             <Box>
               <Button sdsType="primary" sdsStyle="solid" disabled={submit.isPending} onClick={runSync}>
                 {submit.isPending ? 'Starting…' : 'Start preparation'}
