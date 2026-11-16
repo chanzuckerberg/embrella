@@ -429,6 +429,71 @@ class TestDatasetSessionGuard:
         assert r.status_code == 409
         assert DepositionSession.objects.filter(pk=owned_session.pk).exists()
 
+    def _autofill(self, session):
+        """Mark `session` auto-filled the way the auto-fill action does."""
+        from django.utils import timezone
+
+        from depositions.models import TiltseriesMetadata
+
+        session.aretomo_run_name = "run1"
+        session.last_autofill_at = timezone.now()
+        session.last_autofill_duration_seconds = 12
+        session.save()
+        TiltseriesMetadata.objects.create(session=session, acceleration_voltage=300, autofill_metadata={"raw": 1})
+
+    def test_changing_aretomo_run_resets_autofill(self, auth_client, owned_session):
+        """A new AreTomo run makes the autofill stale; its markers clear so submit re-requires it (#1267)."""
+        from depositions.services.dataprep_config import dataset_is_ready
+
+        self._autofill(owned_session)
+        r = auth_client.patch(
+            f"{DATASETS}{owned_session.dataset_id}/",
+            {"sessions": [{"msi_session": owned_session.msi_session_id, "aretomo_run_name": "run2"}]},
+            format="json",
+        )
+        assert r.status_code == 200, r.content
+        owned_session.refresh_from_db()
+        assert owned_session.aretomo_run_name == "run2"
+        assert owned_session.last_autofill_at is None
+        assert owned_session.tiltseries_metadata.autofill_metadata == {}
+        # The actual goal: the dataset is no longer submittable until auto-fill re-runs.
+        assert dataset_is_ready(owned_session.dataset) is False
+
+    def test_changing_aretomo_run_via_session_patch_resets_autofill(self, auth_client, owned_session):
+        """The /sessions/<id>/ write path resets autofill too, not just the dataset save (#1267)."""
+        self._autofill(owned_session)
+        r = auth_client.patch(f"{SESSIONS}{owned_session.id}/", {"aretomo_run_name": "run2"}, format="json")
+        assert r.status_code == 200, r.content
+        owned_session.refresh_from_db()
+        assert owned_session.last_autofill_at is None
+        assert owned_session.tiltseries_metadata.autofill_metadata == {}
+
+    def test_resaving_same_aretomo_run_keeps_autofill(self, auth_client, owned_session):
+        """Saving the session without changing the run must NOT wipe a valid autofill (#1267)."""
+        self._autofill(owned_session)
+        r = auth_client.patch(
+            f"{DATASETS}{owned_session.dataset_id}/",
+            {"sessions": [{"msi_session": owned_session.msi_session_id, "aretomo_run_name": "run1"}]},
+            format="json",
+        )
+        assert r.status_code == 200, r.content
+        owned_session.refresh_from_db()
+        assert owned_session.last_autofill_at is not None
+        assert owned_session.tiltseries_metadata.autofill_metadata == {"raw": 1}
+
+    def test_client_cannot_write_autofill_metadata(self, auth_client, owned_session):
+        """autofill_metadata is read-only: a stale client autosave must not re-populate it (#1267)."""
+        self._autofill(owned_session)
+        owned_session.clear_autofill()
+        r = auth_client.patch(
+            f"{SESSIONS}{owned_session.id}/",
+            {"tiltseries_metadata": {"autofill_metadata": {"stale": 1}}},
+            format="json",
+        )
+        assert r.status_code == 200, r.content
+        owned_session.refresh_from_db()
+        assert owned_session.tiltseries_metadata.autofill_metadata == {}
+
 
 @pytest.fixture
 def owned_session(user):

@@ -151,6 +151,17 @@ it('drops the gate and shows re-run once the session is auto-filled', () => {
   expect(screen.getByRole('button', { name: /re-run auto-fill/i })).toBeInTheDocument();
 });
 
+it('warns when values are present but not auto-filled for the current run (#1267)', () => {
+  // AreTomo run changed: lastAutofillAt cleared server-side, saved values linger.
+  renderCard({ session: makeSession({ tiltseries: { pixel_spacing: 1.5 } }) });
+  expect(screen.getByText(/refresh them\s+before submitting/i)).toBeInTheDocument();
+});
+
+it('drops the stale-values warning once the session is auto-filled', () => {
+  renderCard({ session: makeSession({ tiltseries: { pixel_spacing: 1.5 }, lastAutofillAt: '2026-09-24T10:00:00Z' }) });
+  expect(screen.queryByText(/refresh them\s+before submitting/i)).not.toBeInTheDocument();
+});
+
 it('on failure offers both a retry and a manual escape', () => {
   renderCard({ autoFillError: 'No .mdoc found' });
   expect(screen.getByText(/no \.mdoc found/i)).toBeInTheDocument();
