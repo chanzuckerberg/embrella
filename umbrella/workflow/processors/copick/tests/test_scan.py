@@ -241,6 +241,19 @@ class TestCopickScanWiring:
         assert "#SBATCH --mem-per-cpu=8G" in script
         assert "#SBATCH --time=00:30:00" in script
 
+    @pytest.mark.parametrize("bad", [None, "", "../x", "1; rm -rf /", "-1", "0", True, 7.9])
+    def test_rejects_missing_or_malformed_dataset_id(self, db, bad):
+        """The generic execution API skips the endpoint's check, so the processor must reject bad ids."""
+        from workflow.processors import get_processor as real_get_processor
+
+        proc = real_get_processor("copick-scan")
+        params = {} if bad is None else {"dataset_id": bad}
+        assert proc.validate_parameters(params)
+        run_context = mock.Mock(run_number="run003", cluster_id=None)
+        run_context.msi_session.name = "25oct20a"
+        with pytest.raises(ValueError):
+            proc.render_script(params, run_context)
+
     def test_scan_positions_param_scopes_the_enumeration(self, db):
         """A subset renders a Python list literal the scan filters `root.runs` on; empty = whole project."""
         from workflow.processors import get_processor as real_get_processor
@@ -253,8 +266,10 @@ class TestCopickScanWiring:
             mock.patch("workflow.processors.copick.scan_processor.get_processor") as gp,
         ):
             gp.return_value.get_processing_base_path.return_value = "/hpc/copick"
-            scoped = proc.render_script({"scan_positions": ["Position_1", "Position_2"]}, run_context)
-            unscoped = proc.render_script({}, run_context)
+            scoped = proc.render_script(
+                {"scan_positions": ["Position_1", "Position_2"], "dataset_id": "7"}, run_context
+            )
+            unscoped = proc.render_script({"dataset_id": "7"}, run_context)
         assert '_wanted = ["Position_1", "Position_2"]' in scoped
         assert "_wanted = []" in unscoped
         # Unmatched selections are surfaced instead of silently producing an empty scan.
@@ -280,9 +295,9 @@ class TestTriggerCopickScan:
         response = api.post(SCAN_URL.format(session="26feb20b", run="run001"), [], format="json")
         assert response.status_code == 400
 
-    @pytest.mark.parametrize("body", [{}, {"dataset": "../x"}, {"dataset": "1; rm -rf /"}])
+    @pytest.mark.parametrize("body", [{}, {"dataset": "../x"}, {"dataset": "1; rm -rf /"}, {"dataset": -1}])
     def test_rejects_missing_or_non_numeric_dataset(self, api, copick_session, body):
-        # dataset lands in cluster paths + the sbatch script, so a non-int must 400, not interpolate (#1441).
+        # dataset lands in cluster paths + the sbatch script; a non-positive-int must 400, not interpolate.
         r = api.post(SCAN_URL.format(session="26feb20b", run="run001"), body, format="json")
         assert r.status_code == 400
 

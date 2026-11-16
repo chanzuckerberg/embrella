@@ -30,6 +30,7 @@ from common.httpio import fetch_remote_text
 
 from .constants import ImportTomoType
 from .processor import CopickProcessor
+from .scan_processor import _validate_dataset_id
 
 logger = logging.getLogger(__name__)
 
@@ -77,11 +78,10 @@ def _scan_filename(dataset_id: int) -> str:
 
 
 def _parse_dataset_id(raw) -> int | None:
-    """Coerce a request's dataset id to int; it lands in cluster paths and the sbatch script, so a
-    non-int (e.g. '../x' or '1; cmd') must be rejected, not interpolated. None on invalid input."""
+    """Positive int or None - shares one rule with the scan processor so the 400s and the job agree."""
     try:
-        return int(raw)
-    except (TypeError, ValueError):
+        return _validate_dataset_id(raw)
+    except ValueError:
         return None
 
 

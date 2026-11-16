@@ -16,6 +16,19 @@ from .processor import CopickProcessor
 logger = logging.getLogger(__name__)
 
 
+def _validate_dataset_id(raw) -> int:
+    """Positive int only: the value lands in a cluster path and the sbatch script."""
+    if isinstance(raw, (bool, float)):  # int() would coerce True and 7.9
+        raise ValueError(f"dataset_id must be a positive integer, got {raw!r}.")
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        value = 0
+    if value <= 0:
+        raise ValueError(f"dataset_id must be a positive integer, got {raw!r}.")
+    return value
+
+
 class CopickScanProcessor(CopickProcessor):
     """Enumerate a copick project's annotations and write an aggregated scan.json."""
 
@@ -38,6 +51,10 @@ class CopickScanProcessor(CopickProcessor):
         }
 
     def validate_parameters(self, params: Dict[str, Any]) -> List[str]:
+        try:
+            _validate_dataset_id(params.get("dataset_id"))
+        except ValueError as e:
+            return [str(e)]
         return []
 
     def _copick_dir(self, run_context: RunContext) -> str:
@@ -45,6 +62,7 @@ class CopickScanProcessor(CopickProcessor):
         return f"{base}/{run_context.msi_session.name}/{run_context.run_number}"
 
     def render_script(self, params: Dict[str, Any], run_context: RunContext) -> str:
+        dataset_id = _validate_dataset_id(params.get("dataset_id"))
         copick_dir = self._copick_dir(run_context)
         context = self.get_template_context(params, run_context)
 
@@ -54,8 +72,6 @@ class CopickScanProcessor(CopickProcessor):
 
         # Empty positions scan the whole project.
         scan_positions = [name for name in (params.get("scan_positions") or []) if name]
-        # Per-dataset output so datasets sharing a (session, run) don't overwrite each other (#1441).
-        dataset_id = params.get("dataset_id")
         script = template.render(
             configPath=f"{copick_dir}/config.json",
             scanOutPath=f"{copick_dir}/scan-{dataset_id}.json",
