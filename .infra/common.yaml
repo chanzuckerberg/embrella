@@ -38,6 +38,27 @@ stack:
         periodSeconds: 15
         failureThreshold: 5
       ingress:
+        enabled: true
+        paths:
+          - { path: /static, pathType: Prefix }
+          - { path: /admin, pathType: Prefix }
+          - { path: /accounts, pathType: Prefix }
+          - { path: /api, pathType: Prefix }
+          - { path: /user, pathType: Prefix }
+          - { path: /ping, pathType: Prefix }
+          - { path: /docs, pathType: Prefix }
+          - { path: /workflow, pathType: Prefix }
+          - { path: /cryo_grids, pathType: Prefix }
+          - { path: /processes, pathType: Prefix }
+          - { path: /projects, pathType: Prefix }
+          - { path: /people, pathType: Prefix }
+          - { path: /depositions, pathType: Prefix }
+          - { path: /copick, pathType: Prefix }
+          - { path: /tem, pathType: Prefix }
+          - { path: /get_grids_by_user, pathType: Prefix }
+          - { path: /annotations, pathType: Prefix }
+      gateway:
+        enabled: true
         paths:
           - { path: /static, pathType: Prefix }
           - { path: /admin, pathType: Prefix }
@@ -70,6 +91,12 @@ stack:
           cpu: 250m
           memory: 256Mi
       ingress:
+        enabled: true
+        paths:
+          - path: /
+            pathType: Prefix
+      gateway:
+        enabled: true
         paths:
           - path: /
             pathType: Prefix
