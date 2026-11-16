@@ -1,6 +1,8 @@
 ###### Generated using `argus bootstrap`, then hand-edited ######
 stack:
   global:
+    ingress:
+      enabled: false
     replicaCount: 1
     autoscaling:
       enabled: false
@@ -37,25 +39,11 @@ stack:
         timeoutSeconds: 5
         periodSeconds: 15
         failureThreshold: 5
-      ingress:
+      gateway:
+        enabled: true
         paths:
-          - { path: /static, pathType: Prefix }
-          - { path: /admin, pathType: Prefix }
-          - { path: /accounts, pathType: Prefix }
-          - { path: /api, pathType: Prefix }
-          - { path: /user, pathType: Prefix }
-          - { path: /ping, pathType: Prefix }
-          - { path: /docs, pathType: Prefix }
-          - { path: /workflow, pathType: Prefix }
-          - { path: /cryo_grids, pathType: Prefix }
-          - { path: /processes, pathType: Prefix }
-          - { path: /projects, pathType: Prefix }
-          - { path: /people, pathType: Prefix }
-          - { path: /depositions, pathType: Prefix }
-          - { path: /copick, pathType: Prefix }
-          - { path: /tem, pathType: Prefix }
-          - { path: /get_grids_by_user, pathType: Prefix }
-          - { path: /annotations, pathType: Prefix }
+          - path: '/(static|admin|accounts|api|user|ping|docs|workflow|cryo_grids|processes|projects|people|depositions|copick|tem|get_grids_by_user|annotations)(/.*)?'
+            pathType: RegularExpression
 
     frontend:
       image:
@@ -69,7 +57,8 @@ stack:
         requests:
           cpu: 250m
           memory: 256Mi
-      ingress:
+      gateway:
+        enabled: true
         paths:
           - path: /
             pathType: Prefix
@@ -82,8 +71,6 @@ stack:
         repository: 533267185808.dkr.ecr.us-west-2.amazonaws.com/core-platform/embrella/backend
       command: ["python", "umbrella/manage.py", "qcluster"]
       service:
-        enabled: false
-      ingress:
         enabled: false
       resources:
         limits:
