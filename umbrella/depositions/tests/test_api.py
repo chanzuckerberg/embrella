@@ -959,6 +959,37 @@ class TestDatasetLoadsSessionMetadata:
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("target", ["sample", "assay", "annotation"])
+def test_invalid_ontology_ids_reject_the_entire_save(auth_client, owned_session, target):
+    dataset = owned_session.dataset
+    if target == "annotation":
+        url = f"{SESSIONS}{owned_session.id}/"
+        payload = {
+            "denoise_run_name": "run999",
+            "annotations": [
+                {"copick_kind": "picks", "copick_ref": "valid", "object_id": "GO:0005840"},
+                {"copick_kind": "picks", "copick_ref": "invalid", "object_id": "GO:1"},
+            ],
+        }
+        error_field = "annotations"
+    else:
+        url = f"{DATASETS}{dataset.id}/"
+        field = {"sample": {"sample": {"tissue_id": "UBERON:1"}}, "assay": {"assay_ontology_id": "EFO:1"}}
+        payload = {"title": "Must not save", **field[target]}
+        error_field = "sample" if target == "sample" else "assay_ontology_id"
+    response = auth_client.patch(url, payload, format="json")
+    assert response.status_code == 400, response.content
+    assert error_field in response.json()
+    original_denoise = owned_session.denoise_run_name
+    owned_session.refresh_from_db()
+    dataset.refresh_from_db()
+    assert owned_session.denoise_run_name == original_denoise
+    assert not owned_session.annotations.exists()
+    assert dataset.title != "Must not save"
+    assert dataset.sample_id is None
+
+
+@pytest.mark.django_db
 class TestAnnotationPersistence:
     """PATCH /sessions/<id>/ upserts annotations by (copick_kind, copick_ref) with full-replace."""
 
@@ -1095,13 +1126,13 @@ class TestAnnotationPersistence:
         self._patch(
             auth_client,
             owned_session,
-            [self._ann("a", object_id="GO:1", method_links=[{"link_type": "website", "link": "https://a.org"}])],
+            [self._ann("a", object_id="GO:0005840", method_links=[{"link_type": "website", "link": "https://a.org"}])],
         )
         r = auth_client.get(f"{DATASETS}{owned_session.dataset_id}/")
         assert r.status_code == 200, r.content
         session = r.json()["sessions"][0]
         assert [a["copick_ref"] for a in session["annotations"]] == ["a"]
-        assert session["annotations"][0]["object_id"] == "GO:1"
+        assert session["annotations"][0]["object_id"] == "GO:0005840"
         assert session["annotations"][0]["method_links"][0]["link"] == "https://a.org"
 
     def test_dataset_payload_annotations_do_not_n_plus_1(self, auth_client, owned_session):

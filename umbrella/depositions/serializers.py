@@ -28,6 +28,7 @@ from .services.dataset_metadata import build_dataset_metadata
 from .services.exceptions import SubmissionValidationError
 from .services.metadata_requirements import dataset_metadata_issues
 from .services.progress import serialize_progress, serialize_summary
+from .validators import ANNOTATION_OBJECT_VALIDATOR, ASSAY_ONTOLOGY_VALIDATOR, SAMPLE_ONTOLOGY_VALIDATORS
 
 
 def validate_authors_json(value):
@@ -112,6 +113,7 @@ class DepositionAnnotationSerializer(serializers.ModelSerializer):
         model = DepositionAnnotation
         exclude = ["session"]
         read_only_fields = ["created_at", "updated_at"]
+        extra_kwargs = {"object_id": {"validators": [ANNOTATION_OBJECT_VALIDATOR]}}
 
 
 class DatasetJobSerializer(serializers.ModelSerializer):
@@ -291,6 +293,8 @@ class DatasetSampleSerializer(serializers.ModelSerializer):
             "disease_name",
             "disease_ontology_id",
         ]
+        extra_kwargs = {field: {"validators": [validator]} for field, validator in SAMPLE_ONTOLOGY_VALIDATORS.items()}
+        extra_kwargs["organism_taxid"] = {"min_value": 1}
 
 
 class DatasetSerializer(serializers.ModelSerializer):
@@ -308,6 +312,7 @@ class DatasetSerializer(serializers.ModelSerializer):
         fields = "__all__"
         # dataset_id reserved; status/dates set by syncer/system.
         read_only_fields = ["dataset_id", "status", "created_at", "updated_at"]
+        extra_kwargs = {"assay_ontology_id": {"validators": [ASSAY_ONTOLOGY_VALIDATOR]}}
 
     def get_metadata_issues(self, obj):
         try:
