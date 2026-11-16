@@ -5,6 +5,7 @@ import logging
 import os
 import time
 
+from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema, extend_schema_view
@@ -42,6 +43,26 @@ logger = logging.getLogger(__name__)
 
 # Wizard autosaves via PATCH only — no PUT full-replace.
 HTTP_METHODS_NO_PUT = ["get", "post", "patch", "delete", "head", "options"]
+
+
+def _reserve_id(reserve_fn, label):
+    """Reserve an ID, or log and return None so a transient outage leaves a re-reservable draft."""
+    try:
+        return reserve_fn()
+    except Exception:
+        logger.exception("Failed to reserve %s id; saving draft without one", label)
+        return None
+
+
+def _claim_id(model, pk, id_field, reserve_fn):
+    """Lock the row and recheck before reserving, so concurrent retries can't both allocate and an
+    id already committed survives a later failure. An already-filled id is left untouched."""
+    with transaction.atomic():
+        obj = model.objects.select_for_update().get(pk=pk)
+        if getattr(obj, id_field) is not None:
+            return
+        setattr(obj, id_field, reserve_fn())
+        obj.save(update_fields=[id_field])
 
 
 class MetadataLockedMixin:
@@ -108,12 +129,28 @@ class DepositionViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        deposition_id = None
-        try:
-            deposition_id = get_reservation_service().reserve_new_deposition()
-        except Exception:
-            logger.exception("Failed to reserve deposition id; saving draft without one")
+        deposition_id = _reserve_id(get_reservation_service().reserve_new_deposition, "deposition")
         serializer.save(submitter_user=self.request.user, deposition_id=deposition_id)
+
+    @action(detail=False, methods=["post"])
+    def start(self, request):
+        """Create a deposition and its first dataset together, so a failed dataset can't orphan the deposition."""
+        service = get_reservation_service()  # fail loud on misconfig before creating anything
+        with transaction.atomic():
+            deposition = Deposition.objects.create(submitter_user=request.user)
+            dataset = Dataset.objects.create(deposition=deposition)
+        # Reserve after the rows exist, so a rolled-back create never consumes an id. A reservation
+        # outage just leaves a recoverable draft the user can Reserve ID on.
+        try:
+            _claim_id(Deposition, deposition.pk, "deposition_id", service.reserve_new_deposition)
+            _claim_id(Dataset, dataset.pk, "dataset_id", service.reserve_new_dataset)
+        except Exception:
+            logger.exception(
+                "Reservation failed while starting draft %s; it can be recovered via Reserve ID", dataset.pk
+            )
+        dataset = Dataset.objects.select_related("deposition").get(pk=dataset.pk)
+        serializer = DatasetSerializer(dataset, context=self.get_serializer_context())
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def list(self, request, *args, **kwargs):
         # Lean list rows; prefetch sessions/annotations to avoid N+1.
@@ -199,12 +236,26 @@ class DatasetViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Any authenticated user may add datasets to any deposition.
-        dataset_id = None
-        try:
-            dataset_id = get_reservation_service().reserve_new_dataset()
-        except Exception:
-            logger.exception("Failed to reserve dataset id; saving without one")
+        dataset_id = _reserve_id(get_reservation_service().reserve_new_dataset, "dataset")
         serializer.save(dataset_id=dataset_id)
+
+    @action(detail=True, methods=["post"], url_path="reserve-ids")
+    def reserve_ids(self, request, pk=None):
+        """Backfill IDs a failed reservation left blank, so a stranded draft can be submitted."""
+        dataset = self.get_object()
+        service = get_reservation_service()
+        try:
+            # Claim each missing id under a row lock; a concurrent retry can't double-allocate.
+            _claim_id(Deposition, dataset.deposition_id, "deposition_id", service.reserve_new_deposition)
+            _claim_id(Dataset, dataset.pk, "dataset_id", service.reserve_new_dataset)
+        except Exception:
+            logger.exception("Re-reservation failed for dataset %s", pk)
+            return Response(
+                {"detail": "Couldn't reach the reservation service. Please try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        serializer = self.get_serializer(self.get_queryset().get(pk=dataset.pk))
+        return Response(serializer.data)
 
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):

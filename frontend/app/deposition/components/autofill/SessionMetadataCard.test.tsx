@@ -124,13 +124,6 @@ it('runs auto-fill straight from the gate button', async () => {
   expect(onAutoFill).toHaveBeenCalledTimes(1);
 });
 
-it('does not gate a session that already has saved edits, e.g. after a reload', () => {
-  // pixel_spacing has no default, so a value means real saved edits, not just applied defaults.
-  renderCard({ session: makeSession({ tiltseries: { pixel_spacing: 1.5 } }) });
-  expect(screen.queryByText(/start with auto-fill/i)).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /^auto-fill$/i })).toBeInTheDocument();
-});
-
 it('confirms before auto-fill overwrites saved edits (from the header, gate is already down)', async () => {
   const onAutoFill = jest.fn();
   renderCard({ session: makeSession({ tiltseries: { pixel_spacing: 1.5 } }), onAutoFill });
@@ -156,6 +149,17 @@ it('drops the gate and shows re-run once the session is auto-filled', () => {
   renderCard({ session: makeSession({ lastAutofillAt: '2026-09-24T10:00:00Z' }) });
   expect(screen.queryByText(/start with auto-fill/i)).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: /re-run auto-fill/i })).toBeInTheDocument();
+});
+
+it('warns when values are present but not auto-filled for the current run (#1267)', () => {
+  // AreTomo run changed: lastAutofillAt cleared server-side, saved values linger.
+  renderCard({ session: makeSession({ tiltseries: { pixel_spacing: 1.5 } }) });
+  expect(screen.getByText(/refresh them\s+before submitting/i)).toBeInTheDocument();
+});
+
+it('drops the stale-values warning once the session is auto-filled', () => {
+  renderCard({ session: makeSession({ tiltseries: { pixel_spacing: 1.5 }, lastAutofillAt: '2026-09-24T10:00:00Z' }) });
+  expect(screen.queryByText(/refresh them\s+before submitting/i)).not.toBeInTheDocument();
 });
 
 it('on failure offers both a retry and a manual escape', () => {

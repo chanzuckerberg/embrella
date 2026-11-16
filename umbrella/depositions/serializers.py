@@ -9,6 +9,7 @@ Save model — shallow-nested autosave per wizard step:
 """
 
 from cryo_grids.models import Sample
+from django.db import transaction
 from django.db.models import prefetch_related_objects
 from rest_framework import serializers
 
@@ -95,14 +96,16 @@ class TiltseriesMetadataSerializer(serializers.ModelSerializer):
     class Meta:
         model = TiltseriesMetadata
         exclude = ["session"]
-        read_only_fields = ["created_at", "updated_at"]
+        # autofill_metadata is produced only by the auto-fill action; keep clients from writing a
+        # stale value back and silently re-marking the session auto-filled (#1267).
+        read_only_fields = ["created_at", "updated_at", "autofill_metadata"]
 
 
 class TomogramMetadataSerializer(serializers.ModelSerializer):
     class Meta:
         model = TomogramMetadata
         exclude = ["session"]
-        read_only_fields = ["created_at", "updated_at"]
+        read_only_fields = ["created_at", "updated_at", "autofill_metadata"]
 
 
 class DepositionAnnotationSerializer(serializers.ModelSerializer):
@@ -210,15 +213,23 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
         ts = validated_data.pop("tiltseries_metadata", None)
         tomo = validated_data.pop("tomogram_metadata", None)
         annotations = validated_data.pop("annotations", None)
+        prior_run = instance.aretomo_run_name
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+        with transaction.atomic():
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
 
-        if ts is not None:
-            TiltseriesMetadata.objects.update_or_create(session=instance, defaults={**ts, **TILTSERIES_PIPELINE_VALUES})
-        if tomo is not None:
-            self._sync_tomograms(instance, tomo)
+            if ts is not None:
+                TiltseriesMetadata.objects.update_or_create(
+                    session=instance, defaults={**ts, **TILTSERIES_PIPELINE_VALUES}
+                )
+            if tomo is not None:
+                self._sync_tomograms(instance, tomo)
+            # A new AreTomo run invalidates the autofill; clear after the metadata write so it wins (#1267).
+            if prior_run and instance.aretomo_run_name != prior_run:
+                instance.clear_autofill()
+
         if annotations is not None:
             self._sync_annotations(instance, annotations)
         prefetch_related_objects([instance], "annotations__method_links")
@@ -295,6 +306,7 @@ class DatasetSampleSerializer(serializers.ModelSerializer):
 
 class DatasetSerializer(serializers.ModelSerializer):
     metadata_issues = serializers.SerializerMethodField()
+    deposition_id = serializers.IntegerField(source="deposition.deposition_id", read_only=True)
     funding = DatasetFundingSerializer(many=True, required=False)
     sessions = DepositionSessionLinkSerializer(many=True, required=False)
     sample = DatasetSampleSerializer(required=False)
@@ -441,7 +453,19 @@ class DatasetSerializer(serializers.ModelSerializer):
             msi_session = row.pop("msi_session", None)
             if msi_session is None:
                 raise serializers.ValidationError({"sessions": "Each session entry requires msi_session."})
-            DepositionSession.objects.update_or_create(dataset=dataset, msi_session=msi_session, defaults=row)
+            with transaction.atomic():
+                prior_run = (
+                    DepositionSession.objects.filter(dataset=dataset, msi_session=msi_session)
+                    .values_list("aretomo_run_name", flat=True)
+                    .first()
+                )
+                session, _ = DepositionSession.objects.update_or_create(
+                    dataset=dataset, msi_session=msi_session, defaults=row
+                )
+                # A new AreTomo run makes the autofilled metadata stale. Clearing the markers blocks
+                # submit until auto-fill is re-run, and the card warns while the stale values linger (#1267).
+                if prior_run and session.aretomo_run_name != prior_run:
+                    session.clear_autofill()
 
 
 def _is_owner(serializer, obj) -> bool:

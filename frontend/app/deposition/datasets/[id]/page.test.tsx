@@ -7,6 +7,12 @@ import { useDataset } from '../../hooks/useDataset';
 
 jest.mock('../../hooks/useDataset', () => ({ useDataset: jest.fn() }));
 jest.mock('next/navigation', () => ({ useParams: () => ({ id: '5' }) }));
+// DatasetForm's useDeposition/author hooks fetch on mount; stub them so tests never hit the network.
+jest.mock('../../services/depositionApi', () => ({
+  ...jest.requireActual('../../services/depositionApi'),
+  fetchDeposition: jest.fn(async () => ({ id: 1, title: '', authors_json: [], datasets: [] })),
+  fetchPeopleByIds: jest.fn(async () => []),
+}));
 
 const mockUseDataset = useDataset as jest.Mock;
 

@@ -2,16 +2,20 @@
 
 import itertools
 import json
+import os
 from types import SimpleNamespace
 from unittest import mock
 
 import pytest
 from django.contrib.auth.models import User
 from django.core.cache import cache
+from django.core.exceptions import ImproperlyConfigured
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from people.models import Person
 from rest_framework.test import APIClient
 
+from depositions.models import Dataset, Deposition
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError
 
@@ -54,6 +58,26 @@ def _make_dataset(client, deposition_id, title="Test dataset"):
     return r.json()
 
 
+class TestReservationFactory:
+    """#1445: never hand out in-memory ids outside local dev."""
+
+    def test_unconfigured_outside_dev_raises(self):
+        from depositions.services.reservations import get_reservation_service
+
+        with (
+            mock.patch.dict(os.environ, {"RESERVATION_LAMBDA_URL": ""}),
+            override_settings(DEBUG=False),
+            pytest.raises(ImproperlyConfigured),
+        ):
+            get_reservation_service()
+
+    def test_unconfigured_in_dev_returns_stub(self):
+        from depositions.services.reservations import StubReservationService, get_reservation_service
+
+        with mock.patch.dict(os.environ, {"RESERVATION_LAMBDA_URL": ""}), override_settings(DEBUG=True):
+            assert isinstance(get_reservation_service(), StubReservationService)
+
+
 @pytest.mark.django_db
 class TestAuth:
     def test_list_requires_authentication(self):
@@ -66,6 +90,14 @@ class TestDepositionCrud:
         body = _make_deposition(auth_client)
         assert body["deposition_id"] is not None  # reserved on create
         assert body["submitter_username"] == user.username
+
+    def test_create_does_not_swallow_a_misconfigured_reservation(self, auth_client):
+        # #1445: a config error must surface, not become an id-less draft.
+        with (
+            mock.patch("depositions.views.get_reservation_service", side_effect=ImproperlyConfigured("no url")),
+            pytest.raises(ImproperlyConfigured),
+        ):
+            auth_client.post(DEPOSITIONS, {"title": "x"}, format="json")
 
     def test_create_allows_blank_title_draft(self, auth_client):
         # The reservation modal creates blank drafts; title is enforced later, at prep.
@@ -95,6 +127,76 @@ class TestDepositionCrud:
     def test_delete(self, auth_client):
         dep = _make_deposition(auth_client)
         assert auth_client.delete(f"{DEPOSITIONS}{dep['id']}/").status_code == 204
+
+
+@pytest.mark.django_db
+class TestStartSubmission:
+    def test_start_creates_deposition_and_dataset(self, auth_client, user):
+        r = auth_client.post(f"{DEPOSITIONS}start/", {}, format="json")
+        assert r.status_code == 201, r.content
+        body = r.json()
+        assert body["dataset_id"] is not None
+        assert body["deposition_id"] is not None
+        deposition = Deposition.objects.get(datasets__id=body["id"])
+        assert deposition.submitter_user == user
+        assert deposition.datasets.count() == 1
+
+    def test_start_rolls_back_and_wastes_no_id_if_the_dataset_fails(self, auth_client):
+        # Rows are created before reserving, so a rolled-back create never consumes an id (#1447).
+        svc = mock.Mock()
+        with (
+            mock.patch("depositions.views.get_reservation_service", return_value=svc),
+            mock.patch("depositions.views.Dataset.objects.create", side_effect=RuntimeError("boom")),
+            pytest.raises(RuntimeError),
+        ):
+            auth_client.post(f"{DEPOSITIONS}start/", {}, format="json")
+        assert Deposition.objects.count() == 0
+        svc.reserve_new_deposition.assert_not_called()
+        svc.reserve_new_dataset.assert_not_called()
+
+
+@pytest.mark.django_db
+class TestReserveIds:
+    def test_reserve_ids_backfills_missing_ids(self, auth_client):
+        dep = _make_deposition(auth_client)
+        ds = _make_dataset(auth_client, dep["id"])
+        Deposition.objects.filter(pk=dep["id"]).update(deposition_id=None)
+        Dataset.objects.filter(pk=ds["id"]).update(dataset_id=None)
+
+        r = auth_client.post(f"{DATASETS}{ds['id']}/reserve-ids/", {}, format="json")
+        assert r.status_code == 200, r.content
+        body = r.json()
+        assert body["dataset_id"] is not None
+        assert body["deposition_id"] is not None
+
+    def test_reserve_ids_keeps_already_reserved_ids_without_reserving_again(self, auth_client):
+        # Recheck-after-lock: an id that's already set is never re-reserved (#1444).
+        dep = _make_deposition(auth_client)
+        ds = _make_dataset(auth_client, dep["id"])
+        svc = mock.Mock()
+        with mock.patch("depositions.views.get_reservation_service", return_value=svc):
+            r = auth_client.post(f"{DATASETS}{ds['id']}/reserve-ids/", {}, format="json")
+        assert r.status_code == 200
+        assert r.json()["dataset_id"] == ds["dataset_id"]
+        svc.reserve_new_deposition.assert_not_called()
+        svc.reserve_new_dataset.assert_not_called()
+
+    def test_reserve_ids_keeps_the_first_id_when_the_second_reservation_fails(self, auth_client):
+        # A failed dataset reservation must not discard the deposition id just reserved (#1447).
+        dep = _make_deposition(auth_client)
+        ds = _make_dataset(auth_client, dep["id"])
+        Deposition.objects.filter(pk=dep["id"]).update(deposition_id=None)
+        Dataset.objects.filter(pk=ds["id"]).update(dataset_id=None)
+
+        svc = mock.Mock()
+        svc.reserve_new_deposition.return_value = 55555
+        svc.reserve_new_dataset.side_effect = RuntimeError("reservation down")
+        with mock.patch("depositions.views.get_reservation_service", return_value=svc):
+            r = auth_client.post(f"{DATASETS}{ds['id']}/reserve-ids/", {}, format="json")
+
+        assert r.status_code == 502
+        assert Deposition.objects.get(pk=dep["id"]).deposition_id == 55555  # kept
+        assert Dataset.objects.get(pk=ds["id"]).dataset_id is None  # still needs one
 
 
 @pytest.mark.django_db
@@ -326,6 +428,71 @@ class TestDatasetSessionGuard:
         r = auth_client.delete(f"{SESSIONS}{owned_session.id}/")
         assert r.status_code == 409
         assert DepositionSession.objects.filter(pk=owned_session.pk).exists()
+
+    def _autofill(self, session):
+        """Mark `session` auto-filled the way the auto-fill action does."""
+        from django.utils import timezone
+
+        from depositions.models import TiltseriesMetadata
+
+        session.aretomo_run_name = "run1"
+        session.last_autofill_at = timezone.now()
+        session.last_autofill_duration_seconds = 12
+        session.save()
+        TiltseriesMetadata.objects.create(session=session, acceleration_voltage=300, autofill_metadata={"raw": 1})
+
+    def test_changing_aretomo_run_resets_autofill(self, auth_client, owned_session):
+        """A new AreTomo run makes the autofill stale; its markers clear so submit re-requires it (#1267)."""
+        from depositions.services.dataprep_config import dataset_is_ready
+
+        self._autofill(owned_session)
+        r = auth_client.patch(
+            f"{DATASETS}{owned_session.dataset_id}/",
+            {"sessions": [{"msi_session": owned_session.msi_session_id, "aretomo_run_name": "run2"}]},
+            format="json",
+        )
+        assert r.status_code == 200, r.content
+        owned_session.refresh_from_db()
+        assert owned_session.aretomo_run_name == "run2"
+        assert owned_session.last_autofill_at is None
+        assert owned_session.tiltseries_metadata.autofill_metadata == {}
+        # The actual goal: the dataset is no longer submittable until auto-fill re-runs.
+        assert dataset_is_ready(owned_session.dataset) is False
+
+    def test_changing_aretomo_run_via_session_patch_resets_autofill(self, auth_client, owned_session):
+        """The /sessions/<id>/ write path resets autofill too, not just the dataset save (#1267)."""
+        self._autofill(owned_session)
+        r = auth_client.patch(f"{SESSIONS}{owned_session.id}/", {"aretomo_run_name": "run2"}, format="json")
+        assert r.status_code == 200, r.content
+        owned_session.refresh_from_db()
+        assert owned_session.last_autofill_at is None
+        assert owned_session.tiltseries_metadata.autofill_metadata == {}
+
+    def test_resaving_same_aretomo_run_keeps_autofill(self, auth_client, owned_session):
+        """Saving the session without changing the run must NOT wipe a valid autofill (#1267)."""
+        self._autofill(owned_session)
+        r = auth_client.patch(
+            f"{DATASETS}{owned_session.dataset_id}/",
+            {"sessions": [{"msi_session": owned_session.msi_session_id, "aretomo_run_name": "run1"}]},
+            format="json",
+        )
+        assert r.status_code == 200, r.content
+        owned_session.refresh_from_db()
+        assert owned_session.last_autofill_at is not None
+        assert owned_session.tiltseries_metadata.autofill_metadata == {"raw": 1}
+
+    def test_client_cannot_write_autofill_metadata(self, auth_client, owned_session):
+        """autofill_metadata is read-only: a stale client autosave must not re-populate it (#1267)."""
+        self._autofill(owned_session)
+        owned_session.clear_autofill()
+        r = auth_client.patch(
+            f"{SESSIONS}{owned_session.id}/",
+            {"tiltseries_metadata": {"autofill_metadata": {"stale": 1}}},
+            format="json",
+        )
+        assert r.status_code == 200, r.content
+        owned_session.refresh_from_db()
+        assert owned_session.tiltseries_metadata.autofill_metadata == {}
 
 
 @pytest.fixture
