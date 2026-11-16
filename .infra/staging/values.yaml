@@ -11,6 +11,9 @@ stack:
   # them from AWS Secrets Manager and injects them as env vars at runtime.
 
   global:
+    gateway:
+      sectionName: https
+      dnsOwner: ingress
     env:
       - name: DJANGO_ENV
         value: 'staging'
@@ -55,6 +58,11 @@ stack:
       ingress:
         rules:
           - host: &staging-host embrella.apps-staging.czbiohub.org
+      gateway:
+        rules:
+          - host: *staging-host
+            vanity:
+              enabled: true
 
     frontend:
       image:
@@ -65,6 +73,11 @@ stack:
       ingress:
         rules:
           - host: *staging-host
+      gateway:
+        rules:
+          - host: *staging-host
+            vanity:
+              enabled: true
 
     worker:
       # Not a built image — reuses the backend image
