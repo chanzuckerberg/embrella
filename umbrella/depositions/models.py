@@ -228,6 +228,15 @@ class DepositionSession(models.Model):
     def __str__(self):
         return f"DepositionSession {self.pk} — {self.msi_session}"
 
+    def clear_autofill(self):
+        """Drop the autofill markers when the AreTomo run changes. Entered field values are
+        kept, but submit blocks (dataset_is_ready keys off tiltseries autofill_metadata) until
+        auto-fill is re-run against the new run."""
+        self.last_autofill_at = None
+        self.last_autofill_duration_seconds = None
+        self.save(update_fields=["last_autofill_at", "last_autofill_duration_seconds", "updated_at"])
+        TiltseriesMetadata.objects.filter(session=self).update(autofill_metadata={})
+
 
 class TiltseriesMetadata(models.Model):
     QUALITY_CHOICES = [(i, str(i)) for i in range(1, 6)]

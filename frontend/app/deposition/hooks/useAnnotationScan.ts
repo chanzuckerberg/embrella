@@ -15,13 +15,13 @@ export interface AnnotationScan {
   annotations: ScannedAnnotation[];
 }
 
-/** Read the cached copick scan.json for a session's selected runs. */
-export function useAnnotationScan(sessionName: string, runs: string[], enabled = true) {
+/** Read the cached copick scan.json for a session's selected runs, scoped to one dataset. */
+export function useAnnotationScan(datasetId: number, sessionName: string, runs: string[], enabled = true) {
   const sortedRuns = [...runs].sort();
   return useQuery<AnnotationScan>({
-    queryKey: ['copick-scan', sessionName, sortedRuns],
+    queryKey: ['copick-scan', datasetId, sessionName, sortedRuns],
     queryFn: async () => {
-      const res = await scanCopickAnnotations(sessionName, sortedRuns);
+      const res = await scanCopickAnnotations(sessionName, sortedRuns, datasetId);
       return {
         scanned: res.scanned ?? false,
         pending: res.pending ?? false,
@@ -33,9 +33,10 @@ export function useAnnotationScan(sessionName: string, runs: string[], enabled =
     },
     enabled: enabled && !!sessionName && sortedRuns.length > 0,
     staleTime: STALE,
-    // Keep the prior result only within the SAME session (no empty flash on add/remove config);
-    // dropped on a session switch so one session's rows never leak into another's draft.
-    placeholderData: (prev, prevQuery) => (prevQuery?.queryKey[1] === sessionName ? prev : undefined),
+    // Keep the prior result only within the SAME dataset+session (no empty flash on add/remove config);
+    // dropped on a switch so one dataset/session's rows never leak into another's draft.
+    placeholderData: (prev, prevQuery) =>
+      prevQuery?.queryKey[1] === datasetId && prevQuery?.queryKey[2] === sessionName ? prev : undefined,
     refetchInterval: (query) => {
       const data = query.state.data;
       return !data?.scanned && !!data?.pending ? POLL : false;

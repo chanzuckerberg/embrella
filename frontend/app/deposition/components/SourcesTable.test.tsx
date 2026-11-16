@@ -36,6 +36,7 @@ function setup(rows: SourceRow[]) {
   render(
     <SourcesTable
       rows={rows}
+      datasetId={1}
       sessionOptions={['session-a', 'session-b', 'session-c']}
       subsetMode="all"
       readOnly={false}

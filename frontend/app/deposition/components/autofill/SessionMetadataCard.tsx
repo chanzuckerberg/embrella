@@ -156,6 +156,9 @@ export function SessionMetadataCard({
     if (!readOnly && !session.lastAutofillAt && savedEdits && !manualEntered) onManualEntry();
   }, [readOnly, session.lastAutofillAt, savedEdits, manualEntered, onManualEntry]);
   const gateUp = !readOnly && hasRun && !session.lastAutofillAt && !manualEntered && !savedEdits;
+  // Values present but not auto-filled for the current run (e.g. the AreTomo run changed). Submit
+  // stays blocked until auto-fill repopulates, so nudge instead of showing the values as if they're ready.
+  const needsReAutofill = !readOnly && hasRun && !session.lastAutofillAt && savedEdits;
   const canAutoFill = !readOnly && hasRun && (Boolean(session.lastAutofillAt) || manualEntered || savedEdits);
   let gateActionLabel = 'Auto-fill';
   if (autoFilling) gateActionLabel = 'Auto-filling...';
@@ -244,6 +247,11 @@ export function SessionMetadataCard({
         {autoFillError && !gateUp && (
           <Alert severity="error" sx={{ mb: 1.5 }}>
             {autoFillError}
+          </Alert>
+        )}
+        {needsReAutofill && (
+          <Alert severity="warning" sx={{ mb: 1.5 }}>
+            These values aren&apos;t from auto-fill. Re-run auto-fill to refresh them before submitting.
           </Alert>
         )}
 

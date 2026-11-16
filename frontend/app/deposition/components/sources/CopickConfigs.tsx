@@ -13,11 +13,13 @@ import type { SourceRow } from './types';
 
 export function CopickConfigs({
   row,
+  datasetId,
   subsetMode,
   readOnly,
   onChange,
 }: {
   row: SourceRow;
+  datasetId: number;
   subsetMode: TomogramSubsetMode;
   readOnly: boolean;
   onChange: (patch: Partial<SourceRow>) => void;
@@ -150,6 +152,7 @@ export function CopickConfigs({
                 rescanCopick(
                   row.msi_session_name,
                   [r.name],
+                  datasetId,
                   subsetMode === 'custom' ? (subsetPositions(row.subset_selection) ?? []) : []
                 ).catch(() => undefined);
               setAnchor(null);

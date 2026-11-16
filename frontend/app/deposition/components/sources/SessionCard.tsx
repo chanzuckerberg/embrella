@@ -16,6 +16,7 @@ import type { SourceRow } from './types';
 export function SessionCard({
   index,
   row,
+  datasetId,
   sessionOptions,
   subsetMode,
   readOnly,
@@ -28,6 +29,7 @@ export function SessionCard({
 }: {
   index: number;
   row: SourceRow;
+  datasetId: number;
   sessionOptions: string[];
   subsetMode: TomogramSubsetMode;
   readOnly: boolean;
@@ -75,7 +77,7 @@ export function SessionCard({
 
   // Annotated count is a slow SSH scan, so only fetch it when Annotated mode is active.
   const annotatedMode = subsetMode === 'annotated';
-  const annotated = useAnnotatedCount(session, row.selected_copick_runs, annotatedMode);
+  const annotated = useAnnotatedCount(datasetId, session, row.selected_copick_runs, annotatedMode);
   const annotatedReady = annotatedMode && (annotated.data?.scanned ?? false);
   const annotatedCount = annotatedReady ? annotated.data?.count : undefined;
   useEffect(() => {
@@ -235,7 +237,7 @@ export function SessionCard({
             )}
           </Box>
 
-          <CopickConfigs row={row} subsetMode={subsetMode} readOnly={readOnly} onChange={set} />
+          <CopickConfigs row={row} datasetId={datasetId} subsetMode={subsetMode} readOnly={readOnly} onChange={set} />
         </Box>
       )}
     </Box>
