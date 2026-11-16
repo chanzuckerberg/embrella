@@ -150,6 +150,7 @@ spec:
                   number: 80
     - host: maximum-mastiff.staging-biohub.staging.czi.team
       http: *tomodata-http
+{{- with (((.Values.global).gateway).host) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -163,7 +164,7 @@ spec:
       namespace: envoy-gateway
       sectionName: https
   hostnames:
-    - {{ .Values.global.gateway.host | quote }}
+    - {{ . | quote }}
   rules:
     - matches:
         - path:
@@ -181,6 +182,7 @@ spec:
       backendRefs:
         - name: embrella-tomodata
           port: 80
+{{- end }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
