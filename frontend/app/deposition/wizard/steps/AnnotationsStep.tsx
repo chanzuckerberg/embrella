@@ -69,9 +69,10 @@ export function AnnotationsStep({ dataset, reportSave, readOnly, reportBlocking 
   );
   const [activeAnnId, setActiveAnnId] = useState<string | null>(null);
 
-  const scan = useAnnotationScan(active?.name ?? '', active?.runs ?? [], !readOnly);
+  const scan = useAnnotationScan(dataset.id, active?.name ?? '', active?.runs ?? [], !readOnly);
 
   const compat = useCopickAretomoCompat(
+    dataset.id,
     active?.name ?? '',
     active?.aretomoRun ?? '',
     active?.runs ?? [],
@@ -107,16 +108,18 @@ export function AnnotationsStep({ dataset, reportSave, readOnly, reportBlocking 
       // Custom mode: scope the scan to the selected positions so it scans those, not every run.
       const positions =
         dataset.tomogram_subset_mode === 'custom' ? (subsetPositions(active.subsetSelection) ?? []) : [];
-      await rescanCopick(active.name, active.runs, positions);
+      await rescanCopick(active.name, active.runs, dataset.id, positions);
       // Re-read scan.json - the pending marker now drives polling + spinner.
-      await queryClient.invalidateQueries({ queryKey: ['copick-scan', active.name, [...active.runs].sort()] });
-      queryClient.invalidateQueries({ queryKey: ['copick-aretomo-compat', active.name] });
+      await queryClient.invalidateQueries({
+        queryKey: ['copick-scan', dataset.id, active.name, [...active.runs].sort()],
+      });
+      queryClient.invalidateQueries({ queryKey: ['copick-aretomo-compat', dataset.id, active.name] });
     } catch {
       setRescanError('Couldn’t start the scan. Try again.');
     } finally {
       setRescanning(false);
     }
-  }, [active, dataset.tomogram_subset_mode, queryClient]);
+  }, [active, dataset.id, dataset.tomogram_subset_mode, queryClient]);
 
   const save = useCallback(
     async (state: Record<string, DepositionAnnotation[]>) => {

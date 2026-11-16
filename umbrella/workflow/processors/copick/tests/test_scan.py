@@ -94,10 +94,10 @@ class TestDetailScanWiring:
             ),
             mock.patch.object(copick_views, "_read_scan_json", return_value=ann) as read_mock,
         ):
-            r = client.get(COPICK_DETAIL_URL.format(session="26feb20b", run="run001"), {"scan": "true"})
+            r = client.get(COPICK_DETAIL_URL.format(session="26feb20b", run="run001"), {"scan": "true", "dataset": "7"})
         assert r.status_code == 200
         assert r.json()["project"]["annotations"] == ann
-        read_mock.assert_called_once_with("http://caddy/26feb20b/run001/")
+        read_mock.assert_called_once_with("http://caddy/26feb20b/run001/", 7)
 
     def test_cluster_only_run_without_procrun_still_serves_scan(self, client, copick_session):
         """A config selectable from the cluster but with no ProcRun (run999) must not 404 — it
@@ -107,14 +107,19 @@ class TestDetailScanWiring:
             mock.patch.object(copick_views, "_copick_root_url", return_value="http://caddy/26feb20b/run999/"),
             mock.patch.object(copick_views, "_read_scan_json", return_value=ann) as read_mock,
         ):
-            r = client.get(COPICK_DETAIL_URL.format(session="26feb20b", run="run999"), {"scan": "true"})
+            r = client.get(COPICK_DETAIL_URL.format(session="26feb20b", run="run999"), {"scan": "true", "dataset": "7"})
         assert r.status_code == 200
         assert r.json()["project"]["annotations"] == ann
-        read_mock.assert_called_once_with("http://caddy/26feb20b/run999/")
+        read_mock.assert_called_once_with("http://caddy/26feb20b/run999/", 7)
 
     def test_unknown_session_still_404s(self, client, db):
         r = client.get(COPICK_DETAIL_URL.format(session="does-not-exist", run="run001"), {"scan": "true"})
         assert r.status_code == 404
+
+    def test_scan_without_a_numeric_dataset_is_400(self, client, copick_session):
+        with mock.patch.object(copick_views, "_build_copick_project", return_value={"root_url": "http://caddy/x/"}):
+            r = client.get(COPICK_DETAIL_URL.format(session="26feb20b", run="run001"), {"scan": "true"})
+        assert r.status_code == 400
 
     def test_default_does_not_scan(self, client, copick_session):
         with (
@@ -135,8 +140,16 @@ class TestReadScanJson:
         with mock.patch.object(
             copick_views, "fetch_remote_text", return_value='{"scanned": false, "error": "no copick"}'
         ):
-            result = copick_views._read_scan_json("http://caddy/x/")
+            result = copick_views._read_scan_json("http://caddy/x/", 7)
         assert result == {**copick_views._empty_scan(), "error": "no copick"}
+
+    def test_reads_a_per_dataset_file(self):
+        """Two datasets sharing a (session, run) read separate scan files, so one can't clobber the other (#1441)."""
+        with mock.patch.object(copick_views, "fetch_remote_text", return_value="{}") as fetch:
+            copick_views._read_scan_json("http://caddy/x/", 7)
+            copick_views._read_scan_json("http://caddy/x/", 9)
+        urls = [call.args[0] for call in fetch.call_args_list]
+        assert urls == ["http://caddy/x/scan-7.json", "http://caddy/x/scan-9.json"]
 
 
 @pytest.mark.django_db
@@ -149,13 +162,13 @@ class TestAnnotatedCountEndpoint:
         return mock.patch.object(copick_views, "_copick_root_url", side_effect=lambda _s, run: f"http://caddy/{run}/")
 
     def test_aggregates_across_runs(self, client, copick_session):
-        def fake_read(root_url):
+        def fake_read(root_url, _dataset):
             if "run002" in root_url:
                 return {"scanned": True, "annotated_runs": ["TS_1"]}
             return {"scanned": True, "annotated_runs": ["TS_2"]}
 
         with self._fake_url(), mock.patch.object(copick_views, "_read_scan_json", side_effect=fake_read):
-            r = client.get(self.URL, {"session_id": "26feb20b", "runs": "run002,run003"})
+            r = client.get(self.URL, {"session_id": "26feb20b", "runs": "run002,run003", "dataset": "7"})
         body = r.json()
         assert r.status_code == 200
         assert body["annotated_count"] == 2
@@ -167,7 +180,7 @@ class TestAnnotatedCountEndpoint:
             self._fake_url(),
             mock.patch.object(copick_views, "_read_scan_json", return_value={"scanned": False, "annotated_runs": []}),
         ):
-            r = client.get(self.URL, {"session_id": "26feb20b", "runs": "run001"})
+            r = client.get(self.URL, {"session_id": "26feb20b", "runs": "run001", "dataset": "7"})
         body = r.json()
         assert body["scanned"] is False
         assert body["annotated_count"] == 0
@@ -175,7 +188,7 @@ class TestAnnotatedCountEndpoint:
     def test_resolve_failure_degrades_not_500(self, client, copick_session):
         """A per-run path/cluster lookup failure."""
         with mock.patch.object(copick_views, "_copick_root_url", side_effect=RuntimeError("no cluster row")):
-            r = client.get(self.URL, {"session_id": "26feb20b", "runs": "run001"})
+            r = client.get(self.URL, {"session_id": "26feb20b", "runs": "run001", "dataset": "7"})
         assert r.status_code == 200
         body = r.json()
         assert body["scanned"] is False
@@ -183,9 +196,13 @@ class TestAnnotatedCountEndpoint:
 
     def test_no_runs_returns_zero_without_reading(self, client, copick_session):
         with mock.patch.object(copick_views, "_read_scan_json") as read_mock:
-            r = client.get(self.URL, {"session_id": "26feb20b"})
+            r = client.get(self.URL, {"session_id": "26feb20b", "dataset": "7"})
         assert r.json()["annotated_count"] == 0
         read_mock.assert_not_called()
+
+    def test_non_numeric_dataset_is_rejected(self, client, copick_session):
+        r = client.get(self.URL, {"session_id": "26feb20b", "runs": "run001", "dataset": "../x"})
+        assert r.json()["success"] is False
 
     def test_missing_session_id_is_error(self, client, db):
         r = client.get(self.URL, {"runs": "run002"})
@@ -213,15 +230,29 @@ class TestCopickScanWiring:
             mock.patch("workflow.processors.copick.scan_processor.get_processor") as gp,
         ):
             gp.return_value.get_processing_base_path.return_value = "/hpc/krios1.processing/copick"
-            script = proc.render_script({}, run_context)
+            script = proc.render_script({"dataset_id": "7"}, run_context)
 
         assert "/hpc/krios1.processing/copick/25oct20a/run003/config.json" in script
-        assert "/hpc/krios1.processing/copick/25oct20a/run003/scan.json" in script
+        # Per-dataset output so datasets sharing a (session, run) don't overwrite each other (#1441).
+        assert "/hpc/krios1.processing/copick/25oct20a/run003/scan-7.json" in script
         assert resolve_dir("dataportal_env", cluster=None) in script
         assert "#SBATCH --partition=cpu" in script
         assert "#SBATCH --cpus-per-task=4" in script
         assert "#SBATCH --mem-per-cpu=8G" in script
         assert "#SBATCH --time=00:30:00" in script
+
+    @pytest.mark.parametrize("bad", [None, "", "../x", "1; rm -rf /", "-1", "0", True, 7.9])
+    def test_rejects_missing_or_malformed_dataset_id(self, db, bad):
+        """The generic execution API skips the endpoint's check, so the processor must reject bad ids."""
+        from workflow.processors import get_processor as real_get_processor
+
+        proc = real_get_processor("copick-scan")
+        params = {} if bad is None else {"dataset_id": bad}
+        assert proc.validate_parameters(params)
+        run_context = mock.Mock(run_number="run003", cluster_id=None)
+        run_context.msi_session.name = "25oct20a"
+        with pytest.raises(ValueError):
+            proc.render_script(params, run_context)
 
     def test_scan_positions_param_scopes_the_enumeration(self, db):
         """A subset renders a Python list literal the scan filters `root.runs` on; empty = whole project."""
@@ -235,8 +266,10 @@ class TestCopickScanWiring:
             mock.patch("workflow.processors.copick.scan_processor.get_processor") as gp,
         ):
             gp.return_value.get_processing_base_path.return_value = "/hpc/copick"
-            scoped = proc.render_script({"scan_positions": ["Position_1", "Position_2"]}, run_context)
-            unscoped = proc.render_script({}, run_context)
+            scoped = proc.render_script(
+                {"scan_positions": ["Position_1", "Position_2"], "dataset_id": "7"}, run_context
+            )
+            unscoped = proc.render_script({"dataset_id": "7"}, run_context)
         assert '_wanted = ["Position_1", "Position_2"]' in scoped
         assert "_wanted = []" in unscoped
         # Unmatched selections are surfaced instead of silently producing an empty scan.
@@ -262,6 +295,12 @@ class TestTriggerCopickScan:
         response = api.post(SCAN_URL.format(session="26feb20b", run="run001"), [], format="json")
         assert response.status_code == 400
 
+    @pytest.mark.parametrize("body", [{}, {"dataset": "../x"}, {"dataset": "1; rm -rf /"}, {"dataset": -1}])
+    def test_rejects_missing_or_non_numeric_dataset(self, api, copick_session, body):
+        # dataset lands in cluster paths + the sbatch script; a non-positive-int must 400, not interpolate.
+        r = api.post(SCAN_URL.format(session="26feb20b", run="run001"), body, format="json")
+        assert r.status_code == 400
+
     def test_submits_scan_job_and_returns_202(self, api, copick_session):
         with (
             mock.patch.object(copick_views.clusterio, "get_auth_service_user", return_value={"username": "svc"}),
@@ -270,19 +309,19 @@ class TestTriggerCopickScan:
             mock.patch("workflow.execution.PipelineExecutor") as Executor,
         ):
             Executor.return_value.execute_pipe.return_value = {"job_id": "9001"}
-            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"))
+            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"), {"dataset": 7}, format="json")
 
         assert r.status_code == 202
         body = r.json()
         assert body["success"] is True
         assert body["job_id"] == "9001"
         # invalidate the old scan.json BEFORE submitting
-        invalidate.assert_called_once_with("czii", "26feb20b", "run001")
+        invalidate.assert_called_once_with("czii", "26feb20b", "run001", 7)
         # submitted the copick-scan pipe with SERVICE auth (not per-user); no subset -> scan whole project
         _, kwargs = Executor.return_value.execute_pipe.call_args
         assert kwargs["pipe_in_plan"].pipe.software.processor_class == "copick-scan"
         assert kwargs["auth"] == {"username": "svc"}
-        assert kwargs["parameters"] == {"scan_positions": []}
+        assert kwargs["parameters"] == {"scan_positions": [], "dataset_id": "7"}
         assert kwargs["cluster_id"] == "czii"
         # ProcRun reused under the copick-scan plan, named as the copick project run
         assert ProcRun.objects.filter(name="run001", proc_plan__name="copick-scan").exists()
@@ -298,12 +337,12 @@ class TestTriggerCopickScan:
             Executor.return_value.execute_pipe.return_value = {"job_id": "9002"}
             r = api.post(
                 SCAN_URL.format(session="26feb20b", run="run001"),
-                {"positions": ["Position_1", "Position_2"]},
+                {"positions": ["Position_1", "Position_2"], "dataset": 7},
                 format="json",
             )
         assert r.status_code == 202
         _, kwargs = Executor.return_value.execute_pipe.call_args
-        assert kwargs["parameters"] == {"scan_positions": ["Position_1", "Position_2"]}
+        assert kwargs["parameters"] == {"scan_positions": ["Position_1", "Position_2"], "dataset_id": "7"}
 
     def test_rescan_clears_prior_execution_row(self, api, copick_session):
         """Re-scan reuses the same run+pipe; PipeExecution(run,pipe) is unique_together, so the prior
@@ -323,7 +362,7 @@ class TestTriggerCopickScan:
             mock.patch("workflow.execution.PipelineExecutor") as Executor,
         ):
             Executor.return_value.execute_pipe.return_value = {"job_id": "new"}
-            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"))
+            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"), {"dataset": 7}, format="json")
 
         assert r.status_code == 202
         assert not PipeExecution.objects.filter(id=stale.id).exists()  # prior row cleared → no 1062
@@ -345,7 +384,7 @@ class TestTriggerCopickScan:
             mock.patch("workflow.execution.PipelineExecutor") as Executor,
         ):
             Executor.return_value.execute_pipe.return_value = {"job_id": "9001"}
-            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"))
+            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"), {"dataset": 7}, format="json")
         assert r.status_code == 202  # used the earliest ProcRun, no MultipleObjectsReturned
 
     def test_unknown_session_is_404(self, api, db):
@@ -364,7 +403,7 @@ class TestTriggerCopickScan:
                 side_effect=copick_views.clusterio.SSHDisabledError("off"),
             ),
         ):
-            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"))
+            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"), {"dataset": 7}, format="json")
         assert r.status_code == 503
         assert r.json()["success"] is False
         mark_failed.assert_called_once()  # pending marker cleared so polling doesn't hang
@@ -379,7 +418,7 @@ class TestTriggerCopickScan:
             mock.patch("workflow.execution.PipelineExecutor") as Executor,
         ):
             Executor.return_value.execute_pipe.side_effect = RuntimeError("sbatch blew up")
-            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"))
+            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"), {"dataset": 7}, format="json")
         assert r.status_code == 502
         mark_failed.assert_called_once()
 
@@ -394,12 +433,12 @@ class TestInvalidateScanJson:
             mock.patch.object(copick_views.clusterio, "write_remote_file") as writer,
         ):
             get_processor.return_value.get_processing_base_path.return_value = "/copick/base/"
-            copick_views._invalidate_scan_json("czii", "26feb20b", "run001")
+            copick_views._invalidate_scan_json("czii", "26feb20b", "run001", 7)
 
         writer.assert_called_once()
         args, _ = writer.call_args
         assert args[0] == "czii"
-        assert args[1] == "/copick/base/26feb20b/run001/scan.json"
+        assert args[1] == "/copick/base/26feb20b/run001/scan-7.json"
         payload = json.loads(args[2])
         # pending:true distinguishes "job running" from a missing file ("never scanned")
         assert payload["scanned"] is False
@@ -411,7 +450,7 @@ class TestInvalidateScanJson:
             mock.patch.object(copick_views.clusterio, "write_remote_file", side_effect=FileNotFoundError("no dir")),
         ):
             get_processor.return_value.get_processing_base_path.return_value = "/copick/base/"
-            copick_views._invalidate_scan_json("czii", "26feb20b", "run001")  # must not raise
+            copick_views._invalidate_scan_json("czii", "26feb20b", "run001", 7)  # must not raise
 
 
 @pytest.mark.django_db
