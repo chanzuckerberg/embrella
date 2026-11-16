@@ -13,7 +13,6 @@ stack:
   global:
     gateway:
       sectionName: https
-      dnsOwner: gateway
     env:
       - name: DJANGO_ENV
         value: 'staging'
@@ -55,12 +54,9 @@ stack:
       env:
         - name: EMBRELLA_BUILD_STATIC
           value: '1'
-      ingress:
-        rules:
-          - host: &staging-host embrella.apps-staging.czbiohub.org
       gateway:
         rules:
-          - host: *staging-host
+          - host: &staging-host embrella.apps-staging.czbiohub.org
             vanity:
               enabled: true
 
@@ -70,9 +66,6 @@ stack:
       env:
         - name: BACKEND_URL
           value: 'http://$(__ARGUS_STACK_NAME)-stack-backend:8000'
-      ingress:
-        rules:
-          - host: *staging-host
       gateway:
         rules:
           - host: *staging-host

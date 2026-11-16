@@ -122,34 +122,6 @@ spec:
     - name: http
       port: 80
       targetPort: 80
----
-# Prefix-stripping ingress: /tomodata/<path> -> caddy /<path> (same-origin).
-# Host is the stack ingress host; keep in sync if the stack is renamed.
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: embrella-tomodata
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-    nginx.ingress.kubernetes.io/use-regex: "true"
-    external-dns.alpha.kubernetes.io/target: access.staging-biohub.staging.czi.team
-    external-dns.alpha.kubernetes.io/exclude: "true"
-spec:
-  ingressClassName: nginx
-  # Serve /tomodata on both the friendly public host and the argus-generated one.
-  rules:
-    - host: embrella.apps-staging.czbiohub.org
-      http: &tomodata-http
-        paths:
-          - path: /tomodata(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: embrella-tomodata
-                port:
-                  number: 80
-    - host: maximum-mastiff.staging-biohub.staging.czi.team
-      http: *tomodata-http
 {{- with ((((.Values.stack).global).gateway).host) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
