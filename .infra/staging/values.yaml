@@ -13,7 +13,7 @@ stack:
   global:
     gateway:
       sectionName: https
-      dnsOwner: ingress
+      dnsOwner: gateway
     env:
       - name: DJANGO_ENV
         value: 'staging'
