@@ -569,7 +569,7 @@ class TestAutoFill:
     def _patch_cluster(self):
         """Isolate the SSH/path plumbing so tests exercise the view, not the cluster."""
         return (
-            mock.patch("depositions.views.cluster_id_for_run", return_value="cluster-a"),
+            mock.patch("depositions.views.deposition_cluster_id", return_value="cluster-a"),
             mock.patch("depositions.views.Cluster"),
             mock.patch("depositions.views.resolve_review_path", return_value="/test/aretomo3/24nov10/run001"),
         )
@@ -578,23 +578,6 @@ class TestAutoFill:
         # owned_session has a blank aretomo_run_name
         r = auth_client.post(self._url(owned_session))
         assert r.status_code == 400
-
-    def test_scopes_cluster_lookup_to_aretomo(self, auth_client, owned_session):
-        owned_session.aretomo_run_name = "run001"
-        owned_session.save(update_fields=["aretomo_run_name"])
-        c1, c2, c3 = self._patch_cluster()
-        with (
-            c1 as cluster_lookup,
-            c2,
-            c3,
-            mock.patch(
-                "depositions.views.run_autofill_init",
-                return_value={"filled": True, "session": {"acquisition": {}}, "reason": None},
-            ),
-        ):
-            r = auth_client.post(self._url(owned_session))
-        assert r.status_code == 200, r.content
-        assert cluster_lookup.call_args.kwargs["processor_class"] == "aretomo3"
 
     def test_populates_instrument_from_tem(self, auth_client, owned_session):
         """Facility-record fields come from the session's Microscope/Camera."""
@@ -892,7 +875,7 @@ class TestAutoFill:
         owned_session.save(update_fields=["aretomo_run_name"])
         resolve = mock.patch("depositions.views.resolve_review_path", return_value="/test/aretomo3/x/run001")
         with (
-            mock.patch("depositions.views.cluster_id_for_run", return_value="cluster-a"),
+            mock.patch("depositions.views.deposition_cluster_id", return_value="cluster-a"),
             mock.patch("depositions.views.Cluster"),
             resolve as resolve_mock,
             mock.patch(
@@ -1866,7 +1849,7 @@ class TestMetadataLock:
             return {"filled": True, "session": {}}
 
         with (
-            mock.patch("depositions.views.cluster_id_for_run", return_value="lock-test"),
+            mock.patch("depositions.views.deposition_cluster_id", return_value="lock-test"),
             mock.patch("depositions.views.resolve_review_path", return_value="/tmp/run"),
             mock.patch("depositions.views.run_autofill_init", side_effect=finish_after_prep_starts),
         ):

@@ -8,8 +8,7 @@ import pytest
 import yaml
 from django.core.exceptions import ImproperlyConfigured
 from people.models import Person
-from processes.models import Pipe, PipeExecution, PipeInPlan, ProcRun, ProcSoftware
-from processes.services.cluster_resolver import get_default_cluster_id
+from processes.models import ProcSoftware
 from stores.models import Cluster, DataKind, PathType
 from tem.models import MsiSession
 
@@ -108,37 +107,14 @@ def denoise_dataset(dataset):
     return dataset
 
 
-def _record_execution(session, plan, processor_class, run, cluster_id):
-    software, _ = ProcSoftware.objects.get_or_create(
-        processor_class=processor_class, defaults={"name": processor_class}
-    )
-    pipe = Pipe.objects.create(name=processor_class, software=software)
-    step = PipeInPlan.objects.create(plan=plan, pipe=pipe, step=1, name=processor_class)
-    proc_run = ProcRun.objects.create(name=run, proc_plan=plan, msi_session=session.msi_session)
-    return PipeExecution.objects.create(proc_run=proc_run, pipe_in_plan=step, parameters={"cluster_id": cluster_id})
-
-
 def test_denoise_source_resolved_from_selected_run(denoise_dataset):
-    session = denoise_dataset.sessions.get()
-    with mock.patch("depositions.services.dataprep_config.cluster_id_for_run", return_value="c1") as lookup:
-        config = _build(denoise_dataset)
+    config = _build(denoise_dataset)
     assert _session(config)["paths"]["denoise"] == "/custom/denoise/24nov10/run005"
-    assert lookup.call_args_list == [
-        mock.call(session.msi_session.name, "run001", processor_class="aretomo3"),
-        mock.call(session.msi_session.name, "run005", default="c1", processor_class="denoiset"),
-    ]
 
 
-@pytest.mark.parametrize("denoise_run", ["005", "run005"])
-def test_denoise_missing_execution_falls_back_to_prep_cluster(denoise_dataset, test_proc_plan, denoise_run):
-    session = denoise_dataset.sessions.get()
-    session.aretomo_run_name = "001"
-    session.denoise_run_name = denoise_run
-    session.save()
-    assert get_default_cluster_id() != "c1"
-    _record_execution(session, test_proc_plan, "aretomo3", "run001", "c1")
-    # An unrelated execution with the denoise run's name must not determine its cluster.
-    _record_execution(session, test_proc_plan, "aretomo3", "run005", get_default_cluster_id())
+def test_denoise_resolved_on_the_deposition_cluster(denoise_dataset, monkeypatch):
+    # The denoise path comes from the deposition cluster's root, not wherever the run executed.
+    monkeypatch.setattr("depositions.services.dataprep_config.deposition_cluster_id", lambda: "c1")
     ProcSoftware.objects.filter(processor_class="denoiset").update(processing_root=None)
     PathType.objects.update_or_create(
         data_kind=DataKind.objects.get(data_type="processing_root"),
@@ -149,24 +125,16 @@ def test_denoise_missing_execution_falls_back_to_prep_cluster(denoise_dataset, t
     assert _session(config)["paths"]["denoise"] == "/cluster-c1/denoise/24nov10/run005"
 
 
-def test_denoise_on_another_cluster_is_rejected(denoise_dataset, test_proc_plan):
-    session = denoise_dataset.sessions.get()
-    _record_execution(session, test_proc_plan, "aretomo3", "run001", "c1")
-    _record_execution(session, test_proc_plan, "denoiset", "run005", "c2")
-    with pytest.raises(SubmissionValidationError, match="denoise run 'run005'.*'c2'.*AreTomo cluster 'c1'"):
-        _build(denoise_dataset)
-
-
 @pytest.mark.parametrize("error", [ImproperlyConfigured("No denoise root"), PathType.DoesNotExist("Missing root")])
 def test_misconfigured_denoise_raises_actionable_error(denoise_dataset, error, caplog):
     with (
-        mock.patch("depositions.services.dataprep_config.cluster_id_for_run", return_value="c1"),
+        mock.patch("depositions.services.dataprep_config.deposition_cluster_id", return_value="c1"),
         mock.patch("depositions.services.dataprep_config.get_processor") as processor,
     ):
         processor.return_value.get_processing_base_path.side_effect = error
         with pytest.raises(SubmissionValidationError) as raised:
             _build(denoise_dataset)
-        assert raised.value.public_message == "Denoise isn't configured on this cluster."
+        assert raised.value.public_message == "Denoise isn't configured on the deposition cluster."
         assert str(error) not in raised.value.public_message
     record = next(record for record in caplog.records if record.exc_info)
     assert record.name == "depositions.services.dataprep_config"
@@ -490,15 +458,11 @@ def test_selected_annotations_use_sync_contract_and_reviewed_authors(dataset, mo
     DepositionAnnotationMethodLink.objects.create(
         annotation=selected, link_type="source_code", link="https://example.org/code"
     )
-    cluster_kwargs = {}
-    monkeypatch.setattr(
-        annotation_config, "cluster_id_for_run", lambda *a, **k: cluster_kwargs.update(k) or "cluster-a"
-    )
+    monkeypatch.setattr(annotation_config, "deposition_cluster_id", lambda: "cluster-a")
     monkeypatch.setattr(
         annotation_config, "get_processor", lambda _: SimpleNamespace(get_processing_base_path=lambda **kw: "/copick")
     )
     annotations = _session(_build(dataset))["annotations"]
-    assert cluster_kwargs["processor_class"] == "aretomo3"
     assert len(annotations) == 1
     entry = annotations[0]
     assert entry["kind"] == expected and entry["copick_ref"] == "ribosome:alice/0"

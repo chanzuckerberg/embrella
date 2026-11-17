@@ -7,7 +7,6 @@ from django.utils import timezone
 from people.models import Person
 from stores.models import Cluster, DataKind, PathType
 from stores.paths import resolve_dir
-from tem.models import MsiSession
 
 from depositions.models import (
     Dataset,
@@ -72,7 +71,7 @@ def mocks(monkeypatch, db):
 
     calls["auth"] = {"username": "service-user", "pkey": "test-key"}
     monkeypatch.setattr(submit.clusterio, "get_auth_service_user", lambda: calls["auth"])
-    monkeypatch.setattr(submit, "cluster_id_for_run", lambda *a, **k: "cluster-a")
+    monkeypatch.setattr(submit, "deposition_cluster_id", lambda: "cluster-a")
     monkeypatch.setattr(submit.clusterio, "ensure_remote_dir", lambda *a: calls.__setitem__("mkdir", a))
     monkeypatch.setattr(submit.clusterio, "write_remote_file_atomic", write)
 
@@ -85,66 +84,6 @@ def mocks(monkeypatch, db):
     monkeypatch.setattr(submit, "launch_deposition_job", launch)
     monkeypatch.setattr(submit.tasks, "start_deposition_job_syncer", lambda *a: calls.__setitem__("synced", a))
     return calls
-
-
-@pytest.mark.django_db
-def test_cluster_for_dataset_scopes_to_aretomo(dataset, monkeypatch):
-    captured = {}
-    monkeypatch.setattr(submit, "cluster_id_for_run", lambda *a, **k: captured.update(k) or "cluster-a")
-    assert submit._cluster_for_dataset(dataset) == "cluster-a"
-    assert captured["processor_class"] == "aretomo3"
-
-
-def _add_second_session(dataset):
-    other = MsiSession.objects.create(name="24nov11", session_plan=dataset.sessions.first().msi_session.session_plan)
-    session = DepositionSession.objects.create(dataset=dataset, msi_session=other, aretomo_run_name="run002")
-    TiltseriesMetadata.objects.create(
-        session=session, autofill_metadata={"paths": {"aretomo3": "/b"}, "acquisition": {}}
-    )
-
-
-def _split_by_session(monkeypatch):
-    monkeypatch.setattr(
-        submit,
-        "cluster_id_for_run",
-        lambda session_name, *a, **k: "cluster-a" if session_name == "24nov10" else "cluster-b",
-    )
-
-
-@pytest.mark.django_db
-def test_require_single_cluster_rejects_sessions_across_clusters(dataset, monkeypatch):
-    """A dataset whose sessions resolve to different clusters is blocked, naming both."""
-    _add_second_session(dataset)
-    _split_by_session(monkeypatch)
-    with pytest.raises(SubmissionValidationError, match="span more than one cluster"):
-        submit.require_single_cluster(dataset)
-
-
-@pytest.mark.django_db
-def test_submit_blocks_a_mixed_cluster_dataset_without_launching(dataset, mocks, monkeypatch):
-    """The guard is wired into prep: a mixed-cluster dataset never reaches launch."""
-    _add_second_session(dataset)
-    _split_by_session(monkeypatch)
-    with pytest.raises(SubmissionValidationError, match="span more than one cluster"):
-        submit.submit_dataset_prep(dataset)
-    assert mocks["launched"] is None
-
-
-@pytest.mark.django_db
-def test_preview_config_rejects_a_mixed_cluster_dataset(dataset, mocks, monkeypatch):
-    """A config download rejects mixed clusters too."""
-    _add_second_session(dataset)
-    _split_by_session(monkeypatch)
-    with pytest.raises(SubmissionValidationError, match="span more than one cluster"):
-        submit.preview_config_yaml(dataset)
-
-
-@pytest.mark.django_db
-def test_multiple_sessions_on_one_cluster_still_submit(dataset, mocks):
-    """Several sessions on the same cluster aren't mistaken for a mixed dataset."""
-    _add_second_session(dataset)  # `mocks` resolves every session to cluster-a
-    submit.submit_dataset_prep(dataset)
-    assert mocks["launched"]["cluster"] == "cluster-a"
 
 
 @pytest.mark.django_db
@@ -624,7 +563,7 @@ class TestPreviewConfigYaml:
         monkeypatch.setattr(submit, "resolve_dir", lambda *a, cluster, **k: seen.update(cluster=cluster) or "/staged")
         monkeypatch.setattr(submit, "resolve_sync_destination", lambda *, cluster: "s3://x")
         submit.preview_config_yaml(dataset)
-        assert seen["cluster"] == "cluster-a"  # derived via _cluster_for_dataset, not "stale-cluster"
+        assert seen["cluster"] == "cluster-a"  # derived via deposition_cluster_id, not "stale-cluster"
 
     def test_locked_job_previews_the_staged_cluster(self, dataset, mocks, monkeypatch):
         DatasetJob.objects.create(dataset=dataset, state="prep_running", cluster_id="staged-cluster")
