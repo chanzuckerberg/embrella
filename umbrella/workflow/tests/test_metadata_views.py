@@ -146,7 +146,7 @@ class TestCopickAretomoCompat:
         url_mock, scan_mock = self._scan(["Position_13"])
         with url_mock, scan_mock:
             status, body = _call(
-                get_copick_aretomo_compat, session_name="24nov10", run_number="run001", copick_runs="run003"
+                get_copick_aretomo_compat, session_name="24nov10", run_number="run001", copick_runs="run003", dataset=7
             )
         assert status == 200
         assert body["compatible"] is True
@@ -157,7 +157,7 @@ class TestCopickAretomoCompat:
         url_mock, scan_mock = self._scan(["Position_13", "Position_99"])
         with url_mock, scan_mock:
             status, body = _call(
-                get_copick_aretomo_compat, session_name="24nov10", run_number="run001", copick_runs="run003"
+                get_copick_aretomo_compat, session_name="24nov10", run_number="run001", copick_runs="run003", dataset=7
             )
         assert status == 200
         assert body["compatible"] is False
@@ -167,7 +167,14 @@ class TestCopickAretomoCompat:
         url_mock, scan_mock = self._scan([], scanned=False)
         with url_mock, scan_mock:
             status, body = _call(
-                get_copick_aretomo_compat, session_name="24nov10", run_number="run001", copick_runs="run003"
+                get_copick_aretomo_compat, session_name="24nov10", run_number="run001", copick_runs="run003", dataset=7
             )
         assert status == 200
         assert body["scanned"] is False  # caller should treat the result as provisional
+
+    def test_non_numeric_dataset_is_rejected(self, cluster, test_msi_session, metrics_csv):
+        # dataset reaches _read_scan_json's path, so a non-int must 400 (#1441).
+        status, _ = _call(
+            get_copick_aretomo_compat, session_name="24nov10", run_number="run001", copick_runs="run003", dataset="../x"
+        )
+        assert status == 400

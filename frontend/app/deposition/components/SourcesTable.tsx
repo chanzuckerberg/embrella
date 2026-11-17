@@ -38,6 +38,7 @@ const emptyRow = (): SourceRow => ({
 
 export function SourcesTable({
   rows,
+  datasetId,
   sessionOptions,
   subsetMode,
   readOnly,
@@ -48,6 +49,7 @@ export function SourcesTable({
   onUploadSubset,
 }: {
   rows: SourceRow[];
+  datasetId: number;
   sessionOptions: string[];
   subsetMode: TomogramSubsetMode;
   readOnly: boolean;
@@ -218,6 +220,7 @@ export function SourcesTable({
             key={row.key}
             index={i}
             row={row}
+            datasetId={datasetId}
             sessionOptions={sessionOptions.filter(
               (name) => name === row.msi_session_name || !rows.some((r) => r.msi_session_name === name)
             )}
