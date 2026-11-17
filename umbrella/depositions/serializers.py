@@ -189,6 +189,9 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = [
             "dataset",
+            # The session's run selection (set when added to the dataset) is fixed here — a PATCH must
+            # not repoint it at another msi_session.
+            "msi_session",
             "created_at",
             "updated_at",
             "last_autofill_at",
@@ -324,6 +327,14 @@ class DatasetSerializer(serializers.ModelSerializer):
         # dataset_id reserved; status/dates set by syncer/system.
         read_only_fields = ["dataset_id", "status", "created_at", "updated_at"]
         extra_kwargs = {"assay_ontology_id": {"validators": [ASSAY_ONTOLOGY_VALIDATOR]}}
+
+    def get_fields(self):
+        fields = super().get_fields()
+        # A dataset's parent deposition is set at create and fixed after — a PATCH must not move it
+        # into another deposition.
+        if self.instance is not None:
+            fields["deposition"].read_only = True
+        return fields
 
     def get_metadata_issues(self, obj):
         try:
