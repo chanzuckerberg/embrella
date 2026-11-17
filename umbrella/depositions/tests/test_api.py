@@ -515,6 +515,33 @@ def owned_session(user):
 
 
 @pytest.mark.django_db
+def test_dataset_deposition_cannot_be_reassigned_via_patch(auth_client, owned_session):
+    """A dataset's parent deposition is fixed; a PATCH can't move it into another deposition."""
+    from depositions.models import Deposition
+
+    other = Deposition.objects.create(title="Someone else's")
+    dataset = owned_session.dataset
+    original = dataset.deposition_id
+    r = auth_client.patch(f"{DATASETS}{dataset.id}/", {"deposition": other.id}, format="json")
+    assert r.status_code == 200, r.content
+    dataset.refresh_from_db()
+    assert dataset.deposition_id == original
+
+
+@pytest.mark.django_db
+def test_session_msi_session_cannot_be_reassigned_via_patch(auth_client, owned_session):
+    """A session's msi_session is fixed when it's added; a PATCH can't repoint it."""
+    from tem.models import MsiSession
+
+    other = MsiSession.objects.create(name="99zzz99", session_plan=owned_session.msi_session.session_plan)
+    original = owned_session.msi_session_id
+    r = auth_client.patch(f"{SESSIONS}{owned_session.id}/", {"msi_session": other.id}, format="json")
+    assert r.status_code == 200, r.content
+    owned_session.refresh_from_db()
+    assert owned_session.msi_session_id == original
+
+
+@pytest.mark.django_db
 class TestSubsetUpload:
     """POST /sessions/<id>/subset-csv/ parses + stores the selection in the DB."""
 
