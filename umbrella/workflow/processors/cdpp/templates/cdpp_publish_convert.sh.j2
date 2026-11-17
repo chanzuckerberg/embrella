@@ -1,0 +1,68 @@
+#!/bin/bash -l
+
+# Embrella's conversion of the AreTomo3 run a cdpp pipeline published: zarr volumes for review and
+# thumbnails for the metadata page, as mrc_to_zarr_and_thumbnails.sh makes for a live AreTomo3 run.
+# Differences from that script: the run is complete, so there is no MdocDone.txt to follow;
+# the published run has no SART volume (vol003), so thumbnails come from vol001; vol002 (WBP)
+# is not converted, as review only reads vol001 and vol003.
+# Held until the cdpp job succeeds; cancelled by SLURM if it does not.
+
+#SBATCH --job-name={{ job_name }}
+#SBATCH --dependency=afterok:{{ cdpp_job_id }}
+#SBATCH --kill-on-invalid-dep=yes
+#SBATCH --partition=cpu
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64G
+#SBATCH --time=24:00:00
+#SBATCH -o {{ run_dir }}/JOB%j_convert.out
+#SBATCH -e {{ run_dir }}/JOB%j_convert.err
+{% if cluster == "czii" -%}
+#SBATCH --qos=embrella
+{% endif %}
+umask 0002
+
+ml anaconda
+conda activate {{ software_root }}/zarrczar_env
+# After activation: conda's activate scripts are not nounset-safe.
+set -euo pipefail
+shopt -s nullglob
+
+run_dir={{ run_dir }}
+max_conversions=8
+mkdir -p "${run_dir}/thumbnails" "${run_dir}/ctf_thumbnails"
+
+pids=()
+for vol in "${run_dir}"/vol001/*_Vol.mrc; do
+    name=$(basename "${vol}" _Vol.mrc)
+    case "${name}" in *_EVN | *_ODD) continue ;; esac
+    echo "[INFO] ${name}"
+
+    if [ ! -f "${run_dir}/thumbnails/${name}.jpeg" ]; then
+        zarrczar generate-thumbnail --mrc-path "${vol}" --jpeg-path "${run_dir}/thumbnails/${name}.jpeg" --bin "4,4,2"
+    fi
+    if [ -f "${run_dir}/${name}_CTF.mrc" ] && [ ! -f "${run_dir}/ctf_thumbnails/${name}.jpeg" ]; then
+        zarrczar generate-thumbnail --mrc-path "${run_dir}/${name}_CTF.mrc" \
+            --jpeg-path "${run_dir}/ctf_thumbnails/${name}.jpeg" --bin "4,4,1"
+    fi
+
+    zarr="${vol%.mrc}.zarr"
+    if [ ! -d "${zarr}" ]; then
+        while (( $(jobs -rp | wc -l) >= max_conversions )); do sleep 1; done
+        (
+            zarrczar convert --mrc-path "${vol}" --zarr-path "${zarr}" --chunk-size 128
+            zarrczar compute-image-stats "${zarr}"
+            zarrczar compute-filesystem-stats "${zarr}"
+        ) &
+        pids+=("$!")
+    fi
+done
+
+failed=0
+for pid in "${pids[@]}"; do
+    wait "${pid}" || failed=$((failed + 1))
+done
+if (( failed > 0 )); then
+    echo "[ERROR] ${failed} zarr conversion(s) failed" >&2
+    exit 1
+fi
+echo "[INFO] All done at $(date)"

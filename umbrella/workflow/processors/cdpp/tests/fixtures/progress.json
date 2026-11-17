@@ -1,0 +1,69 @@
+{
+  "schema": "cdpp.progress/v1",
+  "generated_at": "2026-10-22T14:02:11.402913+00:00",
+  "config": "/hpc/projects/group.czii/krios1.processing/cdpp/24nov10/run001/pipeline.yaml",
+  "output_dir": "/hpc/projects/group.czii/krios1.processing/cdpp/24nov10/run001",
+  "submission": {
+    "entry": "20261022T134502Z",
+    "submitted_at": "2026-10-22T13:45:02+00:00",
+    "driver_job_id": "31337",
+    "mode": "foreground"
+  },
+  "runs": ["Position_1", "Position_2"],
+  "summary": {"done": 5, "running": 1, "queued": 1, "failed": 1, "pending": 2, "total": 10},
+  "steps": [
+    {
+      "name": "copick_init",
+      "step": "copick_init",
+      "kind": "synchronous",
+      "phase": 0,
+      "cache_dir": "/hpc/projects/group.czii/krios1.processing/copick/24nov10/run001/.cache/copick_init",
+      "status": "done",
+      "counts": {"done": 1, "running": 0, "queued": 0, "failed": 0, "pending": 0, "total": 1}
+    },
+    {
+      "name": "import_aretomo3",
+      "step": "import_aretomo3",
+      "kind": "per_run",
+      "phase": 1,
+      "cache_dir": "/hpc/projects/group.czii/krios1.processing/cdpp/24nov10/run001/.cache/import_aretomo3",
+      "runs": {"Position_1": "done", "Position_2": "done"},
+      "counts": {"done": 2, "running": 0, "queued": 0, "failed": 0, "pending": 0, "total": 2}
+    },
+    {
+      "name": "warp_metadata_create",
+      "step": "warp_metadata_create",
+      "kind": "per_run",
+      "phase": 2,
+      "cache_dir": "/hpc/projects/group.czii/krios1.processing/miss_alignment/24nov10/run001/.cache/warp_metadata_create",
+      "runs": {"Position_1": "done", "Position_2": "failed"},
+      "counts": {"done": 1, "running": 0, "queued": 0, "failed": 1, "pending": 0, "total": 2}
+    },
+    {
+      "name": "miss_alignment_train",
+      "step": "miss_alignment_train",
+      "kind": "synchronous",
+      "phase": 3,
+      "cache_dir": "/hpc/projects/group.czii/krios1.processing/miss_alignment/24nov10/run001/.cache/miss_alignment_train",
+      "status": "running",
+      "counts": {"done": 0, "running": 1, "queued": 0, "failed": 0, "pending": 0, "total": 1}
+    },
+    {
+      "name": "miss_alignment_inference",
+      "step": "miss_alignment_inference",
+      "kind": "per_run",
+      "phase": 4,
+      "cache_dir": "/hpc/projects/group.czii/krios1.processing/miss_alignment/24nov10/run001/.cache/miss_alignment_inference",
+      "runs": {"Position_1": "queued", "Position_2": "pending"},
+      "counts": {"done": 0, "running": 0, "queued": 1, "failed": 0, "pending": 1, "total": 2}
+    },
+    {
+      "name": "sample_slab",
+      "step": "sample_slab",
+      "kind": "copick_dag",
+      "phase": 5,
+      "runs": {"Position_1": "done", "Position_2": "pending"},
+      "counts": {"done": 1, "running": 0, "queued": 0, "failed": 0, "pending": 1, "total": 2}
+    }
+  ]
+}
