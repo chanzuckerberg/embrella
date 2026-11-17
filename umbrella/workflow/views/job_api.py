@@ -911,6 +911,7 @@ def bulk_cancel_jobs(request):
 # also the class name under workflow.processors.<processor>.syncer.
 SYNCER_TYPES = {
     "aretomo3": "AretomoSyncer",
+    "cdpp": "CdppSyncer",
     "denoiset": "DenoiseSyncer",
 }
 SYNCER_CLASS_PATH = "workflow.processors.{processor}.syncer.{cls}"

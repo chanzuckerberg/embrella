@@ -23,6 +23,7 @@ import AreTomo3LaunchForm from './components/AreTomo3LaunchForm';
 import DenoisETLaunchForm from './components/DenoisETLaunchForm';
 import CopickLaunchForm from './components/CopickLaunchForm';
 import MembranesegLaunchForm from './components/MembranesegLaunchForm';
+import WorkflowLaunchForm from './components/WorkflowLaunchForm';
 import { ClusterSelector } from '@app/common/components/ClusterSelector';
 import { SSHSetupModal } from '@app/common/components/SSHSetupModal';
 
@@ -130,6 +131,9 @@ export default function WorkflowLaunchPage() {
         return <CopickLaunchForm {...commonProps} />;
       case 'membraneseg':
         return <MembranesegLaunchForm {...commonProps} />;
+      case 'cdpp':
+        // The schema-driven form covers it: AreTomo3 run, preset, overrides, driver resources.
+        return <WorkflowLaunchForm {...commonProps} />;
       default:
         // Fallback for unknown processors - could render a generic form
         return (

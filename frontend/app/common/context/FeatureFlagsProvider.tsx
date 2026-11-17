@@ -8,6 +8,7 @@ export enum FEATURE_FLAG {
   MANAGE_DATA = 'manage_data',
   DEPOSITION = 'deposition',
   COPICK_WEB = 'copick-web',
+  CDPP_WEB = 'cdpp-web',
   DEMO = 'demo',
   IMAGES = 'images',
 }
