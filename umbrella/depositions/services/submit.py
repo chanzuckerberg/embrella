@@ -6,12 +6,12 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import transaction
 from django.utils import timezone
-from processes.services.cluster_resolver import cluster_id_for_run, get_default_cluster_id
 from stores.paths import resolve_dir
 
 from common import clusterio
 from depositions import tasks
 from depositions.models import DatasetJob, Deposition
+from depositions.services.cluster import deposition_cluster_id
 from depositions.services.dataprep_config import (
     dataprep_config_yaml,
     dataset_is_ready,
@@ -41,15 +41,6 @@ def _notification_parameters(deposition):
     return {"slurm_mail_user": address}
 
 
-def _cluster_for_dataset(dataset):
-    session = dataset.sessions.select_related("msi_session").order_by("msi_session__name").first()
-    if session is None:
-        return get_default_cluster_id()
-    run = session.aretomo_run_name or ""
-    run_number = run if run.startswith("run") else f"run{run}"
-    return cluster_id_for_run(session.msi_session.name, run_number, processor_class="aretomo3")
-
-
 def _service_auth():
     """Deposition jobs run as the configured service account."""
     try:
@@ -75,7 +66,7 @@ def submit_dataset_prep(dataset):
                 "This dataset isn't ready to submit - add sessions and run auto-fill first."
             )
         auth = _service_auth()
-        cluster_id = _cluster_for_dataset(dataset)
+        cluster_id = deposition_cluster_id()
         if (
             DatasetJob.objects.using(db)
             .filter(dataset__deposition=deposition, state__in=PREP_ACTIVE)
@@ -206,7 +197,7 @@ def submit_dataset_push(dataset):
     require_validation(job)
 
     # Upload from the cluster used for preparation.
-    cluster_id = job.cluster_id or _cluster_for_dataset(dataset)
+    cluster_id = job.cluster_id or deposition_cluster_id()
     auth = _service_auth()
     output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
     base = output_dir.rstrip("/")
@@ -251,8 +242,8 @@ def preview_config_yaml(dataset):
     if deposition.deposition_id is None or dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before downloading the config.")
     job = getattr(dataset, "job", None)
-    # Show the staged cluster only while the job is locked; otherwise derive it the way a resubmit will.
-    cluster_id = (job.cluster_id if job and job.cluster_is_frozen else "") or _cluster_for_dataset(dataset)
+    # Frozen job keeps its staged cluster; otherwise resolve it like a resubmit would.
+    cluster_id = (job.cluster_id if job and job.cluster_is_frozen else "") or deposition_cluster_id()
     output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
     return dataprep_config_yaml(
         dataset,

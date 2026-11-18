@@ -71,7 +71,7 @@ def mocks(monkeypatch, db):
 
     calls["auth"] = {"username": "service-user", "pkey": "test-key"}
     monkeypatch.setattr(submit.clusterio, "get_auth_service_user", lambda: calls["auth"])
-    monkeypatch.setattr(submit, "cluster_id_for_run", lambda *a, **k: "cluster-a")
+    monkeypatch.setattr(submit, "deposition_cluster_id", lambda: "cluster-a")
     monkeypatch.setattr(submit.clusterio, "ensure_remote_dir", lambda *a: calls.__setitem__("mkdir", a))
     monkeypatch.setattr(submit.clusterio, "write_remote_file_atomic", write)
 
@@ -84,14 +84,6 @@ def mocks(monkeypatch, db):
     monkeypatch.setattr(submit, "launch_deposition_job", launch)
     monkeypatch.setattr(submit.tasks, "start_deposition_job_syncer", lambda *a: calls.__setitem__("synced", a))
     return calls
-
-
-@pytest.mark.django_db
-def test_cluster_for_dataset_scopes_to_aretomo(dataset, monkeypatch):
-    captured = {}
-    monkeypatch.setattr(submit, "cluster_id_for_run", lambda *a, **k: captured.update(k) or "cluster-a")
-    assert submit._cluster_for_dataset(dataset) == "cluster-a"
-    assert captured["processor_class"] == "aretomo3"
 
 
 @pytest.mark.django_db
@@ -571,7 +563,7 @@ class TestPreviewConfigYaml:
         monkeypatch.setattr(submit, "resolve_dir", lambda *a, cluster, **k: seen.update(cluster=cluster) or "/staged")
         monkeypatch.setattr(submit, "resolve_sync_destination", lambda *, cluster: "s3://x")
         submit.preview_config_yaml(dataset)
-        assert seen["cluster"] == "cluster-a"  # derived via _cluster_for_dataset, not "stale-cluster"
+        assert seen["cluster"] == "cluster-a"  # derived via deposition_cluster_id, not "stale-cluster"
 
     def test_locked_job_previews_the_staged_cluster(self, dataset, mocks, monkeypatch):
         DatasetJob.objects.create(dataset=dataset, state="prep_running", cluster_id="staged-cluster")
