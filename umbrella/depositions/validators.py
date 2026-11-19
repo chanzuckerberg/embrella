@@ -1,6 +1,23 @@
-"""Ontology ID formats shared by the deposition API's writable fields."""
+"""Format validators shared by the deposition API's writable fields (ontology IDs, run names)."""
+
+import re
 
 from django.core.validators import RegexValidator
+
+from depositions.services.exceptions import SubmissionValidationError
+
+# Run names land in cluster paths (.../{session}/{run}/...). Keep them to one safe path component: no
+# slash (can't traverse) and must start alphanumeric (blocks ".", "..", "-rf").
+SAFE_RUN_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
+RUN_NAME_MESSAGE = "Must be a run directory name (e.g. run001)."
+RUN_NAME_VALIDATOR = RegexValidator(regex=rf"\A(?:{SAFE_RUN_NAME_RE.pattern})\Z", message=RUN_NAME_MESSAGE)
+
+
+def ensure_safe_run_name(name):
+    """Defense-in-depth right before a run name is spliced into a cluster path — catches values that
+    bypassed the serializer (admin edits, rows saved before validation existed). Blank is a no-op."""
+    if name and not SAFE_RUN_NAME_RE.fullmatch(name):
+        raise SubmissionValidationError(f"Invalid run name {name!r}. {RUN_NAME_MESSAGE}")
 
 
 def _ontology_id(pattern, example):
