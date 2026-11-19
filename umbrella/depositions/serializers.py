@@ -29,7 +29,14 @@ from .services.dataset_metadata import build_dataset_metadata
 from .services.exceptions import SubmissionValidationError
 from .services.metadata_requirements import dataset_metadata_issues
 from .services.progress import serialize_progress, serialize_summary
-from .validators import ANNOTATION_OBJECT_VALIDATOR, ASSAY_ONTOLOGY_VALIDATOR, SAMPLE_ONTOLOGY_VALIDATORS
+from .validators import (
+    ANNOTATION_OBJECT_VALIDATOR,
+    ASSAY_ONTOLOGY_VALIDATOR,
+    RUN_NAME_MESSAGE,
+    RUN_NAME_VALIDATOR,
+    SAFE_RUN_NAME_RE,
+    SAMPLE_ONTOLOGY_VALIDATORS,
+)
 
 
 def validate_authors_json(value):
@@ -69,6 +76,9 @@ def validate_selected_copick_runs(value):
     for i, item in enumerate(value):
         if not isinstance(item, str) or not item.strip():
             raise serializers.ValidationError(f"selected_copick_runs[{i}] must be a non-empty string (run name).")
+        if not SAFE_RUN_NAME_RE.fullmatch(item):
+            # These names land in cluster paths; reject anything that could traverse out of them.
+            raise serializers.ValidationError(f"selected_copick_runs[{i}] '{item}': {RUN_NAME_MESSAGE}")
         if item in seen:
             raise serializers.ValidationError(f"Duplicate copick run '{item}' in selected_copick_runs.")
         seen.add(item)
@@ -172,6 +182,10 @@ class DepositionSessionLinkSerializer(serializers.ModelSerializer):
             "last_autofill_at",
         ]
         read_only_fields = ["last_autofill_at"]
+        extra_kwargs = {
+            "aretomo_run_name": {"validators": [RUN_NAME_VALIDATOR]},
+            "denoise_run_name": {"validators": [RUN_NAME_VALIDATOR]},
+        }
 
     def validate_selected_copick_runs(self, value):
         return validate_selected_copick_runs(value)
@@ -197,6 +211,10 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
             "last_autofill_at",
             "last_autofill_duration_seconds",
         ]
+        extra_kwargs = {
+            "aretomo_run_name": {"validators": [RUN_NAME_VALIDATOR]},
+            "denoise_run_name": {"validators": [RUN_NAME_VALIDATOR]},
+        }
 
     def validate_tomogram_metadata(self, value):
         """Each tomogram must have a valid, unique flavor (denoised/filtered) — the sync upserts by it."""
