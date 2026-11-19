@@ -542,6 +542,32 @@ def test_session_msi_session_cannot_be_reassigned_via_patch(auth_client, owned_s
 
 
 @pytest.mark.django_db
+def test_traversal_run_name_via_dataset_sessions_is_rejected(auth_client, owned_session):
+    """A run name can't traverse out of cluster paths, even through the nested sessions list."""
+    from depositions.validators import RUN_NAME_MESSAGE
+
+    r = auth_client.patch(
+        f"{DATASETS}{owned_session.dataset_id}/",
+        {"sessions": [{"msi_session": owned_session.msi_session_id, "aretomo_run_name": "../../etc"}]},
+        format="json",
+    )
+    assert r.status_code == 400, r.content
+    assert str(r.data["sessions"][0]["aretomo_run_name"][0]) == RUN_NAME_MESSAGE
+
+
+@pytest.mark.django_db
+def test_auto_fill_rejects_unsafe_stored_run_name(auth_client, owned_session):
+    """A run name saved past the serializer (admin/legacy) is caught before any cluster work in auto-fill."""
+    owned_session.aretomo_run_name = "a/b"
+    owned_session.save(update_fields=["aretomo_run_name"])
+    with mock.patch("depositions.views.resolve_review_path") as resolve:
+        r = auth_client.post(f"{SESSIONS}{owned_session.id}/auto-fill/")
+    assert r.status_code == 400, r.content
+    assert "Invalid run name" in r.data["detail"]
+    resolve.assert_not_called()
+
+
+@pytest.mark.django_db
 class TestSubsetUpload:
     """POST /sessions/<id>/subset-csv/ parses + stores the selection in the DB."""
 
