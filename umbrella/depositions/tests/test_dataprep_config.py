@@ -488,3 +488,35 @@ def test_annotation_export_rejects_unsupported_or_incomplete_selections(dataset,
     )
     with pytest.raises(SubmissionValidationError, match=match):
         _build(dataset)
+
+
+def test_denoise_path_build_guard_catches_unsafe_saved_name(dataset):
+    """A run name saved straight onto the model (bypassing the serializer) is still caught at path-build."""
+    session = dataset.sessions.get()
+    session.denoise_run_name = "a/b"
+    session.save(update_fields=["denoise_run_name"])
+    with pytest.raises(SubmissionValidationError, match="Invalid run name"):
+        _build(dataset)
+
+
+def test_annotation_path_build_guard_catches_unsafe_saved_copick_run(dataset, monkeypatch):
+    """An unsafe selected_copick_runs value that bypassed the serializer is caught before path-build."""
+    session = dataset.sessions.get()
+    session.selected_copick_runs = ["../etc"]
+    session.save(update_fields=["selected_copick_runs"])
+    TomogramMetadata.objects.create(session=session, flavor="filtered", voxel_spacing=12, is_visualization_default=True)
+    DepositionAnnotation.objects.create(
+        session=session,
+        copick_kind="picks",
+        copick_ref="ribosome:alice/0",
+        object_id="GO:0022626",
+        object_name="ribosome",
+        annotation_method="Manual annotation",
+        annotation_software="Copick",
+    )
+    monkeypatch.setattr(annotation_config, "deposition_cluster_id", lambda: "cluster-a")
+    monkeypatch.setattr(
+        annotation_config, "get_processor", lambda _: SimpleNamespace(get_processing_base_path=lambda **kw: "/copick")
+    )
+    with pytest.raises(SubmissionValidationError, match="Invalid run name"):
+        _build(dataset)
