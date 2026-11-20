@@ -89,6 +89,8 @@ def test_iteration_syncs_once_more_before_stopping(pipe_exec):
 
 
 def run_scheduler():
+    # Drop schedules these tests didn't create (e.g. app-seeded periodic ones) so only NAME can fire here.
+    Schedule.objects.exclude(name=NAME).delete()
     # scheduler() closes "old" connections first; inside pytest-django's
     # test transaction that kills the MySQL connection. Sqlite masks it.
     with (
