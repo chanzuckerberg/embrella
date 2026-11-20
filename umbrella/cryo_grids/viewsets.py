@@ -46,6 +46,7 @@ from umbrella.choices import (
     CANE_COLORS,
     GRID_BOX_COLORS,
     GRID_BOX_NUMBERING,
+    GRID_BOX_NUMBERING_BY_SIZE,
     GRID_CASSETTE_NUMBERING,
     PUCK_COLORS,
 )
@@ -738,6 +739,7 @@ class GridLoggingChoicesViewSet(viewsets.ViewSet):
                 "puck_colors": [{"value": code, "label": name} for code, name in PUCK_COLORS],
                 "grid_box_colors": [{"value": code, "label": name} for code, name in GRID_BOX_COLORS],
                 "grid_box_numbering": [{"value": code, "label": name} for code, name in GRID_BOX_NUMBERING],
+                "grid_box_numbering_by_size": GRID_BOX_NUMBERING_BY_SIZE,
                 "grid_cassette_numbering": [{"value": code, "label": name} for code, name in GRID_CASSETTE_NUMBERING],
             }
         )

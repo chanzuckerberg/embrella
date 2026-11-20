@@ -7,7 +7,7 @@ CryoGridBoxes, and CryoGrids.
 
 from django.utils import timezone as django_timezone
 from rest_framework import serializers
-from umbrella.choices import PUCK_COLORS
+from umbrella.choices import GRID_BOX_NUMBERING_BY_SIZE, PUCK_COLORS
 
 from cryo_grids.models import (
     Cane,
@@ -136,6 +136,7 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
         Custom validation for grid box creation/update
         """
         instance = self.instance
+        self._validate_numbering(data)
 
         # For updates, use existing values if not provided in data (partial update support)
         if instance:
@@ -180,6 +181,27 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
                 )
 
         return data
+
+    def _validate_numbering(self, data):
+        """
+        Reject a numbering style the box size doesn't support (e.g. col on a 4-box).
+        Skipped when an update leaves both unchanged, so legacy combinations stay editable.
+        """
+        instance = self.instance
+        field_default = CryoGridBox._meta.get_field("numbering").default
+        numbering = data.get("numbering", instance.numbering if instance else field_default)
+        max_grids = data.get("max_grids", instance.max_grids if instance else None)
+
+        if instance and (numbering, max_grids) == (instance.numbering, instance.max_grids):
+            return
+
+        allowed = GRID_BOX_NUMBERING_BY_SIZE.get(max_grids, [])
+        if numbering in allowed:
+            return
+
+        raise serializers.ValidationError(
+            {"numbering": f"{max_grids}-grid boxes support: {', '.join(allowed)}."},
+        )
 
 
 class GridLabelInBoxSerializer(serializers.ModelSerializer):

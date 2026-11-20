@@ -6,7 +6,14 @@ from django.utils import timezone
 from external_links.models import ExternalResource
 from projects.models import Project
 from simple_history.models import HistoricalRecords
-from umbrella.choices import CANE_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING, PUCK_COLORS
+from umbrella.choices import (
+    CANE_COLORS,
+    GRID_BOX_COLORS,
+    GRID_BOX_NUMBERING,
+    GRID_BOX_SIZES,
+    GRID_CASSETTE_NUMBERING,
+    PUCK_COLORS,
+)
 
 
 class Site(models.Model):
@@ -82,7 +89,9 @@ class CryoGridBox(models.Model):
     )
     puck = models.ForeignKey(Puck, on_delete=models.CASCADE, null=True, blank=True)
     position_in_puck = models.PositiveSmallIntegerField(default=1, null=True, blank=True)
-    max_grids = models.PositiveSmallIntegerField(default=4, help_text="Maximum number of grids fit in the box")
+    max_grids = models.PositiveSmallIntegerField(
+        default=4, choices=GRID_BOX_SIZES, help_text="Maximum number of grids fit in the box"
+    )
     history = HistoricalRecords()
 
     class Meta:
