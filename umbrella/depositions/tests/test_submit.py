@@ -252,15 +252,61 @@ class TestSubmitDatasetPrep:
         assert job.prep_completed_at is None
         assert job.completed_at is None
 
-    def test_path_resolution_failure_fails_row_without_launching(self, dataset, mocks, monkeypatch):
+    def test_path_resolution_failure_does_not_claim(self, dataset, mocks, monkeypatch):
         def boom(*a, **k):
             raise RuntimeError("no deposition_staging PathType")
 
         monkeypatch.setattr(submit, "resolve_dir", boom)
         with pytest.raises(RuntimeError):
             submit.submit_dataset_prep(dataset)
+        # Paths resolve before the claim now, so a failure leaves the dataset unclaimed, not failed.
+        assert not DatasetJob.objects.filter(dataset=dataset).exists()
+        assert mocks["launched"] is None
+
+    def test_config_build_failure_does_not_claim(self, dataset, mocks, monkeypatch):
+        def boom(*a, **k):
+            raise SubmissionValidationError("Session needs autofill before preparing the dataset.")
+
+        monkeypatch.setattr(submit, "dataprep_config_yaml", boom)
+        with pytest.raises(SubmissionValidationError, match="needs autofill"):
+            submit.submit_dataset_prep(dataset)
+        assert mocks["launched"] is None
+        assert not DatasetJob.objects.filter(dataset=dataset).exists()
+
+    def test_config_build_failure_leaves_prior_attempt_untouched(self, dataset, mocks, monkeypatch):
+        # A fixable error on resubmit must not wipe or fail a completed attempt - the dataset stays usable.
+        DatasetJob.objects.create(
+            dataset=dataset,
+            state="prep_completed",
+            prep_slurm_job_id="p1",
+            validation={"status": "passed"},
+        )
+
+        def boom(*a, **k):
+            raise SubmissionValidationError("Session needs autofill before preparing the dataset.")
+
+        monkeypatch.setattr(submit, "dataprep_config_yaml", boom)
+        with pytest.raises(SubmissionValidationError, match="needs autofill"):
+            submit.submit_dataset_prep(dataset)
         job = DatasetJob.objects.get(dataset=dataset)
-        assert job.state == "failed"  # rolled back, not stranded at prep_submitted
+        assert job.state == "prep_completed"
+        assert job.prep_slurm_job_id == "p1"
+        assert job.validation == {"status": "passed"}
+        assert mocks["launched"] is None
+
+    def test_config_build_failure_leaves_prior_failed_attempt_untouched(self, dataset, mocks, monkeypatch):
+        # A pre-claim failure returns a 400 and doesn't write the job, so the old message stays.
+        DatasetJob.objects.create(dataset=dataset, state="failed", error_message="original failure")
+
+        def boom(*a, **k):
+            raise SubmissionValidationError("Session needs autofill before preparing the dataset.")
+
+        monkeypatch.setattr(submit, "dataprep_config_yaml", boom)
+        with pytest.raises(SubmissionValidationError, match="needs autofill"):
+            submit.submit_dataset_prep(dataset)
+        job = DatasetJob.objects.get(dataset=dataset)
+        assert job.state == "failed"
+        assert job.error_message == "original failure"
         assert mocks["launched"] is None
 
     def test_poller_start_failure_cancels_job_and_fails_row(self, dataset, mocks, monkeypatch):
