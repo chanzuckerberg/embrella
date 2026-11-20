@@ -56,7 +56,7 @@ def submit_dataset_prep(dataset):
     if deposition.deposition_id is None or dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before submitting.")
     db = dataset._state.db
-    # Serialize prep claims within the shared deposition staging directory.
+    # Serialize prep claims; the lock also builds the config from the same state it's claimed on.
     with transaction.atomic(using=db):
         Deposition.objects.using(db).select_for_update().get(pk=deposition.pk)
         deposition.refresh_from_db()
@@ -101,7 +101,7 @@ def submit_dataset_prep(dataset):
         claimed = (
             DatasetJob.objects.using(db)
             .filter(pk=job.pk, state__in=("pending", "failed", "prep_completed"))
-            # Clear the prior attempt's ids + log so a re-failed prep doesn't surface the old output.
+            # Clear the prior attempt's ids + log on claim so a later failure doesn't show old output.
             .update(
                 state="prep_submitted",
                 prep_slurm_job_id="",

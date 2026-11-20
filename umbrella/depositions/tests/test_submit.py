@@ -294,8 +294,8 @@ class TestSubmitDatasetPrep:
         assert job.validation == {"status": "passed"}
         assert mocks["launched"] is None
 
-    def test_config_build_failure_keeps_prior_failure_message(self, dataset, mocks, monkeypatch):
-        # A successful claim replaces a failed attempt's message; a pre-claim failure must leave it.
+    def test_config_build_failure_leaves_prior_failed_attempt_untouched(self, dataset, mocks, monkeypatch):
+        # A pre-claim failure returns a 400 and doesn't write the job, so the old message stays.
         DatasetJob.objects.create(dataset=dataset, state="failed", error_message="original failure")
 
         def boom(*a, **k):

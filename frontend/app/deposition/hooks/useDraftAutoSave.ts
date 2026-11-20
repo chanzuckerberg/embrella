@@ -106,15 +106,15 @@ export function useDraftAutoSave<T>(
   }, [data, enabled, debounceMs, flush]);
   useEffect(() => {
     return () => {
-      if (timer.current) {
-        clearTimeout(timer.current);
-        timer.current = null;
-      }
-      if (savedRevision.current < revision.current && !inFlight.current) {
-        saveRef.current(dataRef.current).catch(() => {});
-      }
+      // Best-effort save when the step unmounts without Save/Next (browser back, nav link); the
+      // component is gone, so a failure can only be logged. flush() no-ops when clean and reuses
+      // an in-flight save.
+      flush().then((ok) => {
+        if (!ok) console.error('Autosave failed while leaving the page; latest edits were not saved.');
+      });
     };
-  }, []);
+    // flush must stay stable ([] deps), or this cleanup fires a save mid-life.
+  }, [flush]);
 
   useEffect(() => {
     if (!isDirty) return;
