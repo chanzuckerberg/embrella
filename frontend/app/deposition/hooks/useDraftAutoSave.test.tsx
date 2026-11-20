@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, cleanup, renderHook } from '@testing-library/react';
 import { StrictMode } from 'react';
 
 import { useDraftAutoSave } from './useDraftAutoSave';
@@ -6,6 +6,9 @@ import { updateDataset } from '../services/depositionApi';
 import { patchResource } from '@app/common/queries/fetchResource';
 
 jest.mock('@app/common/queries/fetchResource', () => ({ patchResource: jest.fn() }));
+
+const AUTOSAVE_LEAVE_ERROR = 'Autosave failed while leaving the page; latest edits were not saved.';
+const originalConsoleError = console.error;
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
@@ -16,10 +19,21 @@ function deferred<T>() {
 }
 
 describe('useDraftAutoSave', () => {
-  beforeEach(() => jest.useFakeTimers());
-  afterEach(() => {
+  // Swallow only the expected unmount-save log; let real React warnings (act(), bad setState) through.
+  let consoleError: jest.SpyInstance;
+  beforeEach(() => {
+    jest.useFakeTimers();
+    consoleError = jest.spyOn(console, 'error').mockImplementation((msg, ...rest) => {
+      if (msg !== AUTOSAVE_LEAVE_ERROR) originalConsoleError(msg, ...rest);
+    });
+  });
+  afterEach(async () => {
+    // Unmount now, while the spy is active, so a dirty test's best-effort unmount save is captured
+    // rather than printed by React Testing Library's own (later) auto-cleanup.
+    await act(async () => cleanup());
     act(() => jest.runOnlyPendingTimers());
     jest.useRealTimers();
+    jest.restoreAllMocks();
   });
 
   it('skips the save when the data has not changed', async () => {
@@ -175,6 +189,36 @@ describe('useDraftAutoSave', () => {
     unmount();
     act(() => jest.runOnlyPendingTimers());
     expect(save).not.toHaveBeenCalled();
+  });
+
+  it('flushes pending edits on unmount', async () => {
+    const save = jest.fn<Promise<void>, [string]>().mockResolvedValue(undefined);
+    const { rerender, unmount } = renderHook(({ data }) => useDraftAutoSave(data, save), {
+      initialProps: { data: 'initial' },
+    });
+    rerender({ data: 'edited' });
+
+    await act(async () => {
+      unmount();
+    });
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledWith('edited');
+  });
+
+  it('logs a failed unmount save instead of swallowing it', async () => {
+    const save = jest.fn<Promise<void>, [string]>().mockRejectedValue(new Error('network error'));
+    const { rerender, unmount } = renderHook(({ data }) => useDraftAutoSave(data, save), {
+      initialProps: { data: 'initial' },
+    });
+    rerender({ data: 'edited' });
+
+    await act(async () => {
+      unmount();
+    });
+
+    expect(save).toHaveBeenCalledWith('edited');
+    expect(consoleError).toHaveBeenCalledWith(AUTOSAVE_LEAVE_ERROR);
   });
 
   it('does not replay discarded edits after an in-flight save finishes', async () => {
