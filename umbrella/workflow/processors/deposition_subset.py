@@ -1,27 +1,41 @@
-"""Job-side subset resolution, embedded in the prep script.
-Rewrites a session's typed ``subset_csv_path`` to ``positions`` from its ``Tilt_Series`` column."""
+"""Resolve typed subset CSVs to positions present in each session's AreTomo metrics."""
 
 import csv
+import io
 import os
 import stat
 import sys
 import tempfile
+from pathlib import Path
 
 import yaml
 
+# Cap the read; a metrics CSV is tiny, so a huge or endless file can't fill memory.
+MAX_CSV_MB = 10
+MAX_CSV_BYTES = MAX_CSV_MB * 1024 * 1024
 
-def _positions(path):
+
+def _positions(path, *, source="subset CSV"):
     try:
-        with open(path, newline="", encoding="utf-8-sig") as handle:
-            rows = list(csv.DictReader(handle))
+        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                sys.exit(f"The {source} at {path} is not a regular file.")
+            with os.fdopen(fd, "rb", closefd=False) as handle:
+                raw = handle.read(MAX_CSV_BYTES + 1)
+        finally:
+            os.close(fd)
     except OSError as error:
-        sys.exit(f"Could not read subset CSV {path}: {error}")
+        sys.exit(f"Could not read {source} at {path}: {error}")
+    if len(raw) > MAX_CSV_BYTES:
+        sys.exit(f"The {source} at {path} exceeds the {MAX_CSV_MB} MB limit.")
+    try:
+        rows = csv.DictReader(io.StringIO(raw.decode("utf-8-sig"), newline=""))
+        positions = [name for name in ((r.get("Tilt_Series") or "").strip().removesuffix(".mrc") for r in rows) if name]
     except (UnicodeDecodeError, csv.Error) as error:
-        sys.exit(f"Could not parse subset CSV {path}: {error}")
-    names = ((row.get("Tilt_Series") or "").strip().removesuffix(".mrc") for row in rows)
-    positions = [name for name in names if name]
+        sys.exit(f"Could not parse {source} at {path}: {error}")
     if not positions:
-        sys.exit(f'Subset CSV {path} has no tilt series - it needs a "Tilt_Series" column.')
+        sys.exit(f'The {source} at {path} has no tilt series - it needs a "Tilt_Series" column.')
     return positions
 
 
@@ -46,12 +60,28 @@ def resolve(config_path):
         return
     changed = False
     for dataset in config.get("datasets", {}).values():
-        for session in dataset.get("sessions", {}).values():
+        for name, session in dataset.get("sessions", {}).items():
             path = (session.get("subset_csv_path") or "").strip()
             if not path:
                 continue
+            aretomo_dir = session.get("paths", {}).get("aretomo3")
+            if not aretomo_dir:
+                sys.exit(f"Session {name} has no AreTomo source path for its tilt series metrics.")
+            metrics = Path(aretomo_dir) / "TiltSeries_Metrics.csv"
+            available = set(_positions(metrics, source=f"tilt series metrics for session {name}"))
+            requested = list(dict.fromkeys(_positions(path)))
+            positions = [position for position in requested if position in available]
+            if not positions:
+                sys.exit(f"Session {name}: none of the positions in {path} match this session's tilt series.")
+            skipped = len(requested) - len(positions)
+            if skipped:
+                print(
+                    f"Warning: skipped {skipped} of {len(requested)} requested positions absent from "
+                    f"session {name}'s tilt series.",
+                    file=sys.stderr,
+                )
             session.pop("subset_csv_path")
-            session["positions"] = _positions(path)
+            session["positions"] = positions
             changed = True
     if changed:
         _write(config_path, config)

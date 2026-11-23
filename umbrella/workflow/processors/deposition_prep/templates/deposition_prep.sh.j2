@@ -32,14 +32,14 @@ trap 'rm -f -- "$tmp"; if [ -n "${progress_pid:-}" ]; then kill "$progress_pid" 
 cat > "$tmp" <<'{{ config_delimiter }}'
 {{ config_yaml }}
 {{ config_delimiter }}
+# Resolve any typed subset CSV on the private temp, so a bad CSV fails before publish.
+python - "$tmp" <<'END_DEPOSITION_SUBSET'
+{{ subset_code }}
+END_DEPOSITION_SUBSET
+
 # mktemp ignores umask; give the staging group read/write access before publishing.
 chmod g+rw "$tmp"
 mv -f -- "$tmp" "$config_path"
-
-# Resolve any typed subset CSV path to positions before sync reads them.
-python - "$config_path" <<'END_DEPOSITION_SUBSET'
-{{ subset_code }}
-END_DEPOSITION_SUBSET
 
 cd {{ output_dir }}
 
