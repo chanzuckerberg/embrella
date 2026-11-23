@@ -586,6 +586,21 @@ properties:
     x-cli-flag: '-DarkTol'
     x-cli-format: direct
 
+  bad_tilt_range:
+    type: string
+    title: Bad Tilt Search Range (°)
+    description: "Flags low-tilt images whose shift is far off the rest of the series. Example: -20 20. '0' disables."
+    default: '0'
+    pattern: '^-?[0-9.]+( -?[0-9.]+)?$'
+    x-parameter-group: alignment
+    x-bash-var: bad_tilt_range
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: '-BadTiltRange'
+    x-cli-format: direct
+    x-cli-always-include: true
+
   # Reconstruction Options
   ext_z:
     type: integer
