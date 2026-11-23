@@ -36,6 +36,11 @@ cat > "$tmp" <<'{{ config_delimiter }}'
 chmod g+rw "$tmp"
 mv -f -- "$tmp" "$config_path"
 
+# Resolve any typed subset CSV path to positions before sync reads them.
+python - "$config_path" <<'END_DEPOSITION_SUBSET'
+{{ subset_code }}
+END_DEPOSITION_SUBSET
+
 cd {{ output_dir }}
 
 progress_file="${SLURM_SUBMIT_DIR:-$output_dir}/deposition-prep-${SLURM_JOB_ID:-local}.progress.json"

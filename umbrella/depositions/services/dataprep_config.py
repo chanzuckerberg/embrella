@@ -21,7 +21,7 @@ from depositions.services.cluster import deposition_cluster_id
 from depositions.services.dataset_metadata import build_dataset_metadata, build_deposition_metadata
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.subset import selected_positions
-from depositions.validators import ensure_safe_run_name
+from depositions.validators import ensure_safe_run_name, ensure_safe_subset_csv_path
 
 logger = logging.getLogger(__name__)
 
@@ -134,19 +134,21 @@ def dataset_is_ready(dataset):
     return bool(sessions) and all(_session_has_autofill(s) for s in sessions)
 
 
-def require_custom_positions(session) -> list[str]:
-    """Positions to keep for a custom-mode session; raise if it has no usable selection or uses an
-    unsupported cluster CSV path. Shared by submit (pre-claim) and the config builder (backstop)."""
+def custom_subset_config(session) -> dict:
+    """Subset for a custom-mode session: uploaded ``positions``, or a ``subset_csv_path`` the job resolves."""
     name = session.msi_session.name
-    if session.subset_csv_path:
+    path = session.subset_csv_path.strip()
+    if path and session.subset_selection is not None:
         raise SubmissionValidationError(
-            f"Session {name} uses a cluster CSV path for its subset, which isn't supported yet - "
-            "re-upload the selection in the Sources step."
+            f"Session {name} has both an uploaded subset and a cluster CSV path - keep only one."
         )
+    if path:
+        ensure_safe_subset_csv_path(path)
+        return {"subset_csv_path": path}
     positions = selected_positions(session.subset_selection)
     if not positions:
         raise SubmissionValidationError(f"Session {name} has no custom subset selected.")
-    return positions
+    return {"positions": positions}
 
 
 def _dataset_block(dataset):
@@ -163,7 +165,7 @@ def _dataset_block(dataset):
         config = _session_config(session, metadata.get("authors", []))
         if dataset.tomogram_subset_mode == "custom":
             # Custom selections must not fall back to processing all positions.
-            config["positions"] = require_custom_positions(session)
+            config.update(custom_subset_config(session))
         sessions[session.msi_session.name] = config
     if not sessions:
         raise SubmissionValidationError("Select at least one session before preparing the dataset.")

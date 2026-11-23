@@ -26,6 +26,12 @@ def test_runs_sync_and_validation():
     assert script.index("cryoetportalprep sync") < script.index("END_DEPOSITION_VALIDATION")
 
 
+def test_subset_resolution_runs_before_sync():
+    script = _render()
+    assert "END_DEPOSITION_SUBSET" in script
+    assert script.index("END_DEPOSITION_SUBSET") < script.index("cryoetportalprep sync")
+
+
 def test_session_filter_scopes_sync_to_this_datasets_sessions():
     script = _render(session_names=["24nov10", "24nov11"])
     assert "cryoetportalprep sync /staged/dep_1/ds_2/dataprep_config.yaml -s 24nov10 -s 24nov11" in script

@@ -16,7 +16,6 @@ from depositions.services.dataprep_config import (
     dataprep_config_yaml,
     dataset_is_ready,
     is_defining_dataset,
-    require_custom_positions,
     resolve_sync_destination,
 )
 from depositions.services.dataset_metadata import build_dataset_metadata, build_deposition_metadata
@@ -83,13 +82,7 @@ def submit_dataset_prep(dataset):
             issues += deposition_metadata_issues(build_deposition_metadata(deposition))
         if issues:
             raise SubmissionValidationError("Complete the metadata before preparation:\n" + "\n".join(issues))
-        # Fail fast (pre-claim) if a custom dataset has an unusable selection; dataprep_config
-        # re-checks it as the backstop.
-        if dataset.tomogram_subset_mode == "custom":
-            for session in dataset.sessions.select_related("msi_session"):
-                require_custom_positions(session)
-        # Build the config (and resolve its paths) before claiming, so a fixable error leaves the job
-        # unclaimed and retryable instead of flipping an existing attempt to failed.
+        # Build the config before claiming so a fixable error leaves the job unclaimed and retryable.
         output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
         config_path = f"{output_dir.rstrip('/')}/{dataset.dataset_id}/{CONFIG_FILENAME}"
         config_yaml = dataprep_config_yaml(

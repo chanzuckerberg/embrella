@@ -47,6 +47,7 @@ class DepositionPrepProcessor(BaseProcessor):
         return template.render(
             progress_code=(Path(__file__).parent.parent / "deposition_progress.py").read_text(),
             validation_code=(Path(__file__).parent.parent / "deposition_validation.py").read_text(),
+            subset_code=(Path(__file__).parent.parent / "deposition_subset.py").read_text(),
             dataset_id=shlex.quote(str(params["dataset_id"])),
             output_dir=shlex.quote(params["output_dir"]),
             config_path=shlex.quote(params["config_path"]),

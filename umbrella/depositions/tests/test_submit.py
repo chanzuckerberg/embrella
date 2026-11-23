@@ -24,6 +24,13 @@ def _raise_no_creds():
     raise RuntimeError("service credentials unavailable")
 
 
+def _build_config_for_real(monkeypatch):
+    """Undo the mocks fixture's config-yaml stub so custom-subset handling runs for real."""
+    from depositions.services import dataprep_config
+
+    monkeypatch.setattr(submit, "dataprep_config_yaml", dataprep_config.dataprep_config_yaml)
+
+
 @pytest.fixture
 def dataset(db, test_msi_session):
     author = Person.objects.create(given_name="Ada", family_name="Lovelace")
@@ -172,7 +179,8 @@ class TestSubmitDatasetPrep:
         assert launched["auth"] is mocks["auth"]
         assert mocks["synced"] == (job.id, "prep", "cluster-a", "slurm-500")
 
-    def test_custom_mode_requires_a_selection_per_session(self, dataset, mocks):
+    def test_custom_mode_requires_a_selection_per_session(self, dataset, mocks, monkeypatch):
+        _build_config_for_real(monkeypatch)
         dataset.tomogram_subset_mode = "custom"
         dataset.save(update_fields=["tomogram_subset_mode"])
         with pytest.raises(SubmissionValidationError, match="no custom subset selected"):
@@ -180,13 +188,26 @@ class TestSubmitDatasetPrep:
         assert mocks["launched"] is None
         assert not DatasetJob.objects.filter(dataset=dataset).exists()
 
-    def test_custom_mode_rejects_cluster_path_subset(self, dataset, mocks):
+    def test_custom_mode_accepts_a_cluster_csv_path(self, dataset, mocks, monkeypatch):
+        _build_config_for_real(monkeypatch)
         dataset.tomogram_subset_mode = "custom"
         dataset.save(update_fields=["tomogram_subset_mode"])
         session = dataset.sessions.get()
         session.subset_csv_path = "/cluster/path/subset.csv"
         session.save(update_fields=["subset_csv_path"])
-        with pytest.raises(SubmissionValidationError, match="cluster CSV path"):
+        job = submit.submit_dataset_prep(dataset)
+        assert job.state == "prep_submitted"
+        assert "subset_csv_path: /cluster/path/subset.csv" in mocks["launched"]["params"]["config_yaml"]
+
+    def test_custom_mode_rejects_both_upload_and_cluster_path(self, dataset, mocks, monkeypatch):
+        _build_config_for_real(monkeypatch)
+        dataset.tomogram_subset_mode = "custom"
+        dataset.save(update_fields=["tomogram_subset_mode"])
+        session = dataset.sessions.get()
+        session.subset_csv_path = "/cluster/path/subset.csv"
+        session.subset_selection = {"Selected positions": ["Position_1"]}
+        session.save(update_fields=["subset_csv_path", "subset_selection"])
+        with pytest.raises(SubmissionValidationError, match="keep only one"):
             submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
 
