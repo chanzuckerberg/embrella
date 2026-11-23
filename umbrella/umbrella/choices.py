@@ -47,7 +47,19 @@ GRID_BOX_NUMBERING = [
     ("ucw", "U-clockwise"),
     ("uccw", "U-counter-clockwise"),
     ("z", "Z-top-left"),
+    ("col", "By column"),
 ]
+
+GRID_BOX_SIZES = [
+    (4, "4"),
+    (8, "8"),
+]
+
+# Numbering styles each box size supports; the first is that size's default.
+GRID_BOX_NUMBERING_BY_SIZE = {
+    4: ["ucw", "uccw", "z"],
+    8: ["col", "z"],
+}
 
 GRID_CASSETTE_NUMBERING = [
     ("bot", "Number 1 at the bottom"),

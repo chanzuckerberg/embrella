@@ -11,6 +11,11 @@ import {
 } from '@app/common/hooks/useGridLogging';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
+import { GridBoxSize, GridBoxSVG } from './GridBoxSvg';
+import { defaultNumbering, numberingOptions } from './gridBoxLayout';
+
+const GRID_BOX_SIZES: GridBoxSize[] = [4, 8];
+const PREVIEW_SIZE = 160;
 
 interface AddGridBoxProps {
   open: boolean;
@@ -77,6 +82,15 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
     setFormData((prev) => ({
       ...prev,
       [field]: value,
+    }));
+  };
+
+  // Switching box size resets numbering to that size's default (e.g. 8 → col).
+  const handleMaxGridsChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      maxGrids: value,
+      numbering: defaultNumbering(choices, Number(value)),
     }));
   };
 
@@ -200,7 +214,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
             disabled={!choicesLoaded}
             sx={disabledTextFieldStyles}
           >
-            {choices?.grid_box_numbering?.map((numbering) => (
+            {numberingOptions(choices, Number(formData.maxGrids)).map((numbering) => (
               <MenuItem key={numbering.value} value={numbering.value}>
                 {numbering.label}
               </MenuItem>
@@ -240,15 +254,28 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
           <Select
             labelId="max-grids-label"
             value={formData.maxGrids}
-            onChange={(e) => handleInputChange('maxGrids', e.target.value)}
+            onChange={(e) => handleMaxGridsChange(String(e.target.value))}
             label="Max Grids"
             sx={disabledTextFieldStyles}
           >
-            <MenuItem value={4}>4</MenuItem>
-            <MenuItem value={6}>6</MenuItem>
-            <MenuItem value={8}>8</MenuItem>
+            {GRID_BOX_SIZES.map((boxSize) => (
+              <MenuItem key={boxSize} value={String(boxSize)}>
+                {boxSize}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
+      </Box>
+
+      {/* Live preview of the slot numbering for the chosen size and style. */}
+      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+        <GridBoxSVG
+          size={PREVIEW_SIZE}
+          maxGrids={Number(formData.maxGrids) as GridBoxSize}
+          numbering={formData.numbering}
+          color={formData.color}
+          disableGridClick
+        />
       </Box>
     </BaseFormDialog>
   );

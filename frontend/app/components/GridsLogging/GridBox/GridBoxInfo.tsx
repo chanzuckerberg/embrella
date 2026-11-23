@@ -11,7 +11,8 @@ import {
   useGridLoggingChoices,
 } from '@app/common/hooks/useGridLogging';
 import styles from '../GridLogging.module.css';
-import { GridBoxSVG } from './GridBoxSvg';
+import { GridBoxSize, GridBoxSVG } from './GridBoxSvg';
+import { numberingOptions } from './gridBoxLayout';
 import { DeleteGridBox } from './DeleteGridBox';
 import { disabledTextFieldStyles } from './DisableBoxStyle';
 import { UserList, GridBoxDetailResponse, PuckList } from '@app/common/types/gridLogging';
@@ -29,6 +30,9 @@ interface GridBoxInfoProps {
   onGridBoxInfoRefetchReady?: (refetch: () => void) => void;
   onGridBoxDeleted?: () => void;
 }
+
+// Grid box drawing size in the panel; large enough for comfortable slot clicks.
+const GRID_BOX_SVG_SIZE = 240;
 
 const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
   name: data.grid_box?.name || '',
@@ -270,24 +274,17 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
 
         <CardContent sx={{ padding: '0px' }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: GRID_BOX_SVG_SIZE }}>
               <GridBoxSVG
-                size={200}
+                size={GRID_BOX_SVG_SIZE}
                 onGridClick={handleGridClick}
                 gridBoxData={gridBoxData}
                 slotsData={slotsData}
                 selectedSlot={selectedSlot}
-                maxGrids={formData.maxGrids as 4 | 6 | 8}
+                maxGrids={formData.maxGrids as GridBoxSize}
+                numbering={isEditMode ? editedData.numbering : formData.numbering}
+                color={isEditMode ? editedData.color : formData.color}
               />
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
-                  Occupied Slots: {gridBoxData?.grid_box?.positions?.filter((pos) => pos.occupied).length || 0} Filled
-                  with grid
-                </Typography>
-                <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
-                  Empty Slots: {gridBoxData?.grid_box?.positions?.filter((pos) => !pos.occupied).length || 0} Empty
-                </Typography>
-              </Box>
             </Box>
 
             <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -378,7 +375,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                   sx={!isEditMode ? disabledTextFieldStyles : {}}
                 >
                   {isEditMode &&
-                    choices?.grid_box_numbering?.map((option: { value: string; label: string }) => (
+                    numberingOptions(choices, formData.maxGrids, formData.numbering).map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
                       </MenuItem>
