@@ -84,6 +84,56 @@ class TestSummaryDirectories:
         assert body["data_collection_directory"] is None
 
 
+class TestNanSafeSerialization:
+    # One row makes pandas std NaN; the response must still be valid JSON (null, not a bare NaN token).
+    SINGLE_ROW_CSV = "\n".join(METRICS_CSV.splitlines()[:2]) + "\n"
+
+    def test_single_row_std_serializes_as_null(self, cluster, test_msi_session):
+        with mock.patch.object(metadata_views, "fetch_remote_text", return_value=self.SINGLE_ROW_CSV):
+            request = RequestFactory().get("/", {"session_name": "24nov10", "run_number": "run001"})
+            with override_settings(FILESERVER_ALLOWED_HOSTS=[], FILESERVER_INTERNAL_BASE_URL=""):
+                response = get_metadata_summary(request)
+
+        assert response.status_code == 200
+        assert b"NaN" not in response.content
+        body = json.loads(response.content)
+        assert body["num_tomograms"] == 1
+        ctf = next(item for item in body["computed_metrics"] if item["name"] == "CTF Score")
+        assert ctf["std"] is None
+        assert ctf["mean"] == 0.49
+
+    def test_viz_missing_beta0_serializes_as_null(self, cluster, test_msi_session):
+        # The viz view emits float("nan") for a missing Beta0; it must serialize as null.
+        csv = METRICS_CSV.replace(",15.5,-8.2", ",15.5,")
+        with mock.patch.object(metadata_views, "fetch_remote_text", return_value=csv):
+            request = RequestFactory().get("/", {"session_name": "24nov10", "run_number": "run001"})
+            with override_settings(FILESERVER_ALLOWED_HOSTS=[], FILESERVER_INTERNAL_BASE_URL=""):
+                response = get_metadata_viz_data(request)
+
+        assert response.status_code == 200
+        assert b"NaN" not in response.content
+        body = json.loads(response.content)
+        rows = body["accepted_results"] + body["rejected_results"]
+        assert {r["name"]: r["metrics"]["beta0"] for r in rows}["Position_13"] is None
+
+
+def test_json_safe_replaces_non_finite_floats_and_passes_the_rest():
+    assert metadata_views._json_safe(float("nan")) is None
+    assert metadata_views._json_safe(float("inf")) is None
+    assert metadata_views._json_safe(float("-inf")) is None
+    assert metadata_views._json_safe({"a": float("nan"), "b": [1, float("inf"), "x"], "c": {"d": 2.5}}) == {
+        "a": None,
+        "b": [1, None, "x"],
+        "c": {"d": 2.5},
+    }
+    assert metadata_views._json_safe({"n": None, "i": 3, "s": "ok", "f": 1.25}) == {
+        "n": None,
+        "i": 3,
+        "s": "ok",
+        "f": 1.25,
+    }
+
+
 class TestThumbnailNames:
     def test_stem_keeps_serialem_mrc(self, cluster, test_msi_session, metrics_csv):
         status, body = _call(get_metadata_viz_data, session_name="24nov10", run_number="run001")
