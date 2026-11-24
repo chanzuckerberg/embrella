@@ -20,7 +20,7 @@ from depositions.services.annotation_config import session_annotations
 from depositions.services.cluster import deposition_cluster_id
 from depositions.services.dataset_metadata import build_dataset_metadata, build_deposition_metadata
 from depositions.services.exceptions import SubmissionValidationError
-from depositions.services.subset import selected_positions
+from depositions.services.subset import resolve_custom_positions, selected_positions
 from depositions.validators import ensure_safe_run_name
 
 logger = logging.getLogger(__name__)
@@ -146,19 +146,14 @@ def dataset_is_ready(dataset):
     return bool(sessions) and all(_session_has_autofill(s) for s in sessions)
 
 
-def require_custom_positions(session) -> list[str]:
-    """Positions to keep for a custom-mode session; raise if it has no usable selection or uses an
-    unsupported cluster CSV path. Shared by submit (pre-claim) and the config builder (backstop)."""
-    name = session.msi_session.name
-    if session.subset_csv_path:
-        raise SubmissionValidationError(
-            f"Session {name} uses a cluster CSV path for its subset, which isn't supported yet - "
-            "re-upload the selection in the Sources step."
-        )
-    positions = selected_positions(session.subset_selection)
-    if not positions:
-        raise SubmissionValidationError(f"Session {name} has no custom subset selected.")
-    return positions
+def custom_subset_config(session, positions=None) -> dict:
+    """A custom-mode session's subset as a resolved ``positions`` list (uploaded, or a typed CSV)."""
+    if session.subset_csv_path.strip():
+        return {"positions": positions if positions is not None else resolve_custom_positions(session)}
+    uploaded = selected_positions(session.subset_selection)
+    if not uploaded:
+        raise SubmissionValidationError(f"Session {session.msi_session.name} has no custom subset selected.")
+    return {"positions": uploaded}
 
 
 def require_annotated_positions(session, dataset, cluster_id) -> list[str]:
@@ -194,7 +189,7 @@ def require_annotated_positions(session, dataset, cluster_id) -> list[str]:
     return positions
 
 
-def _dataset_block(dataset, annotated_positions=None, cluster_id=None):
+def _dataset_block(dataset, annotated_positions=None, cluster_id=None, custom_positions=None):
     if dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve the dataset_id before preparing the dataset.")
     metadata = build_dataset_metadata(dataset)
@@ -208,7 +203,9 @@ def _dataset_block(dataset, annotated_positions=None, cluster_id=None):
         config = _session_config(session, metadata.get("authors", []))
         if dataset.tomogram_subset_mode == "custom":
             # Custom selections must not fall back to processing all positions.
-            config["positions"] = require_custom_positions(session)
+            name = session.msi_session.name
+            resolved = custom_positions.get(name) if custom_positions else None
+            config.update(custom_subset_config(session, resolved))
         elif dataset.tomogram_subset_mode == "annotated":
             # Submit resolves these before the lock and passes them in; recompute only when it didn't
             # (e.g. config preview).
@@ -230,7 +227,9 @@ def is_defining_dataset(dataset) -> bool:
     return dataset.deposition.metadata_dataset_id in (None, dataset.pk)
 
 
-def build_dataprep_config(dataset, *, output_dir, sync_destination=None, annotated_positions=None, cluster_id=None):
+def build_dataprep_config(
+    dataset, *, output_dir, sync_destination=None, annotated_positions=None, cluster_id=None, custom_positions=None
+):
     """Build this dataset's prep config with its deposition ID and any defining metadata."""
     deposition = dataset.deposition
     if deposition.deposition_id is None:
@@ -245,7 +244,7 @@ def build_dataprep_config(dataset, *, output_dir, sync_destination=None, annotat
         raise SubmissionValidationError(
             f"Dataset {dataset.dataset_id} isn't ready to prepare; add sessions and run auto-fill first."
         )
-    block = _dataset_block(dataset, annotated_positions, cluster_id)
+    block = _dataset_block(dataset, annotated_positions, cluster_id, custom_positions)
     if is_defining_dataset(dataset):
         block["deposition_metadata"] = build_deposition_metadata(deposition)
     return {
@@ -258,7 +257,9 @@ def build_dataprep_config(dataset, *, output_dir, sync_destination=None, annotat
     }
 
 
-def dataprep_config_yaml(dataset, *, output_dir, sync_destination=None, annotated_positions=None, cluster_id=None):
+def dataprep_config_yaml(
+    dataset, *, output_dir, sync_destination=None, annotated_positions=None, cluster_id=None, custom_positions=None
+):
     """Render the prep deployment config as YAML for a later remote write."""
     config = build_dataprep_config(
         dataset,
@@ -266,5 +267,6 @@ def dataprep_config_yaml(dataset, *, output_dir, sync_destination=None, annotate
         sync_destination=sync_destination,
         annotated_positions=annotated_positions,
         cluster_id=cluster_id,
+        custom_positions=custom_positions,
     )
     return yaml.safe_dump(config, sort_keys=False, allow_unicode=True, default_flow_style=False)

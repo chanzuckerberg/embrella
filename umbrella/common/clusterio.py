@@ -18,6 +18,10 @@ class SSHDisabledError(Exception):
     """
 
 
+class RemoteFileTooLargeError(ValueError):
+    """read_remote_file hit a file larger than its max_bytes cap."""
+
+
 def _ensure_ssh_enabled():
     """Raise SSHDisabledError immediately if SSH is disabled via settings."""
     from django.conf import settings
@@ -131,26 +135,31 @@ def get_cluster_ssh_connection(cluster_id, auth=None):
     return ssh
 
 
-def read_remote_file(cluster_id, remote_path, auth=None):
+def read_remote_file(cluster_id, remote_path, auth=None, *, max_bytes=None):
     """Read a file from a cluster over SFTP and return its UTF-8 content.
 
     Args:
         cluster_id: Target cluster (e.g., 'czii', 'bruno').
         remote_path: Absolute path on the cluster filesystem.
         auth: Optional auth dict; defaults to cached service-user auth.
+        max_bytes: Optional cap for untrusted paths; raises RemoteFileTooLargeError if exceeded.
 
     Returns:
         File content as a UTF-8 string.
 
     Raises:
         FileNotFoundError: if the remote path does not exist.
+        RemoteFileTooLargeError: if max_bytes is set and the file is larger.
     """
     ssh = get_cluster_ssh_connection(cluster_id=cluster_id, auth=auth)
     try:
         sftp = ssh.open_sftp()
         try:
             with sftp.file(remote_path, "r") as remote_file:
-                return remote_file.read().decode("utf-8")
+                data = remote_file.read() if max_bytes is None else remote_file.read(max_bytes + 1)
+            if max_bytes is not None and len(data) > max_bytes:
+                raise RemoteFileTooLargeError(f"Remote file exceeds the {max_bytes}-byte limit: {remote_path}")
+            return data.decode("utf-8")
         finally:
             sftp.close()
     finally:

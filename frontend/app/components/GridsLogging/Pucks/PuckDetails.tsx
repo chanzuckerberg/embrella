@@ -181,8 +181,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
           setSelectedSlotForGridBox(null);
         }}
         selectedUser={selectedUser}
-        puckId={selectedPuck?.id}
-        puckName={selectedPuck?.name}
+        puck={selectedPuck}
         positionInPuck={selectedSlotForGridBox || undefined}
         onGridBoxCreated={handleGridBoxCreated}
       />

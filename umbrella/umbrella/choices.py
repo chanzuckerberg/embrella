@@ -28,12 +28,15 @@ PUCK_COLORS = [
     ("E5C100", "Gold"),  # RGB=(229,193,0)
 ]
 
+# Default color for new grid boxes.
+GRID_BOX_SKY = "00cdf5"
+
 GRID_BOX_COLORS = [
     ("CF1E01", "Red"),  # RGB=(207,30,1)
     ("fdb000", "Orange"),  # RGB=(253,176,0)
     ("fff500", "Yellow"),  # RGB=(255,245,0)
     ("9eef66", "Green"),  # RGB=(158,239,102)
-    ("00cdf5", "Sky"),  # RGB=(0,205,245)
+    (GRID_BOX_SKY, "Sky"),  # RGB=(0,205,245)
     ("366de1", "Blue"),  # RGB=(54,109,225)
     ("d728c9", "Purple"),  # RGB=(215,40,201)
     ("fd5c9f", "Neon Pink"),  # RGB=(253,92,159)
@@ -47,7 +50,26 @@ GRID_BOX_NUMBERING = [
     ("ucw", "U-clockwise"),
     ("uccw", "U-counter-clockwise"),
     ("z", "Z-top-left"),
+    ("col", "By column"),
 ]
+
+GRID_BOX_SIZES = [
+    (4, "4"),
+    (8, "8"),
+]
+
+# Numbering styles each box size supports; the first is that size's default.
+GRID_BOX_NUMBERING_BY_SIZE = {
+    4: ["ucw", "uccw", "z"],
+    8: ["col", "z"],
+}
+
+# Initial values in the Add Grid Box form (sent via the choices endpoint).
+GRID_BOX_DEFAULTS = {
+    "max_grids": 8,
+    "color": GRID_BOX_SKY,
+    "numbering": GRID_BOX_NUMBERING_BY_SIZE[8][0],
+}
 
 GRID_CASSETTE_NUMBERING = [
     ("bot", "Number 1 at the bottom"),

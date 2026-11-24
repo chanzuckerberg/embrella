@@ -17,7 +17,6 @@ from depositions.services.dataprep_config import (
     dataset_is_ready,
     is_defining_dataset,
     require_annotated_positions,
-    require_custom_positions,
     resolve_sync_destination,
 )
 from depositions.services.dataset_metadata import build_dataset_metadata, build_deposition_metadata
@@ -25,11 +24,13 @@ from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
 from depositions.services.metadata_requirements import deposition_metadata_issues, metadata_issues
 from depositions.services.submission import PREP_ACTIVE, PUSH_ACTIVE, apply_status, on_push_complete, start_push
+from depositions.services.subset import resolve_custom_positions
 from depositions.services.validation import require_validation
 
 logger = logging.getLogger(__name__)
 
 CONFIG_FILENAME = "dataprep_config.yaml"
+NOT_READY = "This dataset isn't ready to submit - add sessions and run auto-fill first."
 
 
 def _subset_sessions(dataset):
@@ -70,14 +71,23 @@ def submit_dataset_prep(dataset):
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before submitting.")
     db = dataset._state.db
     cluster_id = deposition_cluster_id()
-    # Resolve annotated positions before the lock - they come from HTTP scan/metrics reads that
-    # shouldn't be held under select_for_update, and a bad selection should fail before the claim.
+    # Resolve subsets before the lock - they come from HTTP scan / SFTP reads that shouldn't be held
+    # under select_for_update, and a bad selection should fail before the claim.
     sessions = _subset_sessions(dataset)
     subset_inputs = _subset_fingerprint(dataset.tomogram_subset_mode, sessions)
     annotated_positions = None
+    custom_positions = None
     if dataset.tomogram_subset_mode == "annotated":
         annotated_positions = {
             s.msi_session.name: require_annotated_positions(s, dataset, cluster_id) for s in sessions
+        }
+    elif dataset.tomogram_subset_mode == "custom":
+        if not dataset_is_ready(dataset):
+            raise SubmissionValidationError(NOT_READY)
+        custom_positions = {
+            s.msi_session.name: resolve_custom_positions(s, cluster_id)
+            for s in dataset.sessions.select_related("msi_session", "tiltseries_metadata")
+            if s.subset_csv_path.strip()
         }
     # Serialize prep claims; the lock also builds the config from the same state it's claimed on.
     with transaction.atomic(using=db):
@@ -89,9 +99,7 @@ def submit_dataset_prep(dataset):
         if _subset_fingerprint(dataset.tomogram_subset_mode, _subset_sessions(dataset)) != subset_inputs:
             raise SubmissionValidationError("The selection changed while submitting - try again.")
         if not dataset_is_ready(dataset):
-            raise SubmissionValidationError(
-                "This dataset isn't ready to submit - add sessions and run auto-fill first."
-            )
+            raise SubmissionValidationError(NOT_READY)
         auth = _service_auth()
         if (
             DatasetJob.objects.using(db)
@@ -109,13 +117,7 @@ def submit_dataset_prep(dataset):
             issues += deposition_metadata_issues(build_deposition_metadata(deposition))
         if issues:
             raise SubmissionValidationError("Complete the metadata before preparation:\n" + "\n".join(issues))
-        # Fail fast (pre-claim) if a custom dataset has an unusable selection; dataprep_config
-        # re-checks it as the backstop.
-        if dataset.tomogram_subset_mode == "custom":
-            for session in dataset.sessions.select_related("msi_session"):
-                require_custom_positions(session)
-        # Build the config (and resolve its paths) before claiming, so a fixable error leaves the job
-        # unclaimed and retryable instead of flipping an existing attempt to failed.
+        # Build the config before claiming so a fixable error leaves the job unclaimed and retryable.
         output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
         config_path = f"{output_dir.rstrip('/')}/{dataset.dataset_id}/{CONFIG_FILENAME}"
         config_yaml = dataprep_config_yaml(
@@ -124,6 +126,7 @@ def submit_dataset_prep(dataset):
             sync_destination=resolve_sync_destination(cluster=cluster_id),
             annotated_positions=annotated_positions,
             cluster_id=cluster_id,
+            custom_positions=custom_positions,
         )
         job, _ = DatasetJob.objects.using(db).get_or_create(dataset=dataset)
         claimed = (

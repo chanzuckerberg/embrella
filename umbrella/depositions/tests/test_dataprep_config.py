@@ -262,6 +262,26 @@ def _annotated_dataset(dataset, runs=("copick-config-1",)):
     return dataset
 
 
+@pytest.mark.parametrize("path", ["relative/path.csv", "/hpc/../etc/passwd.csv", "/hpc/subset.txt"])
+def test_custom_csv_path_must_be_a_safe_absolute_csv(dataset, path):
+    session = dataset.sessions.get()
+    session.subset_csv_path = path
+    session.save(update_fields=["subset_csv_path"])
+    dataset.tomogram_subset_mode = "custom"
+    dataset.save()
+    with pytest.raises(SubmissionValidationError, match="Invalid subset CSV path"):
+        _build(dataset)
+
+
+def _custom_path_dataset(dataset):
+    session = dataset.sessions.get()
+    session.subset_csv_path = "/hpc/subsets/24nov10.csv"
+    session.save(update_fields=["subset_csv_path"])
+    dataset.tomogram_subset_mode = "custom"
+    dataset.save()
+    return dataset
+
+
 def _mock_annotated(monkeypatch, *, annotated, full=True, produced=None):
     monkeypatch.setattr("depositions.services.dataprep_config.deposition_cluster_id", lambda: "c1")
     monkeypatch.setattr("depositions.services.dataprep_config._active_cluster", lambda cluster_id: object())
@@ -337,6 +357,18 @@ def test_annotated_mode_reports_a_metrics_read_failure(dataset, monkeypatch):
     monkeypatch.setattr("workflow.views.metadata_views.aretomo_positions", boom)
     with pytest.raises(SubmissionValidationError, match="couldn't read the tilt series metrics"):
         _build(_annotated_dataset(dataset))
+
+
+def test_custom_csv_with_no_overlap_is_rejected(dataset, monkeypatch):
+    monkeypatch.setattr("depositions.services.subset.deposition_cluster_id", lambda: "c1")
+    monkeypatch.setattr(
+        "depositions.services.subset.clusterio.read_remote_file",
+        lambda cluster_id, path, *a, **kw: (
+            "Tilt_Series\nPosition_1\n" if path.endswith("TiltSeries_Metrics.csv") else "Tilt_Series\nPosition_9\n"
+        ),
+    )
+    with pytest.raises(SubmissionValidationError, match="none of the positions"):
+        _build(_custom_path_dataset(dataset))
 
 
 def test_user_edits_override_autofill_without_changing_saved_raw_data(dataset):
