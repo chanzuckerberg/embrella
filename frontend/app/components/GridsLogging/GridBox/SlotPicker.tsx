@@ -170,8 +170,6 @@ export const SlotPicker = ({ puck, slots, value, onChange }: SlotPickerProps) =>
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
               {puck && (
                 <PuckSVG
-                  // Re-inject the SVG so the highlight follows the selection.
-                  key={pending}
                   puck={puck}
                   slots={slots?.slots}
                   size={PUCK_PREVIEW}

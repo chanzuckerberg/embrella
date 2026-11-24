@@ -1,8 +1,19 @@
 'use client';
 
-import React from 'react';
-import { ReactSVG } from 'react-svg';
+import React, { useState } from 'react';
 import { PuckList, PuckSlots } from '@app/common/types/gridLogging';
+import {
+  FADED_OPACITY,
+  HOVER_LINE_WIDTH,
+  LABEL_COLOR,
+  LABEL_OUTLINE,
+  LINE_WIDTH,
+  RING_WIDTH,
+  SELECTED_FILL,
+  selectedFilter,
+  slotPalette,
+} from '../slotPalette';
+import { OUTLINE_CENTER, OUTLINE_EXTENT, OUTLINE_PATH, OUTLINE_PIVOT, SLOT_CENTERS, SLOT_RADIUS } from './puckArt';
 
 interface PuckSVGProps {
   puck: PuckList;
@@ -15,9 +26,42 @@ interface PuckSVGProps {
   highlightedSlot?: number;
 }
 
+const FILLED = 'filled';
+
+// Outline is enlarged around the slots, so the rim clears them.
+const OUTLINE_SCALE = 1.08;
+
+/**
+ * ViewBox fits the enlarged outline. Scaling around the pivot moves the outline center:
+ *   center' = pivot + scale × (center − pivot)
+ */
+const VIEW = OUTLINE_EXTENT * OUTLINE_SCALE;
+const VIEW_ORIGIN = {
+  x: OUTLINE_PIVOT.x + OUTLINE_SCALE * (OUTLINE_CENTER.x - OUTLINE_PIVOT.x) - VIEW / 2,
+  y: OUTLINE_PIVOT.y + OUTLINE_SCALE * (OUTLINE_CENTER.y - OUTLINE_PIVOT.y) - VIEW / 2,
+};
+
+const OUTLINE_TRANSFORM = [
+  `translate(${OUTLINE_PIVOT.x} ${OUTLINE_PIVOT.y})`,
+  `scale(${OUTLINE_SCALE})`,
+  `translate(${-OUTLINE_PIVOT.x} ${-OUTLINE_PIVOT.y})`,
+].join(' ');
+
+// Shared sizes are in 200-unit drawings; scale them to this viewBox.
+const UNIT = VIEW / 200;
+
+// Label size, like the grid box's.
+const FONT = 14 * UNIT;
+
+// Highlight glow sized like the grid box's.
+const SELECTED_GLOW_FILTER = selectedFilter(UNIT);
+
+// Invisible click target per slot: just under half the gap to its nearest neighbor.
+const HIT_RADIUS = 88;
+
 export const PuckSVG: React.FC<PuckSVGProps> = ({
   puck,
-  slots = [],
+  slots,
   size = 200,
   onClick,
   onSlotClick,
@@ -25,91 +69,30 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
   disableSlotClick = false,
   highlightedSlot,
 }) => {
-  const puckColor = puck.color.startsWith('#') ? puck.color : `#${puck.color}`;
+  const palette = slotPalette(puck.color);
 
-  // Helper function to darken colors for borders
-  const darkenColor = (color: string, amount: number): string => {
-    const hex = color.replace('#', '');
-    const r = Math.max(0, Math.min(255, parseInt(hex.substr(0, 2), 16) - amount));
-    const g = Math.max(0, Math.min(255, parseInt(hex.substr(2, 2), 16) - amount));
-    const b = Math.max(0, Math.min(255, parseInt(hex.substr(4, 2), 16) - amount));
-    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  // Slot under the pointer, outlined bolder.
+  const [hovered, setHovered] = useState<number | null>(null);
+
+  const isFilled = (position: number) => !!slots?.some((s) => s.position === position && s.status === FILLED);
+
+  // No slot data (e.g. puck list): body-colored, so slots don't read as empty.
+  const slotFill = (filled: boolean) => {
+    if (!slots) return palette.body;
+
+    return filled ? palette.occupied : palette.slot;
   };
 
-  // Function to replace colors in the SVG with the API color
-  const replaceColors = (svg: SVGElement, puckColor: string) => {
-    const elements = svg.querySelectorAll('*');
-    elements.forEach((element, index) => {
-      const fill = element.getAttribute('fill');
-      const stroke = element.getAttribute('stroke');
+  // Highlighted slot wins; filled slots fade while another slot is highlighted.
+  const slotStyle = (position: number) => {
+    const filled = isFilled(position);
 
-      // Replace specific colors with API color
-      if (fill && isReplaceableColor(fill)) {
-        if (isCircleElement(index)) {
-          element.setAttribute('fill', puckColor);
-        } else if (isMainPuckOutline(fill)) {
-          element.setAttribute('fill', darkenColor(puckColor, 30));
-        } else {
-          element.setAttribute('fill', puckColor);
-        }
-      }
-      if (stroke && isReplaceableColor(stroke)) {
-        element.setAttribute('stroke', darkenColor(puckColor, 30));
-      }
-    });
-  };
+    if (position === highlightedSlot)
+      return { fill: SELECTED_FILL, opacity: 1, filter: SELECTED_GLOW_FILTER, picked: true };
 
-  const isReplaceableColor = (color: string): boolean => {
-    const replaceableColors = [
-      '#595959', // Individual circles/slots
-      '#363636', // Circle borders AND some circles
-      '#717171', // Main puck outline
-      '#383838', // Details
-      '#373737', // Other details
-      '#393939',
-      '#707070',
-      '#383838',
-      '#000000',
-      '#3b3b3b',
-    ];
-    return replaceableColors.some((replaceable) => color.includes(replaceable));
-  };
+    const opacity = filled && highlightedSlot !== undefined ? FADED_OPACITY : 1;
 
-  const isCircleElement = (index: number): boolean => {
-    return index >= 5 && index <= 16;
-  };
-
-  const isMainPuckOutline = (color: string): boolean => {
-    return color.includes('#717171');
-  };
-
-  // Get slot status for a given position
-  const getSlotStatus = (position: number): 'filled' | 'empty' | 'unknown' => {
-    const slot = slots.find((s) => s.position === position);
-    return slot ? (slot.status as 'filled' | 'empty') : 'unknown';
-  };
-
-  // Get slot style based on status
-  const getSlotStyle = (position: number) => {
-    const status = getSlotStatus(position);
-    const baseStyle = {
-      cursor: disableSlotClick ? 'default' : 'pointer',
-      transition: 'all 0.2s ease-in-out',
-    };
-
-    if (status === 'filled') {
-      return {
-        ...baseStyle,
-        opacity: 0.4,
-        fill: '#C0C0C0',
-        stroke: 'black',
-        strokeLinecap: 'round',
-        strokeOpacity: '1',
-        strokeWidth: '3px',
-      };
-    }
-
-    return baseStyle;
+    return { fill: slotFill(filled), opacity, filter: undefined, picked: false };
   };
 
   return (
@@ -127,68 +110,76 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
       }}
       onClick={onClick}
     >
-      {/* SVG Background */}
-      <ReactSVG
-        src="/puck.svg"
-        beforeInjection={(svg) => {
-          svg.setAttribute('width', '100%');
-          svg.setAttribute('height', '100%');
-          svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      <svg
+        viewBox={`${VIEW_ORIGIN.x} ${VIEW_ORIGIN.y} ${VIEW} ${VIEW}`}
+        width="100%"
+        height="100%"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {/* Stroke divided by scale, so the ring matches the grid box's width. */}
+        <path
+          d={OUTLINE_PATH}
+          transform={OUTLINE_TRANSFORM}
+          fill={palette.body}
+          stroke={palette.ring}
+          strokeWidth={(RING_WIDTH * UNIT) / OUTLINE_SCALE}
+          strokeLinejoin="round"
+        />
 
-          // Add click handlers to individual slot circles using data-position attributes
-          const allPaths = svg.querySelectorAll('path');
+        {/* One circle per slot, labelled by position. */}
+        {Object.entries(SLOT_CENTERS).map(([key, { x, y }]) => {
+          const position = Number(key);
+          const { fill, opacity, filter, picked } = slotStyle(position);
+          const isHovered = hovered === position;
 
-          allPaths.forEach((circle) => {
-            const dataPosition = circle.getAttribute('data-position');
+          const handleClick = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            onSlotClick?.(position);
+          };
 
-            // Check if this is a slot circle by looking for data-position attribute and specific fill color
-            if (dataPosition) {
-              const slotNumber = parseInt(dataPosition, 10);
-              const maxBoxes = puck?.max_boxes || 12;
-
-              if (slotNumber >= 1 && slotNumber <= maxBoxes) {
-                const slotStyle = getSlotStyle(slotNumber);
-
-                // Apply visual styling based on slot status
-                Object.assign(circle.style, slotStyle);
-
-                // Bright fill + dark stroke for highlighted slot, dim others
-                if (highlightedSlot !== undefined) {
-                  if (slotNumber === highlightedSlot) {
-                    circle.style.filter = 'brightness(1.3) drop-shadow(0 0 6px rgba(0,0,0,0.8))';
-                    circle.style.opacity = '1';
-                  } else if (getSlotStatus(slotNumber) === 'filled') {
-                    circle.style.opacity = '0.2';
-                  }
-                }
-
-                // Only add click handlers if slot clicking is not disabled
-                if (!disableSlotClick) {
-                  circle.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (onSlotClick) {
-                      onSlotClick(slotNumber);
-                    }
-                  });
-                }
-              }
-            }
-          });
-
-          // Replace colors with API color
-          replaceColors(svg, puckColor);
-        }}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'contain',
-          display: 'block',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          zIndex: 1,
-        }}
-      />
+          return (
+            <g
+              key={position}
+              data-position={position}
+              opacity={opacity}
+              onClick={disableSlotClick ? undefined : handleClick}
+              onMouseEnter={disableSlotClick ? undefined : () => setHovered(position)}
+              onMouseLeave={disableSlotClick ? undefined : () => setHovered(null)}
+              style={{
+                cursor: disableSlotClick ? 'default' : 'pointer',
+                transition: 'all 0.2s ease-in-out',
+                filter,
+              }}
+            >
+              {!disableSlotClick && <circle cx={x} cy={y} r={HIT_RADIUS} fill="transparent" />}
+              <circle
+                cx={x}
+                cy={y}
+                r={SLOT_RADIUS}
+                fill={fill}
+                stroke={picked ? palette.label : palette.line}
+                strokeWidth={(isHovered || picked ? HOVER_LINE_WIDTH : LINE_WIDTH) * UNIT}
+              />
+              <text
+                x={x}
+                y={y}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontFamily="sans-serif"
+                fontWeight={700}
+                fontSize={FONT}
+                fill={LABEL_COLOR}
+                stroke={palette.label}
+                strokeWidth={FONT * LABEL_OUTLINE}
+                strokeLinejoin="round"
+                paintOrder="stroke"
+              >
+                {position}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 };
