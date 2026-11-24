@@ -60,10 +60,7 @@ export const useFetchMetadataViz = (
         let jsonData = null;
         if (responseText) {
           try {
-            // Replace NaN with null before parsing
-            // const cleanedText = responseText.replace(/([^"a-zA-Z0-9])NaN([^"a-zA-Z0-9])/g, '$1null$2');
-            const cleanedText = responseText.replace(/NaN/g, 'null');
-            jsonData = JSON.parse(cleanedText);
+            jsonData = JSON.parse(responseText);
           } catch (parseError) {
             console.error('JSON parse error:', parseError);
           }

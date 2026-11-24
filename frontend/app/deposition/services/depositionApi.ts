@@ -304,7 +304,7 @@ export async function getTomogramCount(sessionName: string, runNumber: string): 
   const q = `?session_name=${encodeURIComponent(sessionName)}&run_number=${encodeURIComponent(run)}`;
   const res = await fetchResource(url(`${API.METADATA_SUMMARY}${q}`));
   if (!res.ok) throw new Error(`tomogram count unavailable (${res.status})`);
-  const text = (await res.text()).replace(/\bNaN\b/g, 'null');
+  const text = await res.text();
   const data = text ? (JSON.parse(text) as { num_tomograms?: number }) : {};
   return data.num_tomograms ?? 0;
 }
