@@ -164,8 +164,8 @@ class TestAnnotatedCountEndpoint:
     def test_aggregates_across_runs(self, client, copick_session):
         def fake_read(root_url, _dataset):
             if "run002" in root_url:
-                return {"scanned": True, "annotated_runs": ["TS_1"]}
-            return {"scanned": True, "annotated_runs": ["TS_2"]}
+                return {"scanned": True, "full": True, "annotated_runs": ["TS_1"]}
+            return {"scanned": True, "full": True, "annotated_runs": ["TS_2"]}
 
         with self._fake_url(), mock.patch.object(copick_views, "_read_scan_json", side_effect=fake_read):
             r = client.get(self.URL, {"session_id": "26feb20b", "runs": "run002,run003", "dataset": "7"})
@@ -174,6 +174,66 @@ class TestAnnotatedCountEndpoint:
         assert body["annotated_count"] == 2
         assert body["annotated_runs"] == ["TS_1", "TS_2"]
         assert body["scanned"] is True
+
+    def test_subset_scoped_scan_is_done_but_not_complete(self, client, copick_session):
+        # A Custom-subset scan (full=False) finished (scanned) but doesn't count as complete coverage.
+        with (
+            self._fake_url(),
+            mock.patch.object(
+                copick_views,
+                "_read_scan_json",
+                return_value={"scanned": True, "full": False, "annotated_runs": ["TS_1"]},
+            ),
+        ):
+            r = client.get(self.URL, {"session_id": "26feb20b", "runs": "run001", "dataset": "7"})
+        body = r.json()
+        assert body["scanned"] is True  # the job finished, so polling stops
+        assert body["complete"] is False  # but it only covered a subset
+
+    def test_intersects_with_the_aretomo_run_when_given(self, client, copick_session):
+        with (
+            self._fake_url(),
+            mock.patch.object(
+                copick_views,
+                "_read_scan_json",
+                return_value={"scanned": True, "full": True, "annotated_runs": ["TS_1", "TS_2"]},
+            ),
+            mock.patch.object(copick_views, "_aretomo_produced", return_value={"TS_1"}),
+        ):
+            r = client.get(
+                self.URL,
+                {"session_id": "26feb20b", "runs": "run001", "dataset": "7", "aretomo_run": "run001"},
+            )
+        body = r.json()
+        assert body["annotated_runs"] == ["TS_1"]  # TS_2 isn't in the AreTomo run
+        assert body["dropped_runs"] == ["TS_2"]
+        assert body["filtered"] is True
+
+    def test_count_is_marked_unfiltered_when_metrics_unreadable(self, client, copick_session):
+        with (
+            self._fake_url(),
+            mock.patch.object(
+                copick_views,
+                "_read_scan_json",
+                return_value={"scanned": True, "full": True, "annotated_runs": ["TS_1", "TS_2"]},
+            ),
+            mock.patch.object(copick_views, "_aretomo_produced", return_value=None),
+        ):
+            r = client.get(
+                self.URL,
+                {"session_id": "26feb20b", "runs": "run001", "dataset": "7", "aretomo_run": "run001"},
+            )
+        body = r.json()
+        assert body["filtered"] is False
+        assert body["annotated_count"] == 2  # unfiltered union, flagged approximate
+
+    def test_invalid_aretomo_run_is_400(self, client, copick_session):
+        r = client.get(
+            self.URL,
+            {"session_id": "26feb20b", "runs": "run001", "dataset": "7", "aretomo_run": "../etc/passwd"},
+        )
+        assert r.status_code == 400
+        assert r.json()["success"] is False
 
     def test_pending_scan_marks_not_scanned(self, client, copick_session):
         with (
@@ -274,6 +334,9 @@ class TestCopickScanWiring:
         assert "_wanted = []" in unscoped
         # Unmatched selections are surfaced instead of silently producing an empty scan.
         assert 'warnings.append("subset: selected runs not found' in scoped
+        # scan.json records a full scan only when unfiltered AND no run failed to load, so annotated
+        # mode rejects subset scans and partial-failure scans alike.
+        assert '"full": (not _wanted) and not failed_runs' in scoped
 
 
 SCAN_URL = "/copick/v1/projects/{session}/{run}/scan/"

@@ -16,6 +16,7 @@ from depositions.services.dataprep_config import (
     dataprep_config_yaml,
     dataset_is_ready,
     is_defining_dataset,
+    require_annotated_positions,
     require_custom_positions,
     resolve_sync_destination,
 )
@@ -29,6 +30,18 @@ from depositions.services.validation import require_validation
 logger = logging.getLogger(__name__)
 
 CONFIG_FILENAME = "dataprep_config.yaml"
+
+
+def _subset_sessions(dataset):
+    return list(dataset.sessions.select_related("msi_session"))
+
+
+def _subset_fingerprint(mode, sessions):
+    """The mode + per-session inputs a subset is resolved from, to detect an edit mid-submit."""
+    return (
+        mode,
+        sorted((s.msi_session.name, s.aretomo_run_name, tuple(s.selected_copick_runs or [])) for s in sessions),
+    )
 
 
 def _notification_parameters(deposition):
@@ -56,17 +69,30 @@ def submit_dataset_prep(dataset):
     if deposition.deposition_id is None or dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before submitting.")
     db = dataset._state.db
+    cluster_id = deposition_cluster_id()
+    # Resolve annotated positions before the lock - they come from HTTP scan/metrics reads that
+    # shouldn't be held under select_for_update, and a bad selection should fail before the claim.
+    sessions = _subset_sessions(dataset)
+    subset_inputs = _subset_fingerprint(dataset.tomogram_subset_mode, sessions)
+    annotated_positions = None
+    if dataset.tomogram_subset_mode == "annotated":
+        annotated_positions = {
+            s.msi_session.name: require_annotated_positions(s, dataset, cluster_id) for s in sessions
+        }
     # Serialize prep claims; the lock also builds the config from the same state it's claimed on.
     with transaction.atomic(using=db):
         Deposition.objects.using(db).select_for_update().get(pk=deposition.pk)
         deposition.refresh_from_db()
         dataset.refresh_from_db()
+        # The subset was resolved before the lock; reject if the mode or any selection changed since,
+        # so we never stage a config built from stale inputs.
+        if _subset_fingerprint(dataset.tomogram_subset_mode, _subset_sessions(dataset)) != subset_inputs:
+            raise SubmissionValidationError("The selection changed while submitting - try again.")
         if not dataset_is_ready(dataset):
             raise SubmissionValidationError(
                 "This dataset isn't ready to submit - add sessions and run auto-fill first."
             )
         auth = _service_auth()
-        cluster_id = deposition_cluster_id()
         if (
             DatasetJob.objects.using(db)
             .filter(dataset__deposition=deposition, state__in=PREP_ACTIVE)
@@ -96,6 +122,8 @@ def submit_dataset_prep(dataset):
             dataset,
             output_dir=output_dir,
             sync_destination=resolve_sync_destination(cluster=cluster_id),
+            annotated_positions=annotated_positions,
+            cluster_id=cluster_id,
         )
         job, _ = DatasetJob.objects.using(db).get_or_create(dataset=dataset)
         claimed = (
@@ -250,4 +278,5 @@ def preview_config_yaml(dataset):
         dataset,
         output_dir=output_dir,
         sync_destination=resolve_sync_destination(cluster=cluster_id),
+        cluster_id=cluster_id,
     )

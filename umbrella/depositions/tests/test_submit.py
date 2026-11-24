@@ -75,9 +75,10 @@ def mocks(monkeypatch, db):
     monkeypatch.setattr(submit.clusterio, "ensure_remote_dir", lambda *a: calls.__setitem__("mkdir", a))
     monkeypatch.setattr(submit.clusterio, "write_remote_file_atomic", write)
 
-    def config_yaml(dataset, *, output_dir, sync_destination=None):
+    def config_yaml(dataset, *, output_dir, sync_destination=None, annotated_positions=None, cluster_id=None):
         calls["sync_destination"] = sync_destination
         calls["built_dataset_id"] = dataset.dataset_id
+        calls["annotated_positions"] = annotated_positions
         return "yaml-text"
 
     monkeypatch.setattr(submit, "dataprep_config_yaml", config_yaml)
@@ -189,6 +190,73 @@ class TestSubmitDatasetPrep:
         with pytest.raises(SubmissionValidationError, match="cluster CSV path"):
             submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
+
+    def test_annotated_mode_resolves_positions_before_the_claim(self, dataset, mocks, monkeypatch):
+        session = dataset.sessions.get()
+        session.selected_copick_runs = ["copick-config-1"]
+        session.save(update_fields=["selected_copick_runs"])
+        dataset.tomogram_subset_mode = "annotated"
+        dataset.save(update_fields=["tomogram_subset_mode"])
+        monkeypatch.setattr(
+            "workflow.processors.copick.views.aggregate_annotated_runs",
+            lambda s, runs, dataset_id: ({"Position_1"}, True, True),
+        )
+        monkeypatch.setattr(
+            "workflow.views.metadata_views.aretomo_positions",
+            lambda cluster, s, run: {"Position_1", "Position_2"},
+        )
+        job = submit.submit_dataset_prep(dataset)
+        assert job.state == "prep_submitted"
+        # Resolved out of the lock and handed to the builder.
+        assert mocks["annotated_positions"] == {session.msi_session.name: ["Position_1"]}
+
+    def test_annotated_selection_change_during_submit_is_rejected(self, dataset, mocks, monkeypatch):
+        session = dataset.sessions.get()
+        session.selected_copick_runs = ["copick-config-1"]
+        session.save(update_fields=["selected_copick_runs"])
+        dataset.tomogram_subset_mode = "annotated"
+        dataset.save(update_fields=["tomogram_subset_mode"])
+
+        def resolve_then_edit(s, runs, dataset_id):
+            # The real race: an edit lands while positions are being resolved, before the lock.
+            session.selected_copick_runs = ["copick-config-1", "copick-config-2"]
+            session.save(update_fields=["selected_copick_runs"])
+            return ({"Position_1"}, True, True)
+
+        monkeypatch.setattr("workflow.processors.copick.views.aggregate_annotated_runs", resolve_then_edit)
+        monkeypatch.setattr("workflow.views.metadata_views.aretomo_positions", lambda cluster, s, run: {"Position_1"})
+        with pytest.raises(SubmissionValidationError, match="selection changed while submitting"):
+            submit.submit_dataset_prep(dataset)
+        assert mocks["launched"] is None
+        assert not DatasetJob.objects.filter(dataset=dataset).exists()
+
+    def test_mode_flip_during_submit_is_rejected(self, dataset, mocks, monkeypatch):
+        session = dataset.sessions.get()
+        session.selected_copick_runs = ["copick-config-1"]
+        session.save(update_fields=["selected_copick_runs"])
+        dataset.tomogram_subset_mode = "annotated"
+        dataset.save(update_fields=["tomogram_subset_mode"])
+
+        def resolve_then_flip(s, runs, dataset_id):
+            # The mode flips to All while positions are being resolved, before the lock.
+            dataset.tomogram_subset_mode = "all"
+            dataset.save(update_fields=["tomogram_subset_mode"])
+            return ({"Position_1"}, True, True)
+
+        monkeypatch.setattr("workflow.processors.copick.views.aggregate_annotated_runs", resolve_then_flip)
+        monkeypatch.setattr("workflow.views.metadata_views.aretomo_positions", lambda cluster, s, run: {"Position_1"})
+        with pytest.raises(SubmissionValidationError, match="selection changed while submitting"):
+            submit.submit_dataset_prep(dataset)
+        assert mocks["launched"] is None
+        assert not DatasetJob.objects.filter(dataset=dataset).exists()
+
+    def test_annotated_mode_with_no_runs_fails_before_the_claim(self, dataset, mocks):
+        dataset.tomogram_subset_mode = "annotated"
+        dataset.save(update_fields=["tomogram_subset_mode"])
+        with pytest.raises(SubmissionValidationError, match="no annotated runs selected"):
+            submit.submit_dataset_prep(dataset)
+        assert mocks["launched"] is None
+        assert not DatasetJob.objects.filter(dataset=dataset).exists()
 
     def test_rejects_unreserved_ids(self, dataset, mocks):
         dataset.dataset_id = None  # checked on the passed object

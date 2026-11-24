@@ -731,41 +731,98 @@ def get_copick_runs(request) -> JsonResponse:
     return JsonResponse({"success": True, "copick_runs": copick_runs})
 
 
+def aggregate_annotated_runs(session, runs, dataset_id) -> tuple[set[str], bool, bool]:
+    """Annotated run names across a session's copick runs, plus ``scanned`` (every scan job finished)
+    and ``full`` (every scan covered the whole project). A Custom-subset scan is ``scanned`` but not
+    ``full``, so polling can stop while annotated mode still requires a full scan. Shared by the count
+    endpoint, the compat endpoint and the deposition config builder, so it's computed one way.
+    """
+    annotated: set[str] = set()
+    scanned = True
+    full = True
+    for run in runs:
+        try:
+            result = _read_scan_json(_copick_root_url(session, run), dataset_id)
+        except Exception as exc:
+            logger.warning("copick annotated runs: resolve failed for %s/%s: %s", session.name, run, exc)
+            result = {"scanned": False}
+        if not result.get("scanned"):
+            scanned = False
+        if not (result.get("scanned") and result.get("full")):
+            full = False
+        annotated.update(result.get("annotated_runs", []))
+    return annotated, scanned, full
+
+
+def _safe_run_name(name) -> bool:
+    """Path-safe run directory name; reuses the deposition validator's pattern so they can't drift."""
+    from depositions.validators import SAFE_RUN_NAME_RE
+
+    return bool(SAFE_RUN_NAME_RE.fullmatch(name))
+
+
+def _aretomo_produced(session, run_number):
+    """Positions the AreTomo run produced on the deposition cluster (where prep stages), or None when
+    the metrics or cluster can't be read (so the count endpoint reports unfiltered, never 500s)."""
+    from depositions.services.cluster import deposition_cluster_id
+
+    from workflow.views.metadata_views import aretomo_positions
+
+    try:
+        cluster = Cluster.objects.filter(cluster_id=deposition_cluster_id(), is_active=True).first()
+        if cluster is None:
+            return None
+        return aretomo_positions(cluster, session, run_number)
+    except Exception as exc:
+        logger.warning("annotated-count: metrics unavailable for %s/%s: %s", session.name, run_number, exc)
+        return None
+
+
 def get_copick_annotated_count(request) -> JsonResponse:
-    """Annotated-tomogram count for a session"""
+    """Annotated-tomogram count for a session. With an ``aretomo_run``, intersect with the positions
+    that run produced so the number matches what submit stages (dropped runs reported separately)."""
     session_id = request.GET.get("session_id")
     dataset_id = _parse_dataset_id(request.GET.get("dataset"))
     runs = [r.strip() for r in request.GET.get("runs", "").split(",") if r.strip()]
+    aretomo_run = (request.GET.get("aretomo_run") or "").strip()
     if not session_id:
         return JsonResponse({"success": False, "error": "session_id is required", "annotated_count": 0})
     if dataset_id is None:
         return JsonResponse({"success": False, "error": "a numeric dataset is required", "annotated_count": 0})
+    if aretomo_run and not _safe_run_name(aretomo_run):
+        return JsonResponse({"success": False, "error": "invalid aretomo_run", "annotated_count": 0}, status=400)
     if not runs:
-        return JsonResponse({"success": True, "annotated_count": 0, "annotated_runs": [], "scanned": True})
+        return JsonResponse(
+            {"success": True, "annotated_count": 0, "annotated_runs": [], "dropped_runs": [], "scanned": True}
+        )
 
     try:
         session = MsiSession.objects.get(name=session_id)
     except MsiSession.DoesNotExist:
         return JsonResponse({"success": False, "error": "session not found", "annotated_count": 0})
 
-    annotated: set[str] = set()
-    scanned = True
-    for run in runs:
-        try:
-            result = _read_scan_json(_copick_root_url(session, run), dataset_id)
-        except Exception as exc:
-            logger.warning("copick annotated-count: resolve failed for %s/%s: %s", session_id, run, exc)
-            result = {"scanned": False}
-        if not result.get("scanned"):
-            scanned = False
-        annotated.update(result.get("annotated_runs", []))
-
+    annotated, scanned, full = aggregate_annotated_runs(session, runs, dataset_id)
+    dropped: list[str] = []
+    filtered = False
+    if aretomo_run:
+        produced = _aretomo_produced(session, aretomo_run)
+        if produced is not None:
+            filtered = True
+            dropped = sorted(annotated - produced)
+            annotated = annotated & produced
     return JsonResponse(
         {
             "success": True,
             "annotated_count": len(annotated),
             "annotated_runs": sorted(annotated),
+            "dropped_runs": dropped,
+            # filtered=False means the count couldn't be intersected with the AreTomo run (no run given,
+            # or metrics unreadable), so it's the unfiltered union - the UI should treat it as approximate.
+            "filtered": filtered,
+            # scanned = the scan job finished (drives polling); complete = it covered the whole project
+            # (annotated mode needs this; a Custom-subset scan is scanned but not complete).
             "scanned": scanned,
+            "complete": full,
         }
     )
 

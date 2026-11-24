@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 
 import yaml
 from django.core.exceptions import ImproperlyConfigured
-from stores.models import PathType
+from stores.models import Cluster, PathType
 from stores.paths import resolve_dir
 from workflow.processors import get_processor
 
@@ -44,17 +44,29 @@ ACQUISITION_FIELDS = {
 }
 
 
+def _normalized_run(name) -> str:
+    """A run directory name: ensure the 'run' prefix, then validate it's path-safe (no traversal)."""
+    run = (name or "").strip()
+    run = run if run.startswith("run") else f"run{run}"
+    ensure_safe_run_name(run)
+    return run
+
+
+def _active_cluster(cluster_id):
+    cluster = Cluster.objects.filter(cluster_id=cluster_id, is_active=True).first()
+    if cluster is None:
+        raise SubmissionValidationError(f"Deposition cluster {cluster_id!r} isn't configured.")
+    return cluster
+
+
 def _apply_denoise_run(config, session):
     """Resolve the selected denoise run's path on the deposition cluster (where the synced data lives)."""
     paths = config["paths"]
-    run = (session.denoise_run_name or "").strip()
-    if not run:
+    if not (session.denoise_run_name or "").strip():
         paths.pop("denoise", None)
         return
     msi_session = session.msi_session
-    # The "run" prefix already makes the name start alphanumeric; the guard here is for the slash/dot-traversal cases.
-    run = run if run.startswith("run") else f"run{run}"
-    ensure_safe_run_name(run)
+    run = _normalized_run(session.denoise_run_name)
     cluster_id = deposition_cluster_id()
     try:
         root = get_processor("denoiset").get_processing_base_path(cluster=cluster_id)
@@ -149,7 +161,40 @@ def require_custom_positions(session) -> list[str]:
     return positions
 
 
-def _dataset_block(dataset):
+def require_annotated_positions(session, dataset, cluster_id) -> list[str]:
+    """Annotated positions this session's AreTomo run actually produced, on ``cluster_id``: the copick
+    scan intersected with the run's metrics. Fail closed so we never silently fall back to the whole
+    set, and so the staged set matches the annotated count the wizard shows."""
+    from workflow.processors.copick.views import aggregate_annotated_runs  # local: avoids an import cycle
+    from workflow.views.metadata_views import aretomo_positions
+
+    name = session.msi_session.name
+    runs = session.selected_copick_runs or []
+    if not runs:
+        raise SubmissionValidationError(f"Session {name} has no annotated runs selected.")
+    annotated, _scanned, full = aggregate_annotated_runs(session.msi_session, runs, dataset.pk)
+    if not full:
+        raise SubmissionValidationError(
+            f"Session {name}: the annotation scan is still running or only covered a subset - "
+            "rescan the whole project, then resubmit."
+        )
+    if not annotated:
+        raise SubmissionValidationError(f"Session {name} has no annotated tomograms.")
+    run = _normalized_run(session.aretomo_run_name)
+    try:
+        produced = aretomo_positions(_active_cluster(cluster_id), session.msi_session, run)
+    except Exception as exc:
+        logger.exception("Couldn't read tilt series metrics for session %r run %r on %r.", name, run, cluster_id)
+        raise SubmissionValidationError(
+            f"Session {name}: couldn't read the tilt series metrics for run {run}."
+        ) from exc
+    positions = sorted(annotated & produced)
+    if not positions:
+        raise SubmissionValidationError(f"Session {name}: none of the annotated tomograms are in AreTomo run {run}.")
+    return positions
+
+
+def _dataset_block(dataset, annotated_positions=None, cluster_id=None):
     if dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve the dataset_id before preparing the dataset.")
     metadata = build_dataset_metadata(dataset)
@@ -164,6 +209,16 @@ def _dataset_block(dataset):
         if dataset.tomogram_subset_mode == "custom":
             # Custom selections must not fall back to processing all positions.
             config["positions"] = require_custom_positions(session)
+        elif dataset.tomogram_subset_mode == "annotated":
+            # Submit resolves these before the lock and passes them in; recompute only when it didn't
+            # (e.g. config preview).
+            name = session.msi_session.name
+            if annotated_positions is not None and name in annotated_positions:
+                config["positions"] = annotated_positions[name]
+            else:
+                config["positions"] = require_annotated_positions(
+                    session, dataset, cluster_id or deposition_cluster_id()
+                )
         sessions[session.msi_session.name] = config
     if not sessions:
         raise SubmissionValidationError("Select at least one session before preparing the dataset.")
@@ -175,7 +230,7 @@ def is_defining_dataset(dataset) -> bool:
     return dataset.deposition.metadata_dataset_id in (None, dataset.pk)
 
 
-def build_dataprep_config(dataset, *, output_dir, sync_destination=None):
+def build_dataprep_config(dataset, *, output_dir, sync_destination=None, annotated_positions=None, cluster_id=None):
     """Build this dataset's prep config with its deposition ID and any defining metadata."""
     deposition = dataset.deposition
     if deposition.deposition_id is None:
@@ -190,7 +245,7 @@ def build_dataprep_config(dataset, *, output_dir, sync_destination=None):
         raise SubmissionValidationError(
             f"Dataset {dataset.dataset_id} isn't ready to prepare; add sessions and run auto-fill first."
         )
-    block = _dataset_block(dataset)
+    block = _dataset_block(dataset, annotated_positions, cluster_id)
     if is_defining_dataset(dataset):
         block["deposition_metadata"] = build_deposition_metadata(deposition)
     return {
@@ -203,7 +258,13 @@ def build_dataprep_config(dataset, *, output_dir, sync_destination=None):
     }
 
 
-def dataprep_config_yaml(dataset, *, output_dir, sync_destination=None):
+def dataprep_config_yaml(dataset, *, output_dir, sync_destination=None, annotated_positions=None, cluster_id=None):
     """Render the prep deployment config as YAML for a later remote write."""
-    config = build_dataprep_config(dataset, output_dir=output_dir, sync_destination=sync_destination)
+    config = build_dataprep_config(
+        dataset,
+        output_dir=output_dir,
+        sync_destination=sync_destination,
+        annotated_positions=annotated_positions,
+        cluster_id=cluster_id,
+    )
     return yaml.safe_dump(config, sort_keys=False, allow_unicode=True, default_flow_style=False)

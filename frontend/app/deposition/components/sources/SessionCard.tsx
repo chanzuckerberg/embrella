@@ -5,6 +5,7 @@ import { Icon } from '@czi-sds/components';
 import { Autocomplete, Box, Chip, IconButton, TextField, Typography } from '@mui/material';
 
 import type { TomogramSubsetMode } from '../../types';
+import { annotatedTrustedCount } from '../../services/depositionApi';
 import { useAnnotatedCount, usePlanRuns, useTomogramCount } from '../../hooks/useSources';
 import { fillChipSx, outlineChipSx } from './chipStyles';
 import { rowSelected } from './counts';
@@ -77,9 +78,16 @@ export function SessionCard({
 
   // Annotated count is a slow SSH scan, so only fetch it when Annotated mode is active.
   const annotatedMode = subsetMode === 'annotated';
-  const annotated = useAnnotatedCount(datasetId, session, row.selected_copick_runs, annotatedMode);
-  const annotatedReady = annotatedMode && (annotated.data?.scanned ?? false);
-  const annotatedCount = annotatedReady ? annotated.data?.count : undefined;
+  const annotated = useAnnotatedCount(
+    datasetId,
+    session,
+    row.selected_copick_runs,
+    annotatedMode,
+    row.aretomo_run_name
+  );
+  // Trust rule (complete + filtered) is shared with the Submit/rollup totals so they always agree.
+  const ac = annotated.data;
+  const annotatedCount = annotatedMode ? annotatedTrustedCount(ac) : undefined;
   useEffect(() => {
     onAnnotated?.(row.key, annotatedCount);
   }, [row.key, annotatedCount, onAnnotated]);
@@ -89,12 +97,19 @@ export function SessionCard({
   const scanEnabled = annotatedMode && !!session && row.selected_copick_runs.length > 0;
   const scanningAnnotated = scanEnabled && annotated.isFetching && !annotated.data;
   const scanFailed = scanEnabled && annotated.isError;
-  const notScanned = scanEnabled && !annotated.isError && annotated.data != null && !annotated.data.scanned;
+  const notScanned = scanEnabled && !annotated.isError && ac != null && !ac.scanned;
+  // Scan finished but only covered a subset (or predates the full flag): the count can't be trusted.
+  const rescanNeeded = scanEnabled && !!ac?.scanned && !ac.complete;
+  // Full scan, but the AreTomo metrics couldn't be read, so the count couldn't be intersected.
+  const countUnavailable = scanEnabled && !!ac?.complete && ac.filtered === false;
+  const droppedNote = ac?.dropped ? ` · ${ac.dropped} not in this run` : '';
   let tomoBadge = '- tomograms';
   if (scanningAnnotated) tomoBadge = 'scanning annotations…';
   else if (scanFailed) tomoBadge = 'count unavailable';
   else if (notScanned) tomoBadge = total != null ? `- / ${total} · not scanned yet` : 'not scanned yet';
-  else if (total != null) tomoBadge = `${selected ?? '-'} / ${total} tomograms`;
+  else if (rescanNeeded) tomoBadge = 'rescan the whole project';
+  else if (countUnavailable) tomoBadge = 'count unavailable';
+  else if (total != null) tomoBadge = `${selected ?? '-'} / ${total} tomograms${droppedNote}`;
   const badgeWarn = !scanningAnnotated && !scanFailed && !notScanned && selected === 0;
   const [open, setOpen] = useState(index === 0);
 
