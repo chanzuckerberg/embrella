@@ -51,9 +51,7 @@ export const useFetchMetadataSummary = (
         let jsonData = null;
         if (responseText) {
           try {
-            // Replace NaN with null before parsing
-            const cleanedText = responseText.replace(/NaN/g, 'null');
-            jsonData = JSON.parse(cleanedText);
+            jsonData = JSON.parse(responseText);
           } catch (parseError) {
             console.error('JSON parse error:', parseError);
             throw {
