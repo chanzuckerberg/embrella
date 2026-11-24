@@ -1,4 +1,5 @@
 import pytest
+from umbrella.choices import GRID_BOX_DEFAULTS
 
 from cryo_grids.models import CryoGridBox
 from cryo_grids.serializers import CryoGridBoxSerializer
@@ -35,3 +36,11 @@ def test_update_rejects_switch_to_unsupported_numbering():
     box = CryoGridBox.objects.create(name="box", max_grids=8, numbering="col")
 
     assert "numbering" in _errors({"numbering": "uccw"}, instance=box)
+
+
+def test_choices_expose_grid_box_defaults(client, django_user_model):
+    client.force_login(django_user_model.objects.create(username="choices-viewer"))
+
+    response = client.get("/api/grid-logging/choices/")
+
+    assert response.json()["grid_box_defaults"] == GRID_BOX_DEFAULTS
