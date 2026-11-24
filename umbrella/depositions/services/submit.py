@@ -56,7 +56,7 @@ def submit_dataset_prep(dataset):
     if deposition.deposition_id is None or dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before submitting.")
     db = dataset._state.db
-    # Serialize prep claims within the shared deposition staging directory.
+    # Serialize prep claims; the lock also builds the config from the same state it's claimed on.
     with transaction.atomic(using=db):
         Deposition.objects.using(db).select_for_update().get(pk=deposition.pk)
         deposition.refresh_from_db()
@@ -88,11 +88,20 @@ def submit_dataset_prep(dataset):
         if dataset.tomogram_subset_mode == "custom":
             for session in dataset.sessions.select_related("msi_session"):
                 require_custom_positions(session)
+        # Build the config (and resolve its paths) before claiming, so a fixable error leaves the job
+        # unclaimed and retryable instead of flipping an existing attempt to failed.
+        output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
+        config_path = f"{output_dir.rstrip('/')}/{dataset.dataset_id}/{CONFIG_FILENAME}"
+        config_yaml = dataprep_config_yaml(
+            dataset,
+            output_dir=output_dir,
+            sync_destination=resolve_sync_destination(cluster=cluster_id),
+        )
         job, _ = DatasetJob.objects.using(db).get_or_create(dataset=dataset)
         claimed = (
             DatasetJob.objects.using(db)
             .filter(pk=job.pk, state__in=("pending", "failed", "prep_completed"))
-            # Clear the prior attempt's ids + log so a re-failed prep doesn't surface the old output.
+            # Clear the prior attempt's ids + log on claim so a later failure doesn't show old output.
             .update(
                 state="prep_submitted",
                 prep_slurm_job_id="",
@@ -116,14 +125,6 @@ def submit_dataset_prep(dataset):
 
     slurm_job_id = None
     try:
-        # Resolve paths inside the try so a resolution failure rolls the claim back, not strands it.
-        output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
-        config_path = f"{output_dir.rstrip('/')}/{dataset.dataset_id}/{CONFIG_FILENAME}"
-        config_yaml = dataprep_config_yaml(
-            dataset,
-            output_dir=output_dir,
-            sync_destination=resolve_sync_destination(cluster=cluster_id),
-        )
         params = {
             "dataset_id": dataset.dataset_id,
             "output_dir": output_dir,

@@ -21,6 +21,7 @@ from depositions.services.cluster import deposition_cluster_id
 from depositions.services.dataset_metadata import build_dataset_metadata, build_deposition_metadata
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.subset import selected_positions
+from depositions.validators import ensure_safe_run_name
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,9 @@ def _apply_denoise_run(config, session):
         paths.pop("denoise", None)
         return
     msi_session = session.msi_session
+    # The "run" prefix already makes the name start alphanumeric; the guard here is for the slash/dot-traversal cases.
     run = run if run.startswith("run") else f"run{run}"
+    ensure_safe_run_name(run)
     cluster_id = deposition_cluster_id()
     try:
         root = get_processor("denoiset").get_processing_base_path(cluster=cluster_id)

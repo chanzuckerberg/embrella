@@ -38,6 +38,7 @@ from .services.autofill import (
 from .services.cluster import deposition_cluster_id
 from .services.exceptions import SubmissionValidationError
 from .services.metadata import metadata_edit
+from .validators import ensure_safe_run_name
 
 logger = logging.getLogger(__name__)
 
@@ -470,6 +471,10 @@ class DepositionSessionViewSet(
         run_number = (
             session.aretomo_run_name if session.aretomo_run_name.startswith("run") else f"run{session.aretomo_run_name}"
         )
+        try:
+            ensure_safe_run_name(run_number)
+        except SubmissionValidationError as error:
+            return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
 
         msi_session = session.msi_session
         # Auto-fill runs cryoetportalprep, which lives on the deposition cluster, not where AreTomo ran.

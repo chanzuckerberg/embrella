@@ -40,7 +40,7 @@ class AreTomo3Processor(BaseProcessor):
 
     name = "aretomo3"
     display_name = "AreTomo3"
-    version = "2.3.4"
+    version = "2.3.6"
     task_name = "tomographic_reconstruction"
 
     def _schema_default(self, key: str) -> Any:
@@ -112,6 +112,7 @@ class AreTomo3Processor(BaseProcessor):
             "mag_correction": 3,
             "ext_phase": 2,
             "recon_range": 2,
+            "bad_tilt_range": (1, 2),
             "sart_iterations": 2,
             "at_bin": (0, 1, 2, 3),  # 0-3 input values allowed
         }
