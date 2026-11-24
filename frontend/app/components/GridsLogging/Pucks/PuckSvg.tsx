@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Tooltip } from '@mui/material';
 import { PuckList, PuckSlots } from '@app/common/types/gridLogging';
 import {
-  FADED_OPACITY,
   HOVER_LINE_WIDTH,
   LABEL_COLOR,
   LABEL_OUTLINE,
@@ -11,6 +11,8 @@ import {
   RING_WIDTH,
   SELECTED_FILL,
   selectedFilter,
+  slotPaint,
+  SlotPaint,
   slotPalette,
 } from '../slotPalette';
 import { OUTLINE_CENTER, OUTLINE_EXTENT, OUTLINE_PATH, OUTLINE_PIVOT, SLOT_CENTERS, SLOT_RADIUS } from './puckArt';
@@ -24,9 +26,28 @@ interface PuckSVGProps {
   isSelected?: boolean;
   disableSlotClick?: boolean;
   highlightedSlot?: number;
+  mode?: SlotMode;
+  onSlotHover?: (slotPosition: number | null) => void;
+}
+
+/**
+ * View: filled slots clickable, hover tooltip names the occupant.
+ * Pick: filled slots blocked, no tooltip; the caller shows hover text via onSlotHover.
+ */
+export enum SlotMode {
+  View = 'view',
+  Pick = 'pick',
 }
 
 const FILLED = 'filled';
+
+// "Slot 4 · DD-004" or "Slot 4 · Free".
+export const describeSlot = (slots: PuckSlots[], position: number) => {
+  const slot = slots.find((s) => s.position === position);
+  const occupant = slot?.status === FILLED ? (slot.grid_box_name ?? 'Filled') : 'Free';
+
+  return `Slot ${position} · ${occupant}`;
+};
 
 // Outline is enlarged around the slots, so the rim clears them.
 const OUTLINE_SCALE = 1.08;
@@ -68,31 +89,39 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
   isSelected = false,
   disableSlotClick = false,
   highlightedSlot,
+  mode = SlotMode.View,
+  onSlotHover,
 }) => {
   const palette = slotPalette(puck.color);
 
   // Slot under the pointer, outlined bolder.
   const [hovered, setHovered] = useState<number | null>(null);
 
+  const hover = (position: number | null) => {
+    setHovered(position);
+    onSlotHover?.(position);
+  };
+
   const isFilled = (position: number) => !!slots?.some((s) => s.position === position && s.status === FILLED);
 
   // No slot data (e.g. puck list): body-colored, so slots don't read as empty.
-  const slotFill = (filled: boolean) => {
-    if (!slots) return palette.body;
+  const paint = (filled: boolean): SlotPaint => {
+    if (!slots) return { fill: palette.body };
 
-    return filled ? palette.occupied : palette.slot;
+    return slotPaint(palette, filled, UNIT);
   };
 
-  // Highlighted slot wins; filled slots fade while another slot is highlighted.
+  // Tooltip in view mode only; none without slot data.
+  const slotTitle = (position: number) => (slots && mode === SlotMode.View ? describeSlot(slots, position) : '');
+
+  // Highlighted slot wins.
   const slotStyle = (position: number) => {
     const filled = isFilled(position);
 
     if (position === highlightedSlot)
-      return { fill: SELECTED_FILL, opacity: 1, filter: SELECTED_GLOW_FILTER, picked: true };
+      return { paint: { fill: SELECTED_FILL } as SlotPaint, filled, filter: SELECTED_GLOW_FILTER, picked: true };
 
-    const opacity = filled && highlightedSlot !== undefined ? FADED_OPACITY : 1;
-
-    return { fill: slotFill(filled), opacity, filter: undefined, picked: false };
+    return { paint: paint(filled), filled, filter: undefined, picked: false };
   };
 
   return (
@@ -129,8 +158,10 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
         {/* One circle per slot, labelled by position. */}
         {Object.entries(SLOT_CENTERS).map(([key, { x, y }]) => {
           const position = Number(key);
-          const { fill, opacity, filter, picked } = slotStyle(position);
-          const isHovered = hovered === position;
+          const { paint, filled, filter, picked } = slotStyle(position);
+          const blocked = filled && mode === SlotMode.Pick;
+          const isHovered = hovered === position && !blocked;
+          const cursor = blocked ? 'not-allowed' : 'pointer';
 
           const handleClick = (e: React.MouseEvent) => {
             e.stopPropagation();
@@ -138,45 +169,47 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
           };
 
           return (
-            <g
-              key={position}
-              data-position={position}
-              opacity={opacity}
-              onClick={disableSlotClick ? undefined : handleClick}
-              onMouseEnter={disableSlotClick ? undefined : () => setHovered(position)}
-              onMouseLeave={disableSlotClick ? undefined : () => setHovered(null)}
-              style={{
-                cursor: disableSlotClick ? 'default' : 'pointer',
-                transition: 'all 0.2s ease-in-out',
-                filter,
-              }}
-            >
-              {!disableSlotClick && <circle cx={x} cy={y} r={HIT_RADIUS} fill="transparent" />}
-              <circle
-                cx={x}
-                cy={y}
-                r={SLOT_RADIUS}
-                fill={fill}
-                stroke={picked ? palette.label : palette.line}
-                strokeWidth={(isHovered || picked ? HOVER_LINE_WIDTH : LINE_WIDTH) * UNIT}
-              />
-              <text
-                x={x}
-                y={y}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fontFamily="sans-serif"
-                fontWeight={700}
-                fontSize={FONT}
-                fill={LABEL_COLOR}
-                stroke={palette.label}
-                strokeWidth={FONT * LABEL_OUTLINE}
-                strokeLinejoin="round"
-                paintOrder="stroke"
+            // Non-interactive: the pointer passes through to the slot above.
+            <Tooltip key={position} title={slotTitle(position)} arrow placement="top" disableInteractive>
+              <g
+                data-position={position}
+                onClick={disableSlotClick ? undefined : handleClick}
+                onMouseEnter={disableSlotClick ? undefined : () => hover(position)}
+                onMouseLeave={disableSlotClick ? undefined : () => hover(null)}
+                style={{
+                  cursor: disableSlotClick ? 'default' : cursor,
+                  transition: 'all 0.2s ease-in-out',
+                  filter,
+                }}
               >
-                {position}
-              </text>
-            </g>
+                {!disableSlotClick && <circle cx={x} cy={y} r={HIT_RADIUS} fill="transparent" />}
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={SLOT_RADIUS}
+                  fill={paint.fill}
+                  stroke={picked ? palette.label : palette.line}
+                  strokeWidth={(isHovered || picked ? HOVER_LINE_WIDTH : LINE_WIDTH) * UNIT}
+                  strokeDasharray={paint.dash}
+                />
+                <text
+                  x={x}
+                  y={y}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontFamily="sans-serif"
+                  fontWeight={700}
+                  fontSize={FONT}
+                  fill={LABEL_COLOR}
+                  stroke={palette.label}
+                  strokeWidth={FONT * LABEL_OUTLINE}
+                  strokeLinejoin="round"
+                  paintOrder="stroke"
+                >
+                  {position}
+                </text>
+              </g>
+            </Tooltip>
           );
         })}
       </svg>

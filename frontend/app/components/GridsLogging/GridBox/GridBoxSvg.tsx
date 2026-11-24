@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useId, useState } from 'react';
+import { Tooltip } from '@mui/material';
 import { PuckSlotsResponse, GridBoxDetailResponse } from '@app/common/types/gridLogging';
 import {
-  FADED_OPACITY,
   HOVER_LINE_WIDTH,
   LABEL_COLOR,
   LABEL_OUTLINE,
@@ -11,6 +11,8 @@ import {
   RING_WIDTH,
   SELECTED_FILL,
   SELECTED_FILTER,
+  slotPaint,
+  SlotPaint,
   slotPalette,
 } from '../slotPalette';
 import { boxCells, GridBoxNumbering, Point, slotCenter, slotHitArea, slotLabel } from './gridBoxLayout';
@@ -131,18 +133,26 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   // Slot under the pointer, outlined bolder.
   const [hovered, setHovered] = useState<number | null>(null);
 
-  // Highlighted slot wins; occupied slots fade while another slot is highlighted.
+  // Highlighted slot wins.
   const slotStyle = (position: number) => {
     const isOccupied = getGridStatus(position) === GridStatus.Occupied;
 
-    const fill = isOccupied ? palette.occupied : palette.slot;
-
     if (position === selectedGrid)
-      return { fill: SELECTED_FILL, opacity: 1, filter: SELECTED_FILTER, isSelected: true };
+      return { paint: { fill: SELECTED_FILL } as SlotPaint, filter: SELECTED_FILTER, isSelected: true };
 
-    const opacity = isOccupied && selectedGrid !== null ? FADED_OPACITY : 1;
+    return { paint: slotPaint(palette, isOccupied), filter: undefined, isSelected: false };
+  };
 
-    return { fill, opacity, filter: undefined, isSelected: false };
+  // Hover text: "Position 2 · Grid XYZ · clipped" or "Position 2 · Free"; none without box data.
+  const slotTitle = (position: number) => {
+    const slot = gridBoxData?.grid_box?.positions.find((p) => p.q === position);
+    if (!slot) return '';
+
+    if (!slot.occupied) return `Position ${position} · Free`;
+
+    const clipped = slot.clipped ? ' · clipped' : '';
+
+    return `Position ${position} · ${slot.grid_name ?? 'Filled'}${clipped}`;
   };
 
   const layout = SLOT_LAYOUT[maxGrids] ?? SLOT_LAYOUT[4];
@@ -198,7 +208,7 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
         {boxCells(maxGrids).map((cell) => {
           const position = slotLabel(cell, maxGrids, numbering);
           const { x, y } = slotCenter(cell, maxGrids, CENTER, layout.gap, layout.bow);
-          const { fill, opacity, filter, isSelected: isPicked } = slotStyle(position);
+          const { paint, filter, isSelected: isPicked } = slotStyle(position);
           const isHovered = hovered === position;
           const hit = slotHitArea(cell, maxGrids, CENTER, layout.gap, BODY_RADIUS);
 
@@ -208,47 +218,49 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
           };
 
           return (
-            <g
-              key={position}
-              data-position={position}
-              opacity={opacity}
-              onClick={disableGridClick ? undefined : handleClick}
-              onMouseEnter={disableGridClick ? undefined : () => setHovered(position)}
-              onMouseLeave={disableGridClick ? undefined : () => setHovered(null)}
-              style={{
-                cursor: disableGridClick ? 'default' : 'pointer',
-                transition: 'all 0.2s ease-in-out',
-                filter,
-              }}
-            >
-              {/* Invisible click area: the slot's whole cell, not just the oval. */}
-              {!disableGridClick && <rect {...hit} fill="transparent" clipPath={`url(#${clipId})`} />}
-              <ellipse
-                cx={x}
-                cy={y}
-                rx={SLOT.rx}
-                ry={SLOT.ry}
-                fill={fill}
-                stroke={isPicked ? palette.label : palette.line}
-                strokeWidth={isHovered || isPicked ? HOVER_LINE_WIDTH : LINE_WIDTH}
-              />
-              <text
-                x={x}
-                y={y}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fontFamily="sans-serif"
-                fontWeight={700}
-                fontSize={SLOT.font}
-                fill={LABEL_COLOR}
-                stroke={palette.label}
-                strokeWidth={SLOT.font * LABEL_OUTLINE}
-                strokeLinejoin="round"
-                paintOrder="stroke"
+            // Non-interactive: the pointer passes through to the slot above.
+            <Tooltip key={position} title={slotTitle(position)} arrow placement="top" disableInteractive>
+              <g
+                data-position={position}
+                onClick={disableGridClick ? undefined : handleClick}
+                onMouseEnter={disableGridClick ? undefined : () => setHovered(position)}
+                onMouseLeave={disableGridClick ? undefined : () => setHovered(null)}
+                style={{
+                  cursor: disableGridClick ? 'default' : 'pointer',
+                  transition: 'all 0.2s ease-in-out',
+                  filter,
+                }}
               >
-                {position}
-              </text>
-            </g>
+                {/* Invisible click area: the slot's whole cell, not just the oval. */}
+                {!disableGridClick && <rect {...hit} fill="transparent" clipPath={`url(#${clipId})`} />}
+                <ellipse
+                  cx={x}
+                  cy={y}
+                  rx={SLOT.rx}
+                  ry={SLOT.ry}
+                  fill={paint.fill}
+                  stroke={isPicked ? palette.label : palette.line}
+                  strokeWidth={isHovered || isPicked ? HOVER_LINE_WIDTH : LINE_WIDTH}
+                  strokeDasharray={paint.dash}
+                />
+                <text
+                  x={x}
+                  y={y}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontFamily="sans-serif"
+                  fontWeight={700}
+                  fontSize={SLOT.font}
+                  fill={LABEL_COLOR}
+                  stroke={palette.label}
+                  strokeWidth={SLOT.font * LABEL_OUTLINE}
+                  strokeLinejoin="round"
+                  paintOrder="stroke"
+                >
+                  {position}
+                </text>
+              </g>
+            </Tooltip>
           );
         })}
       </svg>

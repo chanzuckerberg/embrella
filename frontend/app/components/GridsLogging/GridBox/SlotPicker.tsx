@@ -9,7 +9,7 @@ import { Box, Tooltip, Typography } from '@mui/material';
 import { Button, Dialog, DialogContent, DialogTitle, DropdownMenu, Icon, InputDropdown } from '@czi-sds/components';
 import { useGridLoggingCaneList } from '@app/common/hooks/useGridLogging';
 import { PuckList, PuckSlotsResponse } from '@app/common/types/gridLogging';
-import { PuckSVG } from '../Pucks/PuckSvg';
+import { describeSlot, PuckSVG, SlotMode } from '../Pucks/PuckSvg';
 
 const FILLED = 'filled';
 const FILL = '100%';
@@ -70,6 +70,7 @@ export const SlotPicker = ({ puck, slots, value, onChange }: SlotPickerProps) =>
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pending, setPending] = useState<number | ''>(value);
+  const [hovered, setHovered] = useState<number | null>(null);
   const { canes } = useGridLoggingCaneList();
 
   // Location trail, outermost first; dewar shows its id until the API sends its name, skipped when unset.
@@ -84,6 +85,10 @@ export const SlotPicker = ({ puck, slots, value, onChange }: SlotPickerProps) =>
     ...options,
   ];
   const selected = options.find((option) => option.position === value) ?? null;
+
+  // Under the puck: hovered slot's occupant, else the free count. Replaces a tooltip that would cover the slot above.
+  const freeCount = `${slots?.slot_summary.empty_count ?? 0} of ${slots?.slot_summary.total ?? 0} free`;
+  const status = slots && hovered !== null ? describeSlot(slots.slots, hovered) : freeCount;
 
   const openDialog = () => {
     setPending(value);
@@ -174,13 +179,15 @@ export const SlotPicker = ({ puck, slots, value, onChange }: SlotPickerProps) =>
                   slots={slots?.slots}
                   size={PUCK_PREVIEW}
                   highlightedSlot={pending || undefined}
+                  mode={SlotMode.Pick}
+                  onSlotHover={setHovered}
                   onSlotClick={(position) => isFree(slots, position) && setPending(position)}
                 />
               )}
             </Box>
 
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-              {slots?.slot_summary.empty_count ?? 0} of {slots?.slot_summary.total ?? 0} free · dimmed = filled
+            <Typography variant="body2" sx={{ textAlign: 'center' }}>
+              {status}
             </Typography>
 
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: SPACE.inline }}>
