@@ -2,7 +2,17 @@
 
 import React, { useId, useState } from 'react';
 import { PuckSlotsResponse, GridBoxDetailResponse } from '@app/common/types/gridLogging';
-import { darken, isDark, lighten, toHex } from '@app/common/utils/color';
+import {
+  FADED_OPACITY,
+  HOVER_LINE_WIDTH,
+  LABEL_COLOR,
+  LABEL_OUTLINE,
+  LINE_WIDTH,
+  RING_WIDTH,
+  SELECTED_FILL,
+  SELECTED_FILTER,
+  slotPalette,
+} from '../slotPalette';
 import { boxCells, GridBoxNumbering, Point, slotCenter, slotHitArea, slotLabel } from './gridBoxLayout';
 
 export type GridBoxSize = 4 | 8;
@@ -30,41 +40,11 @@ enum GridStatus {
 }
 
 const DEFAULT_COLOR = '92D3D5';
-const LABEL_COLOR = '#FFFFFF';
-
-// How far each part shifts from the box color (0..1).
-const SHADE = { ring: 0.35, line: 0.55, label: 0.6, slot: 0.6, occupied: 0.4, bore: 0.45 };
-
-/**
- * Palette derived from the box color, like the puck does.
- * Dark boxes (e.g. black) shift parts lighter so lines stay visible.
- *   fdb000 → ring #a47200, slots #fedf99, occupied #986a00
- */
-const boxPalette = (color: string) => {
-  const body = toHex(color);
-  const dark = isDark(body);
-  const contrast = (amount: number) => (dark ? lighten(body, amount) : darken(body, amount));
-
-  return {
-    body,
-    ring: contrast(SHADE.ring),
-    line: contrast(SHADE.line),
-    label: dark ? body : darken(body, SHADE.label),
-    slot: lighten(body, SHADE.slot),
-    occupied: dark ? lighten(body, SHADE.occupied) : darken(body, SHADE.occupied),
-    bore: contrast(SHADE.bore),
-  };
-};
 
 // Drawing units: the box is drawn in a 200×200 viewBox, then scaled to `size`.
 const VIEW = 200;
 const CENTER: Point = { x: VIEW / 2, y: VIEW / 2 };
 const BODY_RADIUS = 90;
-const RING_WIDTH = 6;
-const LINE_WIDTH = 2.5;
-
-// Hovered slot gets a bolder outline, so the click target is obvious.
-const HOVER_LINE_WIDTH = 4;
 
 // U-shaped notch at 12 o'clock, as cut into the real boxes.
 const NOTCH_WIDTH = 34;
@@ -76,15 +56,6 @@ const THREAD_RADIUS = 0.62;
 const THREAD_WIDTH = 1.5;
 const THREAD_DASH = '3 2.2';
 const THREAD_OPACITY = 0.8;
-
-// Label outline width relative to font size, like the puck's outlined digits.
-const LABEL_OUTLINE = 0.2;
-
-// Highlight like the puck: brightened slot with a dark glow; other occupied slots fade.
-const SELECTED_FILTER = 'brightness(1.3) drop-shadow(0 0 6px rgba(0,0,0,0.8))';
-// Puck's filled-slot grey; brightened by the filter it reads near-white.
-const SELECTED_FILL = '#C0C0C0';
-const FADED_OPACITY = 0.2;
 
 // Same oval, label and hole size for every box size.
 const SLOT = { rx: 25, ry: 14, font: 15 };
@@ -137,7 +108,7 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   numbering = GridBoxNumbering.Ucw,
   color,
 }) => {
-  const palette = boxPalette(color ?? gridBoxData?.grid_box?.color ?? DEFAULT_COLOR);
+  const palette = slotPalette(color ?? gridBoxData?.grid_box?.color ?? DEFAULT_COLOR);
 
   // Get grid status for a given position
   const getGridStatus = (position: number): GridStatus => {
