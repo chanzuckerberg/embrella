@@ -6,6 +6,7 @@ and quality metrics from remote processing directories.
 """
 
 import json
+import math
 from dataclasses import dataclass
 from enum import StrEnum
 from io import StringIO
@@ -63,6 +64,22 @@ class RunLocation:
 
 def _error(message, status):
     return JsonResponse({"error": message}, status=status)
+
+
+def _json_safe(value):
+    """NaN/inf (e.g. the std of a single-row metrics CSV) aren't valid JSON; render them as null so
+    clients don't have to patch the raw response text."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    return value
+
+
+def _metadata_response(data):
+    return JsonResponse(_json_safe(data), json_dumps_params={"indent": 2})
 
 
 def _locate_run(request):
@@ -211,7 +228,7 @@ def get_metadata_summary(request):
             "grid_name": grid_name,
         }
 
-        return JsonResponse(response, json_dumps_params={"indent": 2})
+        return _metadata_response(response)
 
     except Exception:
         logger.exception(GENERIC_ERROR)
@@ -367,7 +384,7 @@ def get_metadata_viz_data(request):
             "rejected_results": rejected_results,
         }
 
-        return JsonResponse(response_data, json_dumps_params={"indent": 2})
+        return _metadata_response(response_data)
 
     except Exception:
         logger.exception(GENERIC_ERROR)
