@@ -253,6 +253,38 @@ def test_custom_mode_rejects_an_empty_selection(dataset):
         _build(dataset)
 
 
+@pytest.mark.parametrize("path", ["relative/path.csv", "/hpc/../etc/passwd.csv", "/hpc/subset.txt"])
+def test_custom_csv_path_must_be_a_safe_absolute_csv(dataset, path):
+    session = dataset.sessions.get()
+    session.subset_csv_path = path
+    session.save(update_fields=["subset_csv_path"])
+    dataset.tomogram_subset_mode = "custom"
+    dataset.save()
+    with pytest.raises(SubmissionValidationError, match="Invalid subset CSV path"):
+        _build(dataset)
+
+
+def _custom_path_dataset(dataset):
+    session = dataset.sessions.get()
+    session.subset_csv_path = "/hpc/subsets/24nov10.csv"
+    session.save(update_fields=["subset_csv_path"])
+    dataset.tomogram_subset_mode = "custom"
+    dataset.save()
+    return dataset
+
+
+def test_custom_csv_with_no_overlap_is_rejected(dataset, monkeypatch):
+    monkeypatch.setattr("depositions.services.subset.deposition_cluster_id", lambda: "c1")
+    monkeypatch.setattr(
+        "depositions.services.subset.clusterio.read_remote_file",
+        lambda cluster_id, path, *a, **kw: (
+            "Tilt_Series\nPosition_1\n" if path.endswith("TiltSeries_Metrics.csv") else "Tilt_Series\nPosition_9\n"
+        ),
+    )
+    with pytest.raises(SubmissionValidationError, match="none of the positions"):
+        _build(_custom_path_dataset(dataset))
+
+
 def test_user_edits_override_autofill_without_changing_saved_raw_data(dataset):
     metadata = TiltseriesMetadata.objects.get(session__dataset=dataset)
     metadata.pixel_spacing = 2.0
