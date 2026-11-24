@@ -82,9 +82,10 @@ def mocks(monkeypatch, db):
     monkeypatch.setattr(submit.clusterio, "ensure_remote_dir", lambda *a: calls.__setitem__("mkdir", a))
     monkeypatch.setattr(submit.clusterio, "write_remote_file_atomic", write)
 
-    def config_yaml(dataset, *, output_dir, sync_destination=None):
+    def config_yaml(dataset, *, output_dir, sync_destination=None, custom_positions=None):
         calls["sync_destination"] = sync_destination
         calls["built_dataset_id"] = dataset.dataset_id
+        calls["custom_positions"] = custom_positions
         return "yaml-text"
 
     monkeypatch.setattr(submit, "dataprep_config_yaml", config_yaml)
@@ -188,25 +189,35 @@ class TestSubmitDatasetPrep:
         assert mocks["launched"] is None
         assert not DatasetJob.objects.filter(dataset=dataset).exists()
 
-    def test_custom_mode_accepts_a_cluster_csv_path(self, dataset, mocks, monkeypatch):
-        _build_config_for_real(monkeypatch)
+    def test_custom_mode_resolves_a_cluster_csv_path_to_positions(self, dataset, mocks, monkeypatch):
+        from depositions.services import subset
+
         dataset.tomogram_subset_mode = "custom"
         dataset.save(update_fields=["tomogram_subset_mode"])
         session = dataset.sessions.get()
         session.subset_csv_path = "/cluster/path/subset.csv"
         session.save(update_fields=["subset_csv_path"])
+
+        def fake_read(cluster_id, path, *a, **kw):
+            # The typed CSV and the session's AreTomo metrics are both read over SFTP; intersect them.
+            if path.endswith("TiltSeries_Metrics.csv"):
+                return "Tilt_Series\nPosition_1.mrc\nPosition_2\n"
+            return "Tilt_Series\nPosition_1\nPosition_9\n"  # Position_9 isn't in the run, dropped
+
+        monkeypatch.setattr(subset.clusterio, "read_remote_file", fake_read)
         job = submit.submit_dataset_prep(dataset)
         assert job.state == "prep_submitted"
-        assert "subset_csv_path: /cluster/path/subset.csv" in mocks["launched"]["params"]["config_yaml"]
+        # Resolved before the lock and handed to the builder; the path never reaches the config.
+        assert mocks["custom_positions"] == {session.msi_session.name: ["Position_1"]}
 
-    def test_custom_mode_rejects_both_upload_and_cluster_path(self, dataset, mocks, monkeypatch):
-        _build_config_for_real(monkeypatch)
+    def test_custom_mode_rejects_both_upload_and_cluster_path(self, dataset, mocks):
         dataset.tomogram_subset_mode = "custom"
         dataset.save(update_fields=["tomogram_subset_mode"])
         session = dataset.sessions.get()
         session.subset_csv_path = "/cluster/path/subset.csv"
         session.subset_selection = {"Selected positions": ["Position_1"]}
         session.save(update_fields=["subset_csv_path", "subset_selection"])
+        # Fails pre-lock in resolve_custom_positions, before any SFTP read.
         with pytest.raises(SubmissionValidationError, match="keep only one"):
             submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None

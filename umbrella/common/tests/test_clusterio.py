@@ -81,6 +81,17 @@ class TestGetAuthForUser:
 
 
 @patch("common.clusterio.get_cluster_ssh_connection")
+class TestReadRemoteFile:
+    def test_max_bytes_rejects_an_oversize_file(self, mock_conn):
+        handle = mock_conn.return_value.open_sftp.return_value.file.return_value.__enter__.return_value
+        handle.read.return_value = b"x" * 11  # read(max_bytes + 1) returns more than the cap
+
+        with pytest.raises(clusterio.RemoteFileTooLargeError):
+            clusterio.read_remote_file("bruno", "/big.csv", max_bytes=10)
+        handle.read.assert_called_once_with(11)
+
+
+@patch("common.clusterio.get_cluster_ssh_connection")
 class TestReadRemoteFileTail:
     @pytest.mark.parametrize("size", [10, 100000])
     def test_bounded_read_and_cleanup(self, mock_conn, size):

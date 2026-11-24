@@ -26,14 +26,6 @@ def test_runs_sync_and_validation():
     assert script.index("cryoetportalprep sync") < script.index("END_DEPOSITION_VALIDATION")
 
 
-def test_subset_resolution_runs_before_publish_and_sync():
-    script = _render()
-    assert "END_DEPOSITION_SUBSET" in script
-    # Resolve the private temp before it is published (mv) and before sync reads it.
-    assert script.index("END_DEPOSITION_SUBSET") < script.index("mv -f")
-    assert script.index("END_DEPOSITION_SUBSET") < script.index("cryoetportalprep sync")
-
-
 def test_session_filter_scopes_sync_to_this_datasets_sessions():
     script = _render(session_names=["24nov10", "24nov11"])
     assert "cryoetportalprep sync /staged/dep_1/ds_2/dataprep_config.yaml -s 24nov10 -s 24nov11" in script
@@ -121,65 +113,6 @@ def test_directory_creation_failure_stops_before_sync(tmp_path):
     result = subprocess.run(["bash"], input=stubs + script, text=True, capture_output=True)
     assert result.returncode != 0
     assert not synced.exists()
-
-
-def test_subset_with_no_matching_positions_preserves_published_config(tmp_path):
-    import subprocess
-
-    import yaml
-
-    metrics = tmp_path / "TiltSeries_Metrics.csv"
-    metrics.write_text("Tilt_Series\nPosition_1.mrc\n")
-    subset = tmp_path / "subset.csv"
-    subset.write_text("Tilt_Series\nOther_Position\n")
-    session = {"paths": {"aretomo3": str(tmp_path)}, "subset_csv_path": str(subset)}
-    config = {"datasets": {"dataset_2": {"sessions": {"24nov10": session}}}}
-    config_path = tmp_path / "dataprep_config.yaml"
-    previous_config = "deposition_id: 1\n"
-    config_path.write_text(previous_config)
-    script = _render(output_dir=str(tmp_path), config_path=str(config_path), config_yaml=yaml.safe_dump(config))
-    stubs = 'ml() { :; }; conda() { :; }; cryoetportalprep() { echo "sync-ran"; };\n'
-
-    result = subprocess.run(["bash"], input=stubs + script, text=True, capture_output=True, timeout=20)
-
-    assert result.returncode != 0
-    assert "none of the positions" in result.stderr
-    assert "sync-ran" not in result.stdout
-    assert config_path.read_text() == previous_config
-    assert not list(tmp_path.glob("*.tmp.*"))
-
-
-def test_script_publishes_resolved_subset_before_sync(tmp_path):
-    import subprocess
-
-    import yaml
-
-    (tmp_path / "TiltSeries_Metrics.csv").write_text("Tilt_Series\nPosition_1.mrc\nPosition_2.mrc\n")
-    subset = tmp_path / "subset.csv"
-    subset.write_text("Tilt_Series\nOther_Position\nPosition_2\n")
-    session = {"paths": {"aretomo3": str(tmp_path)}, "subset_csv_path": str(subset)}
-    config = {
-        "output_dir": str(tmp_path),
-        "datasets": {"dataset_2": {"dataset_id": 2, "sessions": {"24nov10": session}}},
-    }
-    config_path = tmp_path / "dataprep_config.yaml"
-    script = _render(output_dir=str(tmp_path), config_path=str(config_path), config_yaml=yaml.safe_dump(config))
-    stubs = """ml() { :; }; conda() { :; }; cryoetportalprep() {
-      if [ "$1" = sync ]; then
-        cp -- "$2" "$2.synced"
-      else
-        echo '{"errors": [], "warnings": []}'
-      fi
-    };\n"""
-
-    result = subprocess.run(["bash"], input=stubs + script, text=True, capture_output=True, timeout=20)
-
-    assert result.returncode == 0, result.stderr
-    synced_config = config_path.with_suffix(".yaml.synced").read_text()
-    assert synced_config == config_path.read_text()
-    synced_session = yaml.safe_load(synced_config)["datasets"]["dataset_2"]["sessions"]["24nov10"]
-    assert synced_session["positions"] == ["Position_2"]
-    assert "subset_csv_path" not in synced_session
 
 
 def test_staging_permission_denied_stops_before_sync(tmp_path):
