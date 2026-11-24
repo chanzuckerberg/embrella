@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Box, TextField, Typography } from '@mui/material';
+import { Alert, Box, TextField, Typography, useMediaQuery } from '@mui/material';
 import { PuckList, UserList } from '@app/common/types/gridLogging';
 import {
   useCreateGridBox,
@@ -15,12 +15,17 @@ import {
 } from '@app/common/hooks/useGridLogging';
 import { GridLoggingChoicesResponse } from '@app/common/types/gridLogging/config/choices';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
-import { GridBoxSize, GridBoxSVG } from './GridBoxSvg';
+import { GridBoxFit, GridBoxSize, GridBoxSVG } from './GridBoxSvg';
 import { defaultNumbering } from './gridBoxLayout';
 import { ColorDropdown, FIELD_HEIGHT, NumberingDropdown, SizeDropdown } from './StyleDropdowns';
 import { SlotPicker } from './SlotPicker';
 
 const PREVIEW_SIZE = 160;
+const PREVIEW_SIZE_NARROW = 128;
+
+// Below this the xs dialog (400px + 2×32px margin) shrinks and the side column squeezes fields; stack instead.
+const NARROW_QUERY = '(max-width: 463px)';
+
 const FILLED = 'filled';
 const ENTER = 'Enter';
 
@@ -71,6 +76,41 @@ const Labeled = ({ label, children }: { label: string; children: React.ReactNode
     {children}
   </Box>
 );
+
+/**
+ * Cell placement per layout. DOM order is the same in both, so tab order is too.
+ *
+ *   Wide                     Narrow
+ *   ┌───────┬──────────┐     ┌─────────────┐
+ *   │       │ Size     │     │   preview   │
+ *   │preview│ Color    │     │ Size │Color │
+ *   │       │ Numbering│     │ Numbering   │
+ *   ├───────┼──────────┤     │ Position    │
+ *   │Positn │ Name     │     │ Name        │
+ *   └───────┴──────────┘     └─────────────┘
+ */
+const WIDE = {
+  // minmax(0, …): the column never grows past the dialog for long values (e.g. U-counter-clockwise).
+  columns: `${PREVIEW_SIZE}px minmax(0, 1fr)`,
+  preview: { gridColumn: 1, gridRow: '1 / span 3', alignSelf: 'center' },
+  size: { gridColumn: 2 },
+  color: { gridColumn: 2 },
+  numbering: { gridColumn: 2 },
+  position: { gridColumn: 1, mt: PLACEMENT_EXTRA_GAP },
+  name: { gridColumn: 2, mt: PLACEMENT_EXTRA_GAP },
+};
+
+// Size and Color share a row: short values (longest "Neon Pink") fit half width, saving a row on short screens.
+const FULL_ROW = '1 / -1';
+const NARROW = {
+  columns: 'repeat(2, minmax(0, 1fr))',
+  preview: { gridColumn: FULL_ROW, justifySelf: 'center' },
+  size: {},
+  color: {},
+  numbering: { gridColumn: FULL_ROW },
+  position: { gridColumn: FULL_ROW, mt: PLACEMENT_EXTRA_GAP },
+  name: { gridColumn: FULL_ROW },
+};
 
 interface AddGridBoxProps {
   open: boolean;
@@ -163,6 +203,9 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
     handleSave();
   };
 
+  const isNarrow = useMediaQuery(NARROW_QUERY);
+  const layout = isNarrow ? NARROW : WIDE;
+
   const subtitle = [puck?.name, selectedUser?.full_name].filter(Boolean).join(' · ');
 
   return (
@@ -182,17 +225,17 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
       <Box
         sx={{
           display: 'grid',
-          // minmax(0, …): the column never grows past the dialog for long values (e.g. U-counter-clockwise).
-          gridTemplateColumns: `${PREVIEW_SIZE}px minmax(0, 1fr)`,
+          gridTemplateColumns: layout.columns,
           columnGap: ROW_GAP,
           rowGap: ROW_GAP,
           alignItems: 'start',
         }}
       >
-        {/* Live preview spans the three style rows. */}
-        <Box sx={{ gridColumn: 1, gridRow: '1 / span 3', alignSelf: 'center' }}>
+        {/* Live preview: spans the three style rows when wide, on top when narrow. Tight so its edge lines up with Position. */}
+        <Box sx={layout.preview}>
           <GridBoxSVG
-            size={PREVIEW_SIZE}
+            size={isNarrow ? PREVIEW_SIZE_NARROW : PREVIEW_SIZE}
+            fit={GridBoxFit.Tight}
             maxGrids={draft.maxGrids}
             numbering={draft.numbering}
             color={draft.color}
@@ -200,17 +243,17 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
           />
         </Box>
 
-        <Box sx={{ gridColumn: 2 }}>
+        <Box sx={layout.size}>
           <Labeled label="Size">
             <SizeDropdown value={draft.maxGrids} onChange={setSize} />
           </Labeled>
         </Box>
-        <Box sx={{ gridColumn: 2 }}>
+        <Box sx={layout.color}>
           <Labeled label="Color">
             <ColorDropdown choices={choices} value={draft.color} onChange={(color) => update({ color })} />
           </Labeled>
         </Box>
-        <Box sx={{ gridColumn: 2 }}>
+        <Box sx={layout.numbering}>
           <Labeled label="Numbering">
             <NumberingDropdown
               choices={choices}
@@ -221,7 +264,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
           </Labeled>
         </Box>
 
-        <Box sx={{ gridColumn: 1, mt: PLACEMENT_EXTRA_GAP }}>
+        <Box sx={layout.position}>
           <Labeled label="Position">
             <SlotPicker
               puck={puck ?? undefined}
@@ -231,7 +274,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
             />
           </Labeled>
         </Box>
-        <Box sx={{ gridColumn: 2, mt: PLACEMENT_EXTRA_GAP }}>
+        <Box sx={layout.name}>
           <Labeled label="Name">
             <TextField
               required

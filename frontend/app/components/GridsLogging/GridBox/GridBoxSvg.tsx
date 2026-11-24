@@ -19,6 +19,12 @@ import { boxCells, GridBoxNumbering, Point, slotCenter, slotHitArea, slotLabel }
 
 export type GridBoxSize = 4 | 8;
 
+// Padded leaves room around the ring for the selected scale/shadow; Tight crops to the ring so edges align with fields.
+export enum GridBoxFit {
+  Padded = 'padded',
+  Tight = 'tight',
+}
+
 interface GridBoxSVGProps {
   size?: number;
   onClick?: () => void;
@@ -33,6 +39,7 @@ interface GridBoxSVGProps {
   numbering?: string;
   // Box color as hex (e.g. "fdb000"); falls back to the box's stored color.
   color?: string;
+  fit?: GridBoxFit;
 }
 
 enum GridStatus {
@@ -96,6 +103,13 @@ const bodyPath = () => {
 
 const BODY_PATH = bodyPath();
 
+// Tight viewBox: the ring's outer edge, e.g. "7 7 186 186".
+const OUTER_RADIUS = BODY_RADIUS + RING_WIDTH / 2;
+const VIEW_BOX: Record<GridBoxFit, string> = {
+  [GridBoxFit.Padded]: `0 0 ${VIEW} ${VIEW}`,
+  [GridBoxFit.Tight]: `${CENTER.x - OUTER_RADIUS} ${CENTER.y - OUTER_RADIUS} ${OUTER_RADIUS * 2} ${OUTER_RADIUS * 2}`,
+};
+
 export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   size = 200,
   onClick,
@@ -109,6 +123,7 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   maxGrids = 4,
   numbering = GridBoxNumbering.Ucw,
   color,
+  fit = GridBoxFit.Padded,
 }) => {
   const palette = slotPalette(color ?? gridBoxData?.grid_box?.color ?? DEFAULT_COLOR);
 
@@ -175,7 +190,7 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
       }}
       onClick={onClick}
     >
-      <svg viewBox={`0 0 ${VIEW} ${VIEW}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+      <svg viewBox={VIEW_BOX[fit]} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
         <defs>
           <clipPath id={clipId}>
             <path d={BODY_PATH} />
