@@ -63,15 +63,6 @@ it('asks for a full rescan when the scan finished but only covered a subset', ()
   expect(screen.getByText(/rescan the whole project/i)).toBeInTheDocument();
 });
 
-it('shows count unavailable when a full scan could not be intersected with the AreTomo run', () => {
-  mockAnnotated.mockReturnValue({
-    data: { count: 2, scanned: true, complete: true, filtered: false },
-    isFetching: false,
-  });
-  renderCard();
-  expect(screen.getByText(/count unavailable/i)).toBeInTheDocument();
-});
-
 it('shows the scanning state while the scan is in flight', () => {
   mockAnnotated.mockReturnValue({ data: undefined, isFetching: true });
   renderCard();

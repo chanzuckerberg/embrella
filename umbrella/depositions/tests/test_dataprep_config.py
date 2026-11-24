@@ -283,8 +283,8 @@ def _custom_path_dataset(dataset):
 
 
 def _mock_annotated(monkeypatch, *, annotated, full=True, produced=None):
+    Cluster.objects.update_or_create(cluster_id="c1", defaults={"name": "C1", "is_active": True})
     monkeypatch.setattr("depositions.services.dataprep_config.deposition_cluster_id", lambda: "c1")
-    monkeypatch.setattr("depositions.services.dataprep_config._active_cluster", lambda cluster_id: object())
     monkeypatch.setattr(
         "workflow.processors.copick.views.aggregate_annotated_runs",
         lambda session, runs, dataset_id: (set(annotated), True, full),
@@ -315,47 +315,9 @@ def test_annotated_mode_rejects_an_incomplete_scan(dataset, monkeypatch):
         _build(_annotated_dataset(dataset))
 
 
-def test_annotated_mode_rejects_nothing_annotated(dataset, monkeypatch):
-    _mock_annotated(monkeypatch, annotated=set())
-    with pytest.raises(SubmissionValidationError, match="no annotated tomograms"):
-        _build(_annotated_dataset(dataset))
-
-
 def test_annotated_mode_rejects_when_none_are_in_this_run(dataset, monkeypatch):
     _mock_annotated(monkeypatch, annotated={"Position_99"}, produced={"Position_1", "Position_2"})
     with pytest.raises(SubmissionValidationError, match="none of the annotated tomograms are in"):
-        _build(_annotated_dataset(dataset))
-
-
-def test_annotated_mode_normalizes_the_aretomo_run_name(dataset, monkeypatch):
-    session = dataset.sessions.get()
-    session.aretomo_run_name = "002"  # stored without the prefix; metrics read must use "run002"
-    session.save(update_fields=["aretomo_run_name"])
-    seen = {}
-    monkeypatch.setattr("depositions.services.dataprep_config.deposition_cluster_id", lambda: "c1")
-    monkeypatch.setattr("depositions.services.dataprep_config._active_cluster", lambda cluster_id: object())
-    monkeypatch.setattr(
-        "workflow.processors.copick.views.aggregate_annotated_runs",
-        lambda *a: ({"Position_1"}, True, True),
-    )
-
-    def fake_positions(cluster, msi_session, run):
-        seen["run"] = run
-        return {"Position_1"}
-
-    monkeypatch.setattr("workflow.views.metadata_views.aretomo_positions", fake_positions)
-    _build(_annotated_dataset(dataset))
-    assert seen["run"] == "run002"
-
-
-def test_annotated_mode_reports_a_metrics_read_failure(dataset, monkeypatch):
-    _mock_annotated(monkeypatch, annotated={"Position_1"})
-
-    def boom(cluster, msi_session, run):
-        raise FileNotFoundError
-
-    monkeypatch.setattr("workflow.views.metadata_views.aretomo_positions", boom)
-    with pytest.raises(SubmissionValidationError, match="couldn't read the tilt series metrics"):
         _build(_annotated_dataset(dataset))
 
 

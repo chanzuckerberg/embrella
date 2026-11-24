@@ -178,14 +178,6 @@ export interface AnnotatedCount {
   count: number;
   scanned: boolean; // the scan job finished (drives polling)
   complete?: boolean; // it covered the whole project; annotated mode needs this
-  dropped?: number; // annotated runs not produced by the AreTomo run
-  filtered?: boolean; // count was intersected with the AreTomo run (else it's the approximate union)
-}
-
-// The count is trustworthy only when the scan covered the whole project (complete) and was intersected
-// with the AreTomo run (filtered). SessionCard and the Submit/rollup totals must agree, so both use this.
-export function annotatedTrustedCount(data: AnnotatedCount | undefined): number | undefined {
-  return data && data.complete && data.filtered !== false ? data.count : undefined;
 }
 
 export async function getCopickRunObjects(sessionName: string, run: string): Promise<string[]> {
@@ -201,7 +193,7 @@ export async function getAnnotatedCount(
   datasetId: number,
   aretomoRun?: string
 ): Promise<AnnotatedCount> {
-  if (runs.length === 0) return { count: 0, scanned: true, complete: true, dropped: 0, filtered: true };
+  if (runs.length === 0) return { count: 0, scanned: true, complete: true };
   const q =
     `?session_id=${encodeURIComponent(sessionName)}` +
     `&runs=${encodeURIComponent(runs.join(','))}` +
@@ -209,18 +201,17 @@ export async function getAnnotatedCount(
     // Intersect with the AreTomo run so the count matches what submit stages.
     (aretomoRun ? `&aretomo_run=${encodeURIComponent(normalizeRun(aretomoRun))}` : '');
   const data = await parse<{
+    success?: boolean;
     annotated_count?: number;
     scanned?: boolean;
     complete?: boolean;
-    dropped_runs?: string[];
-    filtered?: boolean;
   }>(await fetchResource(url(`${API.COPICK_ANNOTATED_COUNT}${q}`)));
+  // success:false means the metrics couldn't be read; surface it so the UI shows "count unavailable".
+  if (data.success === false) throw new Error('annotated count unavailable');
   return {
     count: data.annotated_count ?? 0,
     scanned: data.scanned ?? false,
     complete: data.complete ?? false,
-    dropped: data.dropped_runs?.length ?? 0,
-    filtered: data.filtered ?? false,
   };
 }
 

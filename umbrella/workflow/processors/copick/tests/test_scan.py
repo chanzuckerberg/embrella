@@ -206,10 +206,9 @@ class TestAnnotatedCountEndpoint:
             )
         body = r.json()
         assert body["annotated_runs"] == ["TS_1"]  # TS_2 isn't in the AreTomo run
-        assert body["dropped_runs"] == ["TS_2"]
-        assert body["filtered"] is True
+        assert body["annotated_count"] == 1
 
-    def test_count_is_marked_unfiltered_when_metrics_unreadable(self, client, copick_session):
+    def test_count_unavailable_when_metrics_unreadable(self, client, copick_session):
         with (
             self._fake_url(),
             mock.patch.object(
@@ -224,8 +223,7 @@ class TestAnnotatedCountEndpoint:
                 {"session_id": "26feb20b", "runs": "run001", "dataset": "7", "aretomo_run": "run001"},
             )
         body = r.json()
-        assert body["filtered"] is False
-        assert body["annotated_count"] == 2  # unfiltered union, flagged approximate
+        assert body["success"] is False  # shows "count unavailable"
 
     def test_invalid_aretomo_run_is_400(self, client, copick_session):
         r = client.get(

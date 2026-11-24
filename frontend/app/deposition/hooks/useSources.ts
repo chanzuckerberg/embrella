@@ -2,7 +2,6 @@ import { queryOptions, useQueries, useQuery } from '@tanstack/react-query';
 
 import {
   type AnnotatedCount,
-  annotatedTrustedCount,
   getAnnotatedCount,
   getCopickRunObjects,
   getDenoisedTomogramCount,
@@ -151,7 +150,7 @@ export function useTomogramSelectionCounts(dataset: Dataset): { selected: number
           subset_csv_path: session.subset_csv_path ?? '',
           subset_selection: session.subset_selection,
           tomogram_total: sourceTotal,
-          tomogram_selected: annotatedTrustedCount(annotated[i].data),
+          tomogram_selected: annotated[i].data?.complete ? annotated[i].data.count : undefined,
         },
         mode
       );
