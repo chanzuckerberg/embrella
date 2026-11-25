@@ -356,39 +356,6 @@ class TestOnPushComplete:
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("state", ["prep_submitted", "prep_running", "push_submitted", "push_running"])
-@pytest.mark.parametrize("success", [True, False])
-def test_dataset_save_failure_rolls_back_completion_and_allows_retry(state, success, monkeypatch):
-    job = _job(state)
-    job.dataset.status = "syncing"
-    job.dataset.save()
-    complete = submission.on_prep_complete if state in submission.PREP_ACTIVE else submission.on_push_complete
-    original_save = Dataset.save
-
-    def fail_after_save(dataset, *args, **kwargs):
-        original_save(dataset, *args, **kwargs)
-        raise RuntimeError("dataset save failed")
-
-    with monkeypatch.context() as patch:
-        patch.setattr(Dataset, "save", fail_after_save)
-        with pytest.raises(RuntimeError, match="dataset save failed"):
-            complete(job, success)
-
-    job.refresh_from_db()
-    job.dataset.refresh_from_db()
-    assert job.state == state
-    assert job.completed_at is None
-    assert not job.error_message
-    assert job.dataset.status == "syncing"
-
-    complete(job, success)
-    expected_state = "prep_completed" if state in submission.PREP_ACTIVE else "completed"
-    assert job.state == (expected_state if success else "failed")
-    job.dataset.refresh_from_db()
-    assert job.dataset.status == job.dataset_status
-
-
-@pytest.mark.django_db
 class TestResetPreparation:
     # Field-clearing and active/completed refusal are covered by the parametrized tests below;
     # this keeps only the no-job (never-prepared) service case.

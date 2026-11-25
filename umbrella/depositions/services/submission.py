@@ -21,12 +21,6 @@ _RUNNING = {
 }
 
 
-def apply_status(job):
-    # Mirror the job state onto the API-facing Dataset.status.
-    job.dataset.status = job.dataset_status
-    job.dataset.save(update_fields=["status", "updated_at"])
-
-
 def on_job_running(job, phase, *, job_id):
     """Flip {phase}_submitted -> {phase}_running on the first RUNNING sacct poll. Idempotent."""
     submitted, running, attempt_field = _RUNNING[phase]
@@ -35,7 +29,6 @@ def on_job_running(job, phase, *, job_id):
     )
     if updated:
         job.refresh_from_db()
-        apply_status(job)
     return job
 
 
@@ -63,7 +56,6 @@ def _record_completion(job, *, active_states, attempt_field, job_id, fields, req
         Deposition.objects.using(job._state.db).filter(
             pk=job.dataset.deposition_id, metadata_dataset__isnull=True
         ).update(metadata_dataset_id=job.dataset_id)
-    apply_status(job)
     return job
 
 
@@ -126,7 +118,6 @@ def reset_preparation(dataset):
             job.refresh_from_db()
             raise SubmissionValidationError(f"Preparation can't be reset while the dataset is {job.state!r}.")
         job.refresh_from_db()
-        apply_status(job)
     return job
 
 
@@ -151,8 +142,6 @@ def start_push(job, *, launch, cancel=None):
             )
         )
         job.refresh_from_db()
-        if claimed:
-            apply_status(job)
     if not claimed:
         require_validation(job)
         raise SubmissionValidationError("Preparation changed before upload could start; refresh and try again.")

@@ -338,12 +338,13 @@ class DatasetSerializer(serializers.ModelSerializer):
     job = DatasetJobSerializer(read_only=True)
     preparation_sources = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
+    status = serializers.ReadOnlyField()  # derived from the job's state
 
     class Meta:
         model = Dataset
         fields = "__all__"
-        # dataset_id reserved; status/dates set by syncer/system.
-        read_only_fields = ["dataset_id", "status", "created_at", "updated_at"]
+        # dataset_id reserved; dates set by the system.
+        read_only_fields = ["dataset_id", "created_at", "updated_at"]
         extra_kwargs = {"assay_ontology_id": {"validators": [ASSAY_ONTOLOGY_VALIDATOR]}}
 
     def get_fields(self):
@@ -533,6 +534,7 @@ class SubmissionDatasetSerializer(serializers.ModelSerializer):
     session_names = serializers.SerializerMethodField()
     session_count = serializers.SerializerMethodField()
     type = serializers.SerializerMethodField()
+    status = serializers.ReadOnlyField()  # derived from the job's state
 
     class Meta:
         model = Dataset

@@ -23,7 +23,7 @@ from depositions.services.dataset_metadata import build_dataset_metadata, build_
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
 from depositions.services.metadata_requirements import deposition_metadata_issues, metadata_issues
-from depositions.services.submission import PREP_ACTIVE, PUSH_ACTIVE, apply_status, on_push_complete, start_push
+from depositions.services.submission import PREP_ACTIVE, PUSH_ACTIVE, on_push_complete, start_push
 from depositions.services.subset import resolve_custom_positions
 from depositions.services.validation import require_validation
 
@@ -135,7 +135,6 @@ def submit_dataset_prep(dataset):
             job.refresh_from_db()
             raise SubmissionValidationError(f"Dataset is already {job.state}; it can't be submitted again.")
         job.refresh_from_db()
-        apply_status(job)
 
     slurm_job_id = None
     try:
@@ -176,7 +175,6 @@ def submit_dataset_prep(dataset):
             state="failed", error_message="Failed to submit the prep job.", completed_at=timezone.now()
         )
         job.refresh_from_db()
-        apply_status(job)
         raise
 
     job.refresh_from_db()
