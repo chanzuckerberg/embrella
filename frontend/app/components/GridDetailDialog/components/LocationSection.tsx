@@ -4,7 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import { Box, Typography } from '@mui/material';
 import { PuckSVG } from '@app/components/GridsLogging/Pucks/PuckSvg';
-import { GridBoxSVG } from '@app/components/GridsLogging/GridBox/GridBoxSvg';
+import { GridBoxSize, GridBoxSVG } from '@app/components/GridsLogging/GridBox/GridBoxSvg';
 import { PuckList, PuckSlotsResponse } from '@app/common/types/gridLogging/entities/puckList';
 import { GridBoxDetailResponse } from '@app/common/types/gridLogging/details/gridBoxDetails';
 import { GridLocation } from '@app/common/types/gridLogging/details/gridDetails';
@@ -54,7 +54,8 @@ export const LocationSection: React.FC<LocationSectionProps> = ({
             gridBoxData={gridBoxData}
             selectedGrid={location.position_in_box ?? null}
             disableGridClick
-            maxGrids={(gridBoxData.grid_box?.positions?.length as 4 | 6 | 8) ?? 4}
+            maxGrids={(gridBoxData.grid_box?.positions?.length as GridBoxSize) ?? 4}
+            numbering={gridBoxData.grid_box?.numbering}
           />
           <Typography variant="caption" display="block" sx={{ mt: '4px' }}>
             Box: {location.grid_box_name}

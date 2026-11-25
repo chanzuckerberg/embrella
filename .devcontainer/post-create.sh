@@ -14,10 +14,9 @@ sudo chown -R embrella:embrella \
 # `/app` is bind-mounted from the host, so git sees a different owner.
 sudo git config --system --add safe.directory /app
 
-# Pin yarn version and install the playwright MCP server for Claude Code.
+# Pin yarn version.
 corepack enable
 corepack prepare yarn@4.9.1 --activate
-npm install -g @playwright/mcp@latest
 
 # Image's venv was built with --no-default-groups. Install the `dev` group
 # (pytest, ruff, debugpy) on top so `pytest` / `ruff` / debug attach work.
@@ -34,3 +33,8 @@ else
   echo "post-create: frontend node_modules not ready after 120s — skipping"
   echo "post-create: run \`cd /app/frontend && sudo yarn playwright install-deps chromium && yarn playwright install chromium\` manually"
 fi
+
+# Playwright MCP bundles its own Playwright, so it needs its own browser build.
+# Must match the version in .mcp.json.
+PLAYWRIGHT_MCP=@playwright/mcp@0.0.86
+npx -y "$PLAYWRIGHT_MCP" install-browser chromium

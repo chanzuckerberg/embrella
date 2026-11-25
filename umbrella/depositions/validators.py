@@ -1,6 +1,7 @@
 """Format validators shared by the deposition API's writable fields (ontology IDs, run names)."""
 
 import re
+from pathlib import PurePosixPath
 
 from django.core.validators import RegexValidator
 
@@ -18,6 +19,17 @@ def ensure_safe_run_name(name):
     bypassed the serializer (admin edits, rows saved before validation existed). Blank is a no-op."""
     if name and not SAFE_RUN_NAME_RE.fullmatch(name):
         raise SubmissionValidationError(f"Invalid run name {name!r}. {RUN_NAME_MESSAGE}")
+
+
+def ensure_safe_subset_csv_path(path):
+    """Confine a user-typed cluster path the prep job reads to an absolute .csv with no traversal."""
+    if "\x00" in path or "\r" in path or "\n" in path:
+        raise SubmissionValidationError(f"Invalid subset CSV path {path!r}: no control characters.")
+    pure = PurePosixPath(path)
+    if not pure.is_absolute() or ".." in pure.parts:
+        raise SubmissionValidationError(f"Invalid subset CSV path {path!r}: use an absolute path with no '..'.")
+    if pure.suffix.lower() != ".csv":
+        raise SubmissionValidationError(f"Invalid subset CSV path {path!r}: must point to a .csv file.")
 
 
 def _ontology_id(pattern, example):
