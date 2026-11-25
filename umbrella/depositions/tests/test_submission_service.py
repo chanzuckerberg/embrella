@@ -1,5 +1,7 @@
 """Tests for the DatasetJob submission-chaining service."""
 
+from datetime import timedelta
+
 import pytest
 from django.db.models.query import QuerySet
 from django.utils import timezone
@@ -353,6 +355,14 @@ class TestOnPushComplete:
         submission.on_push_complete(failed, False, error_message="nope")
         failed.dataset.refresh_from_db()
         assert failed.dataset.status == "failed"
+
+    def test_state_change_advances_dataset_updated_at(self):
+        job = _job("push_running")
+        past = timezone.now() - timedelta(days=1)
+        Dataset.objects.filter(pk=job.dataset_id).update(updated_at=past)
+        submission.on_push_complete(job, True)
+        job.dataset.refresh_from_db()
+        assert job.dataset.updated_at > past
 
 
 @pytest.mark.django_db

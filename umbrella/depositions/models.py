@@ -89,7 +89,7 @@ class Dataset(models.Model):
 
     @property
     def status(self) -> str:
-        """Display/submission status, derived from the job's state (no stored copy)."""
+        """Derived from the job's state."""
         job = getattr(self, "job", None)
         return job.dataset_status if job else "draft"
 
