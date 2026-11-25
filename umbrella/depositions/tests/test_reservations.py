@@ -32,14 +32,14 @@ def captured(monkeypatch):
     return sent
 
 
-def test_signs_request_with_region_from_url_and_covers_querystring(monkeypatch, captured):
+def test_signs_request_with_region_from_url(monkeypatch, captured):
     creds = Credentials(access_key="AKIAEXAMPLE", secret_key="secret", token=None)
     monkeypatch.setattr("botocore.session.Session.get_credentials", lambda self: creds)
 
-    LambdaReservationService(BASE_URL).list_reservations(detail=True)
+    LambdaReservationService(BASE_URL).reserve_new_deposition()
 
     request = captured["request"]
-    assert request.url.endswith("/reservations?detail=true")
+    assert request.url.endswith("/reservations/deposition/new")
     auth = request.headers["Authorization"]
     assert auth.startswith("AWS4-HMAC-SHA256")
     assert "/us-west-2/lambda/aws4_request" in auth

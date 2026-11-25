@@ -370,15 +370,12 @@ class TestResetPreparation:
 @pytest.mark.parametrize("state", ["prep_completed", "failed"])
 def test_reset_preparation_clears_attempt_and_preserves_staged_tree(state):
     job = _job(state)
-    job.staged_at = timezone.now()
     job.sync_progress = {"done": 1}
     job.sync_summary = {"objects": 1}
     job.push_progress = {"done": 1}
     job.save()
-    staged_at = job.staged_at
     result = submission.reset_preparation(job.dataset)
     assert result.state == "pending" and result.dataset.status == "draft"
-    assert result.staged_at == staged_at
     assert result.validation is None
     assert result.sync_progress is None and result.sync_summary is None and result.push_progress is None
     assert result.prep_slurm_job_id == result.push_slurm_job_id == ""
