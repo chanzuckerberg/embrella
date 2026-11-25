@@ -16,6 +16,7 @@ import { Button, InputToggle, SegmentedControl } from '@czi-sds/components';
 import { DropdownSelect } from '@app/common/components/DropdownSelect';
 import { primary100, primary500 } from '@app/common/theme';
 import { CreatedSession, PLAN_TIERS, PlanTier } from '../types';
+import { GridField } from './GridField';
 import { useSessionForm } from './useSessionForm';
 
 const LABEL_INDENT_CLASS = 'pl-4';
@@ -65,7 +66,6 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
   const {
     state,
     formOptions,
-    users,
     grids,
     magnifications,
     errors,
@@ -75,7 +75,6 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
     planTierOptions,
     updateField,
     selectPlanTier,
-    selectFilterUser,
     submit,
   } = useSessionForm();
 
@@ -84,30 +83,10 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
     [formOptions]
   );
 
-  const userOptions = useMemo(
-    () => [
-      { id: 0, name: 'All Users' },
-      ...users.map((u) => ({
-        id: u.id,
-        name: u.full_name || u.username || `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim(),
-      })),
-    ],
-    [users]
-  );
-
-  const gridOptions = useMemo(() => grids.map((g) => ({ ...g, name: g.display_name || g.name })), [grids]);
-
   const selectedProject = useMemo(
     () => projectOptions.find((p) => p.id === state.projectId),
     [projectOptions, state.projectId]
   );
-
-  const selectedUser = useMemo(
-    () => userOptions.find((u) => u.id === (state.filterUserId ?? 0)),
-    [userOptions, state.filterUserId]
-  );
-
-  const selectedGrid = useMemo(() => gridOptions.find((g) => g.id === state.gridId), [gridOptions, state.gridId]);
 
   const magnificationOptions = useMemo(() => magnifications.map((m) => ({ ...m, name: m.display })), [magnifications]);
 
@@ -153,12 +132,13 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
               disabled={Boolean(previousTier) && !planSelection[previousTier]}
               onChange={(_event, value) => selectPlanTier(tier, value ?? undefined)}
             />
+            {/* Plan error under the last tier, spaced like the other field errors. */}
+            {index === PLAN_TIERS.length - 1 && Boolean(errors.sessionPlanId) && (
+              <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: '4px' }}>{errors.sessionPlanId}</Box>
+            )}
           </Box>
         );
       })}
-      {Boolean(errors.sessionPlanId) && (
-        <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: '-12px' }}>{errors.sessionPlanId}</Box>
-      )}
 
       <Box sx={{ '& > button': { width: '100%' } }}>
         <DropdownSelect
@@ -173,23 +153,12 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
         )}
       </Box>
 
-      <Box sx={{ '& > button': { width: '100%' } }}>
-        <DropdownSelect
-          topLabelClass={LABEL_INDENT_CLASS}
-          topLabel="Filter by User"
-          value={selectedUser}
-          options={userOptions}
-          onChange={(option) => selectFilterUser(option?.id === 0 ? null : (option?.id ?? null))}
-        />
-      </Box>
-
-      <Box sx={{ '& > button': { width: '100%' } }}>
-        <DropdownSelect
-          topLabelClass={LABEL_INDENT_CLASS}
-          topLabel="Grid"
-          value={selectedGrid}
-          options={gridOptions}
-          onChange={(option) => updateField('gridId', option?.id ?? null)}
+      <Box>
+        <GridField
+          grids={grids}
+          gridId={state.gridId}
+          onChange={(id) => updateField('gridId', id)}
+          labelClass={LABEL_CLASS}
         />
         {Boolean(errors.gridId) && (
           <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: '4px' }}>{errors.gridId}</Box>

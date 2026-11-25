@@ -17,6 +17,7 @@ interface PuckDetailsProps {
   onRefetchReady?: (refetch: () => void) => void;
   onGridBoxInfoRefetchReady?: (refetch: () => void) => void;
   onPuckDeleted?: () => void;
+  onShowSlot?: (puckId: number, slotPosition: number) => void; // open a slot in another puck
 }
 
 export const PuckDetails: React.FC<PuckDetailsProps> = ({
@@ -26,6 +27,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
   onRefetchReady,
   onGridBoxInfoRefetchReady,
   onPuckDeleted,
+  onShowSlot,
 }) => {
   // Fetch puck slots data
   const { slotsData, isSuccess, refetch } = useGridLoggingPuckSlots(selectedPuck?.id);
@@ -62,7 +64,13 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
     }
   };
 
-  const handleGridBoxCreated = (slotPosition: number) => {
+  const handleGridBoxCreated = (slotPosition: number, puckId: number) => {
+    // Created in another puck (picked in the location picker): open it there.
+    if (puckId !== selectedPuck?.id && onShowSlot) {
+      onShowSlot(puckId, slotPosition);
+      return;
+    }
+
     // Refetch slots data to update the graphic
     refetch();
     // Select the newly created slot

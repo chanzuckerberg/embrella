@@ -11,15 +11,17 @@ export interface PuckListResponse {
   pucks: PuckList[];
 }
 
-export interface PuckList extends PuckBase {
+// API names the owner `user`; `user_id` is create-only.
+export interface PuckList extends Omit<PuckBase, 'user_id'> {
   id: number;
   name: string;
   color: string;
   color_display: string;
   position_in_cane: number;
   max_boxes: number;
-  user_id: number;
+  user: number;
   user_name: string;
+  grid_box_count: number;
   cane: number;
 }
 

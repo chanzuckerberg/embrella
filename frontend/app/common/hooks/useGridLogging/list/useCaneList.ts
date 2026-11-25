@@ -9,6 +9,7 @@ export interface Cane {
   position_in_dewar: number;
   max_pucks: number;
   dewar: number;
+  dewar_name: string | null;
   pucks_count: number;
 }
 

@@ -231,12 +231,14 @@ describe('useSessionForm dependent lists', () => {
     expect(result.current.state.energyFilterUsed).toBe(true);
   });
 
-  it('selecting a user loads their grids and pre-selects the default one', async () => {
+  it('selecting a user loads their grids without pre-selecting one', async () => {
     const { result } = await mountForm();
 
     act(() => result.current.selectFilterUser(USER_ID));
 
-    await waitFor(() => expect(result.current.state.gridId).toBe(DEFAULT_GRID.id));
+    // The default grid is a last resort the user opts into, never a pre-filled answer.
+    await waitFor(() => expect(result.current.grids).toContainEqual(DEFAULT_GRID));
+    expect(result.current.state.gridId).toBeNull();
     expect(result.current.state.filterUserId).toBe(USER_ID);
     expect(mockedFetch).toHaveBeenCalledWith(expect.stringContaining(`${TEM_API.GRIDS_BY_USER}?user_id=${USER_ID}`));
   });

@@ -9,8 +9,13 @@
 html,
 body {
   max-width: 100vw;
-  overflow-x: hidden;
   font-family: helvetica-neue-lt-pro, Helvetica, sans-serif;
+}
+
+/* body only: on html it pins the viewport scrollbar, so MUI's scroll lock (body overflow:hidden
+   + scrollbar-width padding) can't hide it and opening a Menu/Dialog shifts the page left. */
+body {
+  overflow-x: hidden;
 }
 
 a {

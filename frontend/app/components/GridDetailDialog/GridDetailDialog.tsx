@@ -117,7 +117,7 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
           color_display: '',
           position_in_cane: 0,
           max_boxes: slotsData.slots?.length ?? 12,
-          user_id: 0,
+          user: 0,
           user_name: '',
           cane: 0,
         } as PuckList)
