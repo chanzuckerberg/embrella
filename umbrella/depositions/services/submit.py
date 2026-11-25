@@ -156,7 +156,7 @@ def submit_dataset_prep(dataset):
         recorded = (
             DatasetJob.objects.using(db)
             .filter(pk=job.pk, state="prep_submitted", prep_slurm_job_id="")
-            .update(prep_slurm_job_id=slurm_job_id, staged_at=timezone.now(), cluster_id=cluster_id)
+            .update(prep_slurm_job_id=slurm_job_id, cluster_id=cluster_id)
         )
         if not recorded:
             raise LaunchError("Lost the prep claim before the SLURM id could be recorded.")

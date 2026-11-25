@@ -406,7 +406,7 @@ class TestSubmitDatasetPrep:
         assert job.state == "prep_submitted"
 
     def test_lost_claim_before_id_recorded_cancels_orphan(self, dataset, mocks, monkeypatch):
-        # If the id/staged_at write matches no row (claim lost), cancel the launched job, don't poll it.
+        # If the id write matches no row (claim lost), cancel the launched job, don't poll it.
         cancelled = {}
         monkeypatch.setattr(
             submit, "cancel_deposition_job", lambda *, cluster_id, job_id, auth: cancelled.update(id=job_id)
@@ -616,12 +616,9 @@ def test_missing_service_credentials_does_not_claim_or_launch(dataset, mocks, mo
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("state", ["prep_submitted", "prep_running"])
-@pytest.mark.parametrize("staged", [False, True])
-def test_sibling_prep_blocks_submission_before_config_is_frozen(dataset, mocks, state, staged):
+def test_sibling_prep_blocks_submission_before_config_is_frozen(dataset, mocks, state):
     sibling = Dataset.objects.create(deposition=dataset.deposition, title="Sibling", dataset_id=3)
-    DatasetJob.objects.create(
-        dataset=sibling, state=state, staged_at=timezone.now() if staged else None, prep_slurm_job_id=""
-    )
+    DatasetJob.objects.create(dataset=sibling, state=state, prep_slurm_job_id="")
     with pytest.raises(SubmissionValidationError, match="queued or running prep"):
         submit.submit_dataset_prep(dataset)
     assert mocks["launched"] is None
@@ -694,7 +691,6 @@ def test_prepared_dataset_can_retry_once_and_drops_stale_validation(dataset, moc
         state="prep_completed",
         prep_slurm_job_id="old",
         validation=_passed_validation("old"),
-        staged_at=timezone.now(),
     )
     job = submit.submit_dataset_prep(dataset)
     assert job.state == "prep_submitted" and job.validation is None
