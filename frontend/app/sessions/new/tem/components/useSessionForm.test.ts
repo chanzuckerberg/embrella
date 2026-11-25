@@ -42,9 +42,7 @@ const SERIALEM_PLAN = {
 // What the backend does: the chosen plan's name_prefix in front of the date.
 const PLAN_PREFIX: Record<number, string> = { [TOMO5_PLAN.id]: '', [SERIALEM_PLAN.id]: 's' };
 
-const USER_ID = 5;
-const DEFAULT_GRID = { id: 11, name: 'g11', display_name: 'Grid 11', is_default: true };
-const OTHER_GRID = { id: 12, name: 'g12', display_name: 'Grid 12', is_default: false };
+const DEFAULT_GRID = { id: 11, name: 'default grid' };
 const MAGNIFICATION = { id: 3, nominal_mag: 50000, mode: 'SA', index: 0, scope__name: 'krios1', display: '50kx' };
 
 const jsonResponse = (body: unknown) => ({ ok: true, json: async () => body }) as unknown as Response;
@@ -57,17 +55,15 @@ function fakeBackend(url: string): Promise<Response> {
     return Promise.resolve(jsonResponse({ suggested_name: `${PLAN_PREFIX[planId] ?? ''}${TODAY}` }));
   }
   if (pathname === TEM_API.FORM_OPTIONS) {
-    return Promise.resolve(jsonResponse({ session_plans: [TOMO5_PLAN, SERIALEM_PLAN], projects: [] }));
+    return Promise.resolve(
+      jsonResponse({ session_plans: [TOMO5_PLAN, SERIALEM_PLAN], projects: [], default_grid: DEFAULT_GRID })
+    );
   }
   if (pathname === TEM_API.USERS) {
     return Promise.resolve(jsonResponse({ users: [] }));
   }
   if (pathname === TEM_API.MAGNIFICATIONS) {
     return Promise.resolve(jsonResponse([MAGNIFICATION]));
-  }
-  if (pathname === TEM_API.GRIDS_BY_USER) {
-    const grids = searchParams.get('user_id') === String(USER_ID) ? [OTHER_GRID, DEFAULT_GRID] : [];
-    return Promise.resolve(jsonResponse(grids));
   }
   return Promise.resolve(jsonResponse([]));
 }
@@ -230,18 +226,14 @@ describe('useSessionForm dependent lists', () => {
     expect(result.current.state.phasePlateUsed).toBe(false); // TOMO5 has phase_plate_used: false
     expect(result.current.state.energyFilterUsed).toBe(true);
   });
+});
 
-  it('selecting a user loads their grids without pre-selecting one', async () => {
-    const { result } = await mountForm();
+it('offers the default grid without pre-selecting it', async () => {
+  const { result } = await mountForm();
 
-    act(() => result.current.selectFilterUser(USER_ID));
-
-    // The default grid is a last resort the user opts into, never a pre-filled answer.
-    await waitFor(() => expect(result.current.grids).toContainEqual(DEFAULT_GRID));
-    expect(result.current.state.gridId).toBeNull();
-    expect(result.current.state.filterUserId).toBe(USER_ID);
-    expect(mockedFetch).toHaveBeenCalledWith(expect.stringContaining(`${TEM_API.GRIDS_BY_USER}?user_id=${USER_ID}`));
-  });
+  // The default grid is a last resort the user opts into, never a pre-filled answer.
+  expect(result.current.formOptions?.default_grid).toEqual(DEFAULT_GRID);
+  expect(result.current.state.gridId).toBeNull();
 });
 
 it('posts session overrides for phase plate and energy filter usage', async () => {

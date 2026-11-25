@@ -66,7 +66,6 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
   const {
     state,
     formOptions,
-    grids,
     magnifications,
     errors,
     isLoading,
@@ -155,7 +154,7 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
 
       <Box>
         <GridField
-          grids={grids}
+          defaultGrid={formOptions?.default_grid ?? null}
           gridId={state.gridId}
           onChange={(id) => updateField('gridId', id)}
           labelClass={LABEL_CLASS}
