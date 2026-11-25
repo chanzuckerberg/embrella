@@ -26,22 +26,6 @@ class ReservationService(ABC):
     @abstractmethod
     def reserve_new_dataset(self) -> int: ...
 
-    @abstractmethod
-    def validate_deposition(self, deposition_id: int) -> Dict[str, Any]:
-        """Check if a deposition ID is reserved.
-        Returns dict with keys: deposition_id, instantiated, reservation.
-        """
-
-    @abstractmethod
-    def validate_dataset(self, dataset_id: int) -> Dict[str, Any]:
-        """Check if a dataset ID is reserved.
-        Returns dict with keys: dataset_id, instantiated, reservation.
-        """
-
-    @abstractmethod
-    def list_reservations(self, detail: bool = False) -> Dict[str, Any]:
-        """List reservations. If detail=True, includes full datasets/depositions dicts."""
-
 
 class StubReservationService(ReservationService):
     """In-memory stub for local dev. Class-level counters from 10000; reset on process restart."""
@@ -56,32 +40,6 @@ class StubReservationService(ReservationService):
     def reserve_new_dataset(self) -> int:
         StubReservationService._next_dataset_id += 1
         return StubReservationService._next_dataset_id
-
-    def validate_deposition(self, deposition_id: int) -> Dict[str, Any]:
-        return {
-            "deposition_id": deposition_id,
-            "instantiated": deposition_id <= StubReservationService._next_deposition_id,
-            "reservation": {},
-        }
-
-    def validate_dataset(self, dataset_id: int) -> Dict[str, Any]:
-        return {
-            "dataset_id": dataset_id,
-            "instantiated": dataset_id <= StubReservationService._next_dataset_id,
-            "reservation": {},
-        }
-
-    def list_reservations(self, detail: bool = False) -> Dict[str, Any]:
-        response: Dict[str, Any] = {
-            "next_deposition_id": StubReservationService._next_deposition_id + 1,
-            "next_dataset_id": StubReservationService._next_dataset_id + 1,
-            "dataset_count": 0,
-            "deposition_count": 0,
-        }
-        if detail:
-            response["datasets"] = {}
-            response["depositions"] = {}
-        return response
 
 
 class LambdaReservationService(ReservationService):
@@ -106,9 +64,9 @@ class LambdaReservationService(ReservationService):
         SigV4Auth(credentials, "lambda", region.group(1)).add_auth(request)
         return dict(request.headers)
 
-    def _get(self, path: str, params: Dict[str, Any] | None = None) -> Dict[str, Any]:
-        # Prepare the full URL (incl. querystring) first so the signature covers it.
-        prepared = requests.Request("GET", f"{self.base_url}{path}", params=params).prepare()
+    def _get(self, path: str) -> Dict[str, Any]:
+        # Prepare the full URL first so the signature covers it.
+        prepared = requests.Request("GET", f"{self.base_url}{path}").prepare()
         prepared.headers.update(self._sigv4_headers(prepared.url))
         with requests.Session() as session:
             response = session.send(prepared, timeout=self.timeout)
@@ -120,16 +78,6 @@ class LambdaReservationService(ReservationService):
 
     def reserve_new_dataset(self) -> int:
         return self._get("/reservations/dataset/new")["dataset_id"]
-
-    def validate_deposition(self, deposition_id: int) -> Dict[str, Any]:
-        return self._get(f"/reservations/deposition/{deposition_id}")
-
-    def validate_dataset(self, dataset_id: int) -> Dict[str, Any]:
-        return self._get(f"/reservations/dataset/{dataset_id}")
-
-    def list_reservations(self, detail: bool = False) -> Dict[str, Any]:
-        params = {"detail": "true"} if detail else None
-        return self._get("/reservations", params=params)
 
 
 def get_reservation_service() -> ReservationService:
