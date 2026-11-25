@@ -118,6 +118,9 @@ def duplicate_grid(
     """
     if source_grid.trashed:
         raise DuplicateGridError("Cannot duplicate a trashed grid.")
+    # Copies would inherit is_placeholder, creating extra default grids.
+    if source_grid.is_placeholder:
+        raise DuplicateGridError("Cannot duplicate the default grid.")
     if number_to_copy < 1:
         raise DuplicateGridError("number_to_copy must be at least 1.")
 
