@@ -37,8 +37,13 @@ const updateTheme = (themeMode: ThemeMode): Theme => {
     MuiPopover: { defaultProps: { transitionDuration: POPUP_TRANSITION_MS } },
   });
 
+  // SDS maps MUI text variants to its densest sizes (body1 → XS 13px, body2 → XXS 12px,
+  // caption → XXXS 11px). Shift each up one SDS step so plain <Typography> is readable app-wide.
+  const sdsBody = themeOptions.typography.wideStyles.body.regular;
+  const typography = { ...appTheme.typography, body1: sdsBody.s, body2: sdsBody.xs, caption: sdsBody.xxs };
+
   return createTheme(
-    { ...appTheme, spacing: spacingFn, components },
+    { ...appTheme, spacing: spacingFn, components, typography },
     {
       cssVariables: true,
     }
