@@ -442,9 +442,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
         open={moveGridBoxDialogOpen}
         onClose={() => setMoveGridBoxDialogOpen(false)}
         currentPuck={selectedPuck}
-        currentSlot={selectedSlot}
         gridBoxData={gridBoxData}
-        selectedUser={selectedUser}
         onSuccess={(newPuckId: number, newSlotPosition: number) => {
           if (onMoveGridBoxSuccess) {
             onMoveGridBoxSuccess(newPuckId, newSlotPosition);

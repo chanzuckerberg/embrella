@@ -123,6 +123,12 @@ class TestDuplicateGridService:
         with pytest.raises(DuplicateGridError):
             duplicate_grid(source_grid=source_grid, destination_box=dest_box, number_to_copy=1, request_user=user)
 
+    def test_placeholder_source_rejected(self, source_grid, dest_box, user):
+        source_grid.is_placeholder = True
+        source_grid.save()
+        with pytest.raises(DuplicateGridError):
+            duplicate_grid(source_grid=source_grid, destination_box=dest_box, number_to_copy=1, request_user=user)
+
     def test_labels_copied_with_duplicator_as_added_by(self, source_grid, dest_box, user, original_user):
         label = Label.objects.create(name="lbl", color="#fff")
         GridLabel.objects.create(grid=source_grid, label=label, added_by=original_user)

@@ -25,7 +25,7 @@ import { PickerCrumbs } from './PickerCrumbs';
 import { PickPane } from './PickPane';
 import { PuckList } from './PuckList';
 import { SelectionTray } from './SelectionTray';
-import { PickedLocation, PickerStart, PickTarget, SelectMode } from './types';
+import { PickedLocation, PickerStart, PickTarget, SelectMode, TrashedGrid } from './types';
 import { usePickerNav } from './usePickerNav';
 import { useSelection } from './useSelection';
 
@@ -55,6 +55,7 @@ export interface LocationPickerDialogProps {
   error?: string | null; // e.g. a failed move; shown above the buttons
   onDismissError?: () => void;
   busy?: boolean; // confirm in flight: disables the primary button
+  onPickTrashed?: (grid: TrashedGrid) => void; // Grid target, single only: search also offers trashed grids
 }
 
 // Mounted per open, so filters, path and picks start fresh each time.
@@ -72,6 +73,7 @@ const PickerBody = ({
   error,
   onDismissError,
   busy = false,
+  onPickTrashed,
 }: Omit<LocationPickerDialogProps, 'open' | 'title'>) => {
   const user = useContext(UserContext);
   const userId = user ? Number(user.id) : null;
@@ -79,9 +81,12 @@ const PickerBody = ({
   const selection = useSelection(mode, capacity, initial);
   const { picks } = selection;
 
+  // A trashed grid has no spot, so only a single grid pick can take one.
+  const pickTrashed = target === PickTarget.Grid && mode === SelectMode.Single ? onPickTrashed : undefined;
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: SPACE.section, pt: '8px' }}>
-      <LocationSearch nav={nav} selection={selection} canPick={canPick} />
+      <LocationSearch nav={nav} selection={selection} canPick={canPick} onPickTrashed={pickTrashed} />
       <PickerCrumbs nav={nav} userId={userId} />
 
       {nav.puck ? (

@@ -1,3 +1,4 @@
+from cryo_grids.services import default_grid
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from projects.models import Project
 from rest_framework import status
@@ -153,7 +154,7 @@ def _role_halves(path, pattern):
     methods=["GET"],
     tags=["TEM Sessions"],
     responses={200: FormOptionsSerializer},
-    description="Get dropdown options for the session creation form (session plans and projects).",
+    description="Get dropdown options for the session creation form (session plans, projects, default grid).",
 )
 @api_view(["GET"])
 def form_options(request):
@@ -162,6 +163,7 @@ def form_options(request):
     ).select_related("scope", "camera", "imaging_workflow", "software", "acquisition_defaults")
 
     projects = Project.objects.all().order_by("name")
+    placeholder = default_grid()
 
     return Response(
         {
@@ -178,6 +180,7 @@ def form_options(request):
                 for sp in session_plans
             ],
             "projects": [{"id": p.id, "name": p.name} for p in projects],
+            "default_grid": {"id": placeholder.id, "name": placeholder.name} if placeholder else None,
         }
     )
 

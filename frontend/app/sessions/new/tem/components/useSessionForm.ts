@@ -3,25 +3,16 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import {
-  createSession,
-  fetchFormOptions,
-  fetchGrids,
-  fetchMagnifications,
-  fetchSuggestedName,
-  fetchUsers,
-} from '../services/sessionApi';
+import { createSession, fetchFormOptions, fetchMagnifications, fetchSuggestedName } from '../services/sessionApi';
 import {
   CreatedSession,
   FormOptions,
-  GridOption,
   MagnificationOption,
   PLAN_TIERS,
   PlanSelection,
   PlanTier,
   SessionFormState,
   SessionPlanOption,
-  UserOption,
 } from '../types';
 import { autoFill, pickTier, resolvePlan, tierOptions } from './planTiers';
 
@@ -31,21 +22,15 @@ const STALE = 5 * 60 * 1000;
 
 const keys = {
   formOptions: ['tem', 'session-form', 'options'] as const,
-  users: ['tem', 'session-form', 'users'] as const,
-  grids: (userId: number | null) => ['tem', 'session-form', 'grids', userId] as const,
   magnifications: (planId: number | null) => ['tem', 'session-form', 'magnifications', planId] as const,
   suggestedName: (planId: number | null) => ['tem', 'session-form', 'suggested-name', planId] as const,
 };
 
-const NO_GRIDS: GridOption[] = [];
 const NO_MAGNIFICATIONS: MagnificationOption[] = [];
-const NO_USERS: UserOption[] = [];
 
 interface UseSessionFormReturn {
   state: SessionFormState;
   formOptions: FormOptions | null;
-  users: UserOption[];
-  grids: GridOption[];
   magnifications: MagnificationOption[];
   suggestedName: string;
   errors: Record<string, string>;
@@ -57,14 +42,12 @@ interface UseSessionFormReturn {
   updateField: <K extends keyof SessionFormState>(field: K, value: SessionFormState[K]) => void;
   selectPlanTier: (tier: PlanTier, value: string | undefined) => void;
   selectSessionPlan: (sessionPlanId: number | null) => void;
-  selectFilterUser: (userId: number | null) => void;
   submit: () => Promise<CreatedSession | null>;
 }
 
 /**
  * Server data is declared with React Query, keyed on the form state it depends on:
  *
- *   filterUserId  -> grids            (never pre-selected: users pick the grid they loaded)
  *   sessionPlanId -> magnifications
  *   sessionPlanId -> suggested name   (applied to the field only while it is untouched)
  *
@@ -78,8 +61,6 @@ export function useSessionForm(): UseSessionFormReturn {
     gridId: null,
     magnificationId: null,
     name: '',
-    // All users' grids: the grid is picked by location, often from someone else's puck.
-    filterUserId: null,
     superResolution: false,
     phasePlateUsed: false,
     energyFilterUsed: true,
@@ -89,12 +70,6 @@ export function useSessionForm(): UseSessionFormReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const optionsQuery = useQuery({ queryKey: keys.formOptions, queryFn: fetchFormOptions, staleTime: STALE });
-  const usersQuery = useQuery({ queryKey: keys.users, queryFn: fetchUsers, staleTime: STALE });
-  const gridsQuery = useQuery({
-    queryKey: keys.grids(state.filterUserId),
-    queryFn: () => fetchGrids(state.filterUserId),
-    staleTime: STALE,
-  });
   const magnificationsQuery = useQuery({
     queryKey: keys.magnifications(state.sessionPlanId),
     queryFn: () => fetchMagnifications(state.sessionPlanId as number),
@@ -107,7 +82,6 @@ export function useSessionForm(): UseSessionFormReturn {
   });
 
   const plans = useMemo(() => optionsQuery.data?.session_plans ?? [], [optionsQuery.data]);
-  const grids = gridsQuery.data ?? NO_GRIDS;
   const magnifications =
     state.sessionPlanId !== null ? (magnificationsQuery.data ?? NO_MAGNIFICATIONS) : NO_MAGNIFICATIONS;
 
@@ -138,11 +112,6 @@ export function useSessionForm(): UseSessionFormReturn {
     },
     [clearError]
   );
-
-  const selectFilterUser = useCallback((userId: number | null) => {
-    // The default grid of the new list takes over.
-    setState((prev) => ({ ...prev, filterUserId: userId, gridId: null }));
-  }, []);
 
   const selectSessionPlan = useCallback(
     (sessionPlanId: number | null) => {
@@ -260,17 +229,14 @@ export function useSessionForm(): UseSessionFormReturn {
     }
   }, [state, validate]);
 
-  const isLoading = optionsQuery.isPending || usersQuery.isPending;
+  const isLoading = optionsQuery.isPending;
   const formOptions = optionsQuery.data ?? null;
-  const users = usersQuery.data ?? NO_USERS;
   const suggestedName = applied.name;
 
   return useMemo(
     () => ({
       state,
       formOptions,
-      users,
-      grids,
       magnifications,
       suggestedName,
       errors,
@@ -281,14 +247,11 @@ export function useSessionForm(): UseSessionFormReturn {
       updateField,
       selectPlanTier,
       selectSessionPlan,
-      selectFilterUser,
       submit,
     }),
     [
       state,
       formOptions,
-      users,
-      grids,
       magnifications,
       suggestedName,
       errors,
@@ -299,7 +262,6 @@ export function useSessionForm(): UseSessionFormReturn {
       updateField,
       selectPlanTier,
       selectSessionPlan,
-      selectFilterUser,
       submit,
     ]
   );

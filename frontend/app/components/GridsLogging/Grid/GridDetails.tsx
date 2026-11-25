@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import Image from 'next/image';
-import { PuckList, UserList } from '@app/common/types/gridLogging';
+import { PuckList } from '@app/common/types/gridLogging';
 import { Card, CardContent, CardHeader, Typography, Box, CircularProgress, IconButton } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { useGridDetails } from '@app/common/hooks/useGridLogging/details/useGridDetails';
@@ -20,7 +20,6 @@ interface GridDetailsProps {
   selectedSlot: number | null;
   selectedGrid: number | null;
   selectedGridId: number | null;
-  selectedUser?: UserList | null;
   onGridDetailsRefetchReady?: (refetch: () => void) => void;
   onMoveGridSuccess?: (
     newPuckId: number,
@@ -36,7 +35,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   selectedSlot,
   selectedGrid,
   selectedGridId,
-  selectedUser,
   onGridDetailsRefetchReady,
   onMoveGridSuccess,
   onGridMutated,
@@ -224,10 +222,8 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
         onClose={() => form.setMoveGridDialogOpen(false)}
         currentPuck={selectedPuck}
         currentSlot={selectedSlot}
-        currentPosition={selectedGrid}
         gridDetails={gridDetails}
         gridId={selectedGridId}
-        selectedUser={selectedUser}
         onSuccess={onMoveGridSuccess}
       />
       <DuplicateGrid

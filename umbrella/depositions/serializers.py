@@ -386,10 +386,10 @@ class DatasetSerializer(serializers.ModelSerializer):
             seen.add(grid.pk)
             specimen = grid.specimen
             samples = list(specimen.samples.all()) if specimen else []
-            # A "default grid" is a placeholder for a session with no real grid in the DB (matches
-            # is_default in cryo_grids.api.views). Its freezing values are defaults, not measured, so
-            # skip them and show one clean note instead of echoing the raw DB text.
-            is_default_grid = "default grid" in (grid.name or "").lower()
+            # The placeholder grid stands in for a session with no real grid in the DB. Its freezing
+            # values are defaults, not measured, so skip them and show one clean note instead of
+            # echoing the raw DB text.
+            is_default_grid = grid.is_placeholder
             if is_default_grid:
                 grid_notes = ["Default grid - no grid information recorded for this session."]
             else:
