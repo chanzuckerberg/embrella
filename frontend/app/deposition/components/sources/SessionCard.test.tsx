@@ -50,11 +50,17 @@ it('shows "not scanned yet" instead of 0 when the annotation scan has not run', 
   expect(screen.getByText(/not scanned yet/i)).toBeInTheDocument();
 });
 
-it('shows a real 0 count once the scan has completed', () => {
-  mockAnnotated.mockReturnValue({ data: { count: 0, scanned: true }, isFetching: false });
+it('shows a real 0 count once a full scan has completed', () => {
+  mockAnnotated.mockReturnValue({ data: { count: 0, scanned: true, complete: true }, isFetching: false });
   renderCard();
   expect(screen.getByText(/0 \/ 10 tomograms/i)).toBeInTheDocument();
   expect(screen.queryByText(/not scanned yet/i)).not.toBeInTheDocument();
+});
+
+it('asks for a full rescan when the scan finished but only covered a subset', () => {
+  mockAnnotated.mockReturnValue({ data: { count: 1, scanned: true, complete: false }, isFetching: false });
+  renderCard();
+  expect(screen.getByText(/rescan the whole project/i)).toBeInTheDocument();
 });
 
 it('shows the scanning state while the scan is in flight', () => {

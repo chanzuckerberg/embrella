@@ -21,8 +21,8 @@ const sourceKeys = {
     ['deposition', 'sources', 'copick-run-objects', session, run] as const,
   tomoCount: (session: string, run: string) => ['deposition', 'sources', 'tomo-count', session, run] as const,
   denoiseCount: (session: string, run: string) => ['deposition', 'sources', 'denoise-count', session, run] as const,
-  annotatedCount: (datasetId: number, session: string, runs: string[]) =>
-    ['deposition', 'sources', 'annotated-count', datasetId, session, runs.join(',')] as const,
+  annotatedCount: (datasetId: number, session: string, runs: string[], aretomoRun: string) =>
+    ['deposition', 'sources', 'annotated-count', datasetId, session, runs.join(','), aretomoRun] as const,
 };
 
 const STALE = 5 * 60 * 1000;
@@ -89,18 +89,30 @@ const ANNOTATED_POLL_MS = 5000;
 export const annotatedRefetchInterval = (data: AnnotatedCount | undefined, isError = false): number | false =>
   !isError && data && !data.scanned ? ANNOTATED_POLL_MS : false;
 
-function annotatedCountOptions(datasetId: number, sessionName: string, runs: string[], enabled: boolean) {
+function annotatedCountOptions(
+  datasetId: number,
+  sessionName: string,
+  runs: string[],
+  enabled: boolean,
+  aretomoRun = ''
+) {
   return queryOptions({
-    queryKey: sourceKeys.annotatedCount(datasetId, sessionName, runs),
-    queryFn: () => getAnnotatedCount(sessionName, runs, datasetId),
+    queryKey: sourceKeys.annotatedCount(datasetId, sessionName, runs, aretomoRun),
+    queryFn: () => getAnnotatedCount(sessionName, runs, datasetId, aretomoRun),
     enabled: enabled && sessionName.trim().length > 0 && runs.length > 0,
     staleTime: STALE,
     refetchInterval: (query) => annotatedRefetchInterval(query.state.data, query.state.status === 'error'),
   });
 }
 
-export function useAnnotatedCount(datasetId: number, sessionName: string, runs: string[], enabled: boolean) {
-  return useQuery(annotatedCountOptions(datasetId, sessionName, runs, enabled));
+export function useAnnotatedCount(
+  datasetId: number,
+  sessionName: string,
+  runs: string[],
+  enabled: boolean,
+  aretomoRun = ''
+) {
+  return useQuery(annotatedCountOptions(datasetId, sessionName, runs, enabled, aretomoRun));
 }
 
 export function useTomogramSelectionCounts(dataset: Dataset): { selected: number; total: number } | undefined {
@@ -118,7 +130,8 @@ export function useTomogramSelectionCounts(dataset: Dataset): { selected: number
         dataset.id,
         s.msi_session_name ?? '',
         (s.selected_copick_runs ?? []) as string[],
-        mode === 'annotated'
+        mode === 'annotated',
+        s.aretomo_run_name ?? ''
       )
     ),
   });
@@ -137,7 +150,7 @@ export function useTomogramSelectionCounts(dataset: Dataset): { selected: number
           subset_csv_path: session.subset_csv_path ?? '',
           subset_selection: session.subset_selection,
           tomogram_total: sourceTotal,
-          tomogram_selected: annotated[i].data?.scanned ? annotated[i].data?.count : undefined,
+          tomogram_selected: annotated[i].data?.complete ? annotated[i].data.count : undefined,
         },
         mode
       );

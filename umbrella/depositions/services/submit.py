@@ -16,6 +16,7 @@ from depositions.services.dataprep_config import (
     dataprep_config_yaml,
     dataset_is_ready,
     is_defining_dataset,
+    require_annotated_positions,
     resolve_sync_destination,
 )
 from depositions.services.dataset_metadata import build_dataset_metadata, build_deposition_metadata
@@ -58,9 +59,17 @@ def submit_dataset_prep(dataset):
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before submitting.")
     db = dataset._state.db
     cluster_id = deposition_cluster_id()
-    # Resolve a typed cluster-CSV subset over SFTP before the lock, after the readiness gate.
+    # Resolve before the lock so the HTTP/SFTP reads aren't held under it.
+    annotated_positions = None
     custom_positions = None
-    if dataset.tomogram_subset_mode == "custom":
+    if dataset.tomogram_subset_mode == "annotated":
+        if not dataset_is_ready(dataset):
+            raise SubmissionValidationError(NOT_READY)
+        annotated_positions = {
+            s.msi_session.name: require_annotated_positions(s, dataset)
+            for s in dataset.sessions.select_related("msi_session")
+        }
+    elif dataset.tomogram_subset_mode == "custom":
         if not dataset_is_ready(dataset):
             raise SubmissionValidationError(NOT_READY)
         custom_positions = {
@@ -99,6 +108,7 @@ def submit_dataset_prep(dataset):
             dataset,
             output_dir=output_dir,
             sync_destination=resolve_sync_destination(cluster=cluster_id),
+            annotated_positions=annotated_positions,
             custom_positions=custom_positions,
         )
         job, _ = DatasetJob.objects.using(db).get_or_create(dataset=dataset)
