@@ -9,6 +9,8 @@ import { deepmerge } from '@mui/utils';
 
 export type ThemeMode = 'light' | 'dark';
 
+const POPUP_TRANSITION_MS = 100;
+
 const updateTheme = (themeMode: ThemeMode): Theme => {
   const baseTheme = themeMode === 'light' ? SDSLightAppTheme : SDSDarkAppTheme;
   const customTheme = themeMode === 'light' ? customThemeLight : customThemeDark;
@@ -28,8 +30,15 @@ const updateTheme = (themeMode: ThemeMode): Theme => {
     return factor * 8;
   };
 
+  // MUI's 'auto' open animation lengthens with menu height (long menus feel sluggish); cap it.
+  // Menu passes its own duration to Popover, so both need it; Select opens a Menu.
+  const components = deepmerge(appTheme.components ?? {}, {
+    MuiMenu: { defaultProps: { transitionDuration: POPUP_TRANSITION_MS } },
+    MuiPopover: { defaultProps: { transitionDuration: POPUP_TRANSITION_MS } },
+  });
+
   return createTheme(
-    { ...appTheme, spacing: spacingFn },
+    { ...appTheme, spacing: spacingFn, components },
     {
       cssVariables: true,
     }
