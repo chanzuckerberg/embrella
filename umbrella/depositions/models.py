@@ -166,6 +166,9 @@ class DatasetJob(models.Model):
     # Pre-flight validation result for the current prep attempt (see services/validation.py).
     validation = models.JSONField(null=True, blank=True)
     error_message = models.TextField(null=True, blank=True)
+    # Syncer liveness: the poller sets these so a broken poll chain can be detected and restarted.
+    syncer_active = models.BooleanField(default=False)
+    syncer_polled_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -3,6 +3,8 @@
 import logging
 from datetime import timedelta
 
+from django.db.models import Q
+from django.utils import timezone
 from django_q.tasks import async_task
 
 from common import clusterio
@@ -16,9 +18,22 @@ POLL_INTERVAL = timedelta(seconds=15)
 NOT_LISTED_DELAY = timedelta(seconds=30)
 ERROR_BACKOFF = timedelta(seconds=120)
 MAX_WAIT_ATTEMPTS = 20
+# A live poller refreshes its heartbeat every iteration; past this (> the Q task timeout) it's a dead chain.
+SYNCER_STALE_AFTER = timedelta(minutes=10)
 
 _COMPLETION = {"prep": submission.on_prep_complete, "push": submission.on_push_complete}
 _ATTEMPT_FIELD = {"prep": "prep_slurm_job_id", "push": "push_slurm_job_id"}
+_ACTIVE_STATES = submission.PREP_ACTIVE + submission.PUSH_ACTIVE
+
+
+def _mark_polling(job):
+    """Heartbeat: a live poller refreshes this each iteration so a dead chain goes stale."""
+    DatasetJob.objects.filter(pk=job.pk).update(syncer_active=True, syncer_polled_at=timezone.now())
+
+
+def _mark_stopped(job):
+    """The poller stopped rescheduling (terminal or gave up); it no longer owns this job."""
+    DatasetJob.objects.filter(pk=job.pk).update(syncer_active=False)
 
 
 def _exit_ok(exit_code):
@@ -61,6 +76,7 @@ def _give_up(job, phase, cluster_id, slurm_job_id, reason, *, capture_log=True):
 
 def start_deposition_job_syncer(dataset_job_id, phase, cluster_id, expected_job_id):
     """Start the poller for a submitted prep/push job attempt."""
+    DatasetJob.objects.filter(pk=dataset_job_id).update(syncer_active=True, syncer_polled_at=timezone.now())
     return async_task(
         "depositions.tasks.run_deposition_job_syncer",
         dataset_job_id,
@@ -96,11 +112,13 @@ def run_deposition_job_syncer(dataset_job_id, phase, cluster_id, expected_job_id
         # A retry replaced the attempt we were started for; let its own poller take over.
         logger.info("Deposition syncer: %s attempt changed (%s != %s); stopping.", phase, slurm_job_id, expected_job_id)
         return {"status": "superseded"}
+    _mark_polling(job)
     if not slurm_job_id:
         if attempts >= MAX_WAIT_ATTEMPTS:
             logger.warning(
                 "Deposition %s poller for DatasetJob %s stopping: no SLURM id on the row.", phase, dataset_job_id
             )
+            _mark_stopped(job)
             return {"status": "gave_up", "reason": "no_id"}
         _reschedule(dataset_job_id, phase, cluster_id, expected_job_id, attempts + 1, NOT_LISTED_DELAY)
         return {"status": "waiting_id"}
@@ -120,6 +138,7 @@ def run_deposition_job_syncer(dataset_job_id, phase, cluster_id, expected_job_id
                     f"Deposition {phase} job never started on the cluster.",
                     capture_log=False,
                 )
+                _mark_stopped(job)
                 return {"status": "gave_up", "reason": "not_in_sacct"}
             _reschedule(dataset_job_id, phase, cluster_id, expected_job_id, attempts + 1, NOT_LISTED_DELAY)
             return {"status": "waiting"}
@@ -153,6 +172,7 @@ def run_deposition_job_syncer(dataset_job_id, phase, cluster_id, expected_job_id
         _COMPLETION[phase](
             job, success, job_id=slurm_job_id, error_message=error_message, log_excerpt=log_excerpt, **extra
         )
+        _mark_stopped(job)
         return {"status": "terminal", "state": info["state"], "success": success}
     except Exception as e:
         logger.error("Deposition syncer error (%s job %s): %s", phase, slurm_job_id, e)
@@ -160,6 +180,28 @@ def run_deposition_job_syncer(dataset_job_id, phase, cluster_id, expected_job_id
             _give_up(
                 job, phase, cluster_id, slurm_job_id, f"Lost contact with the cluster while checking the {phase} job."
             )
+            _mark_stopped(job)
             return {"status": "gave_up", "reason": "error"}
         _reschedule(dataset_job_id, phase, cluster_id, expected_job_id, attempts + 1, ERROR_BACKOFF)
         return {"status": "error", "error": str(e)}
+
+
+def reconcile_deposition_syncers():
+    """Restart pollers for active-state jobs whose poll chain has died — never started, crashed before
+    rescheduling, or lost its Django-Q schedule. Scheduled to run periodically."""
+    cutoff = timezone.now() - SYNCER_STALE_AFTER
+    stuck = DatasetJob.objects.filter(state__in=_ACTIVE_STATES).filter(
+        Q(syncer_active=False) | Q(syncer_polled_at__isnull=True) | Q(syncer_polled_at__lt=cutoff)
+    )
+    restarted = []
+    for job in stuck:
+        phase = "prep" if job.state in submission.PREP_ACTIVE else "push"
+        slurm_job_id = getattr(job, _ATTEMPT_FIELD[phase])
+        if not slurm_job_id:
+            # No cluster job to monitor yet (mid-launch, or a launch that never recorded an id) — nothing
+            # for a poller to do, so skip rather than restart one that can't progress.
+            continue
+        logger.warning("Reconciler restarting %s poller for DatasetJob %s (state=%s).", phase, job.pk, job.state)
+        start_deposition_job_syncer(job.id, phase, job.cluster_id, slurm_job_id)
+        restarted.append(job.pk)
+    return {"restarted": restarted}
