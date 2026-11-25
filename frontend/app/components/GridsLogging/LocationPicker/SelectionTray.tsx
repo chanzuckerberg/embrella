@@ -10,7 +10,7 @@
 import React from 'react';
 import { Box, Chip, IconButton, Link, Tooltip, Typography } from '@mui/material';
 import { Icon } from '@czi-sds/components';
-import { pickLabel } from './labels';
+import { CRUMB, pickLabel } from './labels';
 import { Membership, PickedLocation } from './types';
 import { Selection } from './useSelection';
 
@@ -31,7 +31,7 @@ const groupByBox = (picks: PickedLocation[]): BoxGroup[] => {
     const group = groups.get(key) ?? {
       key,
       boxName: p.boxName ?? '',
-      where: `${p.puckName} › slot ${p.slot}`,
+      where: `${p.puckName} ${CRUMB} slot ${p.slot}`,
       picks: [],
     };
     group.picks.push(p);
