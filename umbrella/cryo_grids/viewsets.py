@@ -122,11 +122,20 @@ class PuckViewSet(viewsets.ModelViewSet):
         """
         queryset = (
             Puck.objects.select_related("user", "cane")
-            .annotate(**natural_name_annotations())
+            .annotate(grid_box_count=Count("cryogridbox", distinct=True), **natural_name_annotations())
             .order_by(*natural_name_ordering())
         )
         user_id = self.request.query_params.get("user_id", None)
         cane_id = self.request.query_params.get("cane_id", None)
+        grid_owner_id = self.request.query_params.get("grid_owner_id", None)
+
+        # Pucks holding the user's grids, whoever owns the puck. Subquery keeps grid_box_count's join clean.
+        if grid_owner_id is not None:
+            try:
+                owned = CryoGrid.objects.filter(user_id=int(grid_owner_id), trashed=False)
+                queryset = queryset.filter(id__in=owned.values("grid_box__puck"))
+            except ValueError:
+                raise ValidationError("Invalid grid_owner_id format. Must be a number.")
 
         if user_id is not None:
             try:
@@ -333,7 +342,7 @@ class PuckViewSet(viewsets.ModelViewSet):
                         {
                             "q": q,
                             "occupied": True,
-                            "grid_id": f"{grid_at_position['id']}",
+                            "grid_id": grid_at_position["id"],
                             "grid_name": grid_at_position["name"],
                             "clipped": grid_at_position["clipped"],
                         }
@@ -1850,6 +1859,7 @@ class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
                     "color": item["color"],
                     "colorDisplay": item["color_display"],
                     "numberingDisplay": item["numbering_display"],
+                    "puckId": item["puck"],
                     "puckName": item["puck_name"],
                     "positionInPuck": item["position_in_puck"],
                     "maxGrids": item["max_grids"],
