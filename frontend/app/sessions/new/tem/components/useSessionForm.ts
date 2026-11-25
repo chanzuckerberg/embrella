@@ -3,13 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import {
-  createSession,
-  fetchFormOptions,
-  fetchMagnifications,
-  fetchSuggestedName,
-  fetchUsers,
-} from '../services/sessionApi';
+import { createSession, fetchFormOptions, fetchMagnifications, fetchSuggestedName } from '../services/sessionApi';
 import {
   CreatedSession,
   FormOptions,
@@ -19,7 +13,6 @@ import {
   PlanTier,
   SessionFormState,
   SessionPlanOption,
-  UserOption,
 } from '../types';
 import { autoFill, pickTier, resolvePlan, tierOptions } from './planTiers';
 
@@ -29,18 +22,15 @@ const STALE = 5 * 60 * 1000;
 
 const keys = {
   formOptions: ['tem', 'session-form', 'options'] as const,
-  users: ['tem', 'session-form', 'users'] as const,
   magnifications: (planId: number | null) => ['tem', 'session-form', 'magnifications', planId] as const,
   suggestedName: (planId: number | null) => ['tem', 'session-form', 'suggested-name', planId] as const,
 };
 
 const NO_MAGNIFICATIONS: MagnificationOption[] = [];
-const NO_USERS: UserOption[] = [];
 
 interface UseSessionFormReturn {
   state: SessionFormState;
   formOptions: FormOptions | null;
-  users: UserOption[];
   magnifications: MagnificationOption[];
   suggestedName: string;
   errors: Record<string, string>;
@@ -80,7 +70,6 @@ export function useSessionForm(): UseSessionFormReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const optionsQuery = useQuery({ queryKey: keys.formOptions, queryFn: fetchFormOptions, staleTime: STALE });
-  const usersQuery = useQuery({ queryKey: keys.users, queryFn: fetchUsers, staleTime: STALE });
   const magnificationsQuery = useQuery({
     queryKey: keys.magnifications(state.sessionPlanId),
     queryFn: () => fetchMagnifications(state.sessionPlanId as number),
@@ -240,16 +229,14 @@ export function useSessionForm(): UseSessionFormReturn {
     }
   }, [state, validate]);
 
-  const isLoading = optionsQuery.isPending || usersQuery.isPending;
+  const isLoading = optionsQuery.isPending;
   const formOptions = optionsQuery.data ?? null;
-  const users = usersQuery.data ?? NO_USERS;
   const suggestedName = applied.name;
 
   return useMemo(
     () => ({
       state,
       formOptions,
-      users,
       magnifications,
       suggestedName,
       errors,
@@ -265,7 +252,6 @@ export function useSessionForm(): UseSessionFormReturn {
     [
       state,
       formOptions,
-      users,
       magnifications,
       suggestedName,
       errors,

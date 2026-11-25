@@ -59,9 +59,6 @@ function fakeBackend(url: string): Promise<Response> {
       jsonResponse({ session_plans: [TOMO5_PLAN, SERIALEM_PLAN], projects: [], default_grid: DEFAULT_GRID })
     );
   }
-  if (pathname === TEM_API.USERS) {
-    return Promise.resolve(jsonResponse({ users: [] }));
-  }
   if (pathname === TEM_API.MAGNIFICATIONS) {
     return Promise.resolve(jsonResponse([MAGNIFICATION]));
   }

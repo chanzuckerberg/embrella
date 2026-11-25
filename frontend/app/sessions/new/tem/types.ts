@@ -37,14 +37,6 @@ export interface MagnificationOption {
   display: string;
 }
 
-export interface UserOption {
-  id: number;
-  username: string;
-  first_name?: string;
-  last_name?: string;
-  full_name?: string;
-}
-
 export interface FormOptions {
   session_plans: SessionPlanOption[];
   projects: ProjectOption[];

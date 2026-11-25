@@ -3,5 +3,4 @@ export const TEM_API = {
   SUGGEST_NAME: '/tem/v1/sessions/suggest-name/',
   MAGNIFICATIONS: '/tem/v1/magnifications/',
   CREATE_SESSION: '/tem/v1/sessions/',
-  USERS: '/api/list/all/users/',
 } as const;
