@@ -42,7 +42,7 @@ stack:
       gateway:
         enabled: true
         paths:
-          - path: '/(static|admin|accounts|api|user|ping|docs|workflow|cryo_grids|processes|projects|people|depositions|copick|tem|get_grids_by_user|annotations)(/.*)?'
+          - path: '/(static|admin|accounts|api|user|ping|docs|workflow|cryo_grids|processes|projects|people|depositions|copick|tem|annotations)(/.*)?'
             pathType: RegularExpression
 
     frontend:

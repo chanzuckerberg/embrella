@@ -11,8 +11,8 @@ import { API } from '@app/common/constants/api';
 import { useDebounced } from '@app/common/hooks/useDebounced';
 
 const SEARCH_PAGE = 20;
-const SEARCH_DEBOUNCE_MS = 300;
-const SEARCH_MIN_CHARS = 2;
+export const SEARCH_DEBOUNCE_MS = 300;
+export const SEARCH_MIN_CHARS = 2;
 
 enum Category {
   Search = 'search',

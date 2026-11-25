@@ -16,7 +16,6 @@ Including another URLconf
 """
 
 # Import API views from their respective app-level modules
-from cryo_grids.api.views import get_grids_by_user
 from cryo_grids.viewsets import (
     CaneViewSet,
     CryoGridBoxViewSet,
@@ -109,7 +108,6 @@ api_patterns = [
     # Other API endpoints
     path("user", get_user_info, name="user_info"),
     path("ping/", ping),
-    path("get_grids_by_user/", get_grids_by_user, name="get_grids_by_user"),
     path("annotations/v1/filterlist/", available_annotation_filter, name="get filter list for annotations"),
     # External resources (documentation links)
     path("api/external-resources/", include("external_links.urls")),

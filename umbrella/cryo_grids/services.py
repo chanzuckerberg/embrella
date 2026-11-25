@@ -118,6 +118,9 @@ def duplicate_grid(
     """
     if source_grid.trashed:
         raise DuplicateGridError("Cannot duplicate a trashed grid.")
+    # Copies would inherit is_placeholder, creating extra default grids.
+    if source_grid.is_placeholder:
+        raise DuplicateGridError("Cannot duplicate the default grid.")
     if number_to_copy < 1:
         raise DuplicateGridError("number_to_copy must be at least 1.")
 
@@ -166,3 +169,8 @@ def duplicate_grid(
         created.append(new_grid)
 
     return created
+
+
+def default_grid() -> CryoGrid | None:
+    """The placeholder grid for sessions with no known grid; seeded by migration 0044."""
+    return CryoGrid.objects.filter(is_placeholder=True).order_by("id").first()

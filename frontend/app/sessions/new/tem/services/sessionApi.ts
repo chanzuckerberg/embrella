@@ -2,7 +2,7 @@ import { DJANGO_URL } from '@app/common/constants/api';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 
 import { TEM_API } from '../constants';
-import type { FormOptions, GridOption, MagnificationOption, UserOption } from '../types';
+import type { FormOptions, MagnificationOption } from '../types';
 
 const url = (path: string): string => `${DJANGO_URL}${path}`;
 
@@ -13,20 +13,6 @@ async function parse<T>(response: Response): Promise<T> {
 
 export async function fetchFormOptions(): Promise<FormOptions> {
   return parse<FormOptions>(await fetchResource(url(TEM_API.FORM_OPTIONS)));
-}
-
-export async function fetchUsers(): Promise<UserOption[]> {
-  const data = await parse<{ users?: UserOption[]; results?: UserOption[] } | UserOption[]>(
-    await fetchResource(url(TEM_API.USERS))
-  );
-  if (Array.isArray(data)) return data;
-  return data.users ?? data.results ?? [];
-}
-
-/** Grids a user may pick from; all grids when no user filter is set. */
-export async function fetchGrids(userId: number | null): Promise<GridOption[]> {
-  const query = userId ? `?user_id=${userId}` : '';
-  return parse<GridOption[]>(await fetchResource(url(`${TEM_API.GRIDS_BY_USER}${query}`)));
 }
 
 export async function fetchMagnifications(sessionPlanId: number): Promise<MagnificationOption[]> {

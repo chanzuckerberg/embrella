@@ -1384,6 +1384,7 @@ class TestPreparationSources:
             notes="This is a default grid when no corresponding grid information available in the database.",
             blot_time=6,
             freezing_session=freezing,
+            is_placeholder=True,
         )
         msi = owned_session.msi_session
         msi.grid = grid

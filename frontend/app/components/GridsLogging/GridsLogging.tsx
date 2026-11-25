@@ -344,7 +344,6 @@ export const GridsLogging: React.FC = () => {
               selectedSlot={selectedSlot}
               selectedGrid={selectedGrid}
               selectedGridId={selectedGridId}
-              selectedUser={selectedUser}
               onGridDetailsRefetchReady={handleGridDetailsRefetchReady}
               onMoveGridSuccess={handleMoveGridSuccess}
               onGridMutated={() => {

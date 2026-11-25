@@ -28,13 +28,6 @@ export interface ProjectOption {
   name: string;
 }
 
-export interface GridOption {
-  id: number;
-  name: string;
-  display_name: string;
-  is_default: boolean;
-}
-
 export interface MagnificationOption {
   id: number;
   nominal_mag: number;
@@ -44,17 +37,15 @@ export interface MagnificationOption {
   display: string;
 }
 
-export interface UserOption {
-  id: number;
-  username: string;
-  first_name?: string;
-  last_name?: string;
-  full_name?: string;
-}
-
 export interface FormOptions {
   session_plans: SessionPlanOption[];
   projects: ProjectOption[];
+  default_grid: GridRef | null; // placeholder for a session whose real grid is unknown
+}
+
+export interface GridRef {
+  id: number;
+  name: string;
 }
 
 /** Where a role's data lands: the resolved directory, and the filenames expected in it. */
@@ -85,7 +76,6 @@ export interface SessionFormState {
   gridId: number | null;
   magnificationId: number | null;
   name: string;
-  filterUserId: number | null;
   superResolution: boolean;
   phasePlateUsed: boolean;
   energyFilterUsed: boolean;
