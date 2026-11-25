@@ -166,3 +166,8 @@ def duplicate_grid(
         created.append(new_grid)
 
     return created
+
+
+def default_grid() -> CryoGrid | None:
+    """The placeholder grid for sessions with no known grid; seeded by migration 0044."""
+    return CryoGrid.objects.filter(is_placeholder=True).order_by("id").first()

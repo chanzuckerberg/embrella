@@ -319,6 +319,9 @@ class CryoGrid(models.Model):
         default=1, null=True, blank=True, help_text="The slot the grid is put in the cryo cassette if exists"
     )
     trashed = models.BooleanField(default=False, help_text="Is this cryo-grid discarded ?")
+    is_placeholder = models.BooleanField(
+        default=False, help_text="Stand-in for sessions whose real grid is unknown. One per instance, seeded."
+    )
     intended_project = models.ForeignKey(
         Project,
         on_delete=models.SET_NULL,
