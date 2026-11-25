@@ -279,7 +279,6 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
             onClose={() => form.setMoveGridDialogOpen(false)}
             currentPuck={puckForSvg}
             currentSlot={location.position_in_puck}
-            currentPosition={location.position_in_box}
             gridDetails={gridDetails}
             gridId={gridId}
             onSuccess={handleMoveGridSuccess}

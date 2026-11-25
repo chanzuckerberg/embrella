@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { PuckList, GridDetailsResponse, UserList } from '@app/common/types/gridLogging';
+import { PuckList, GridDetailsResponse } from '@app/common/types/gridLogging';
 import { useMoveGrid } from '@app/common/hooks/useGridLogging/move/useMoveGrid';
 import { LocationPickerDialog, PickedLocation, PickTarget } from '../LocationPicker';
 
@@ -16,10 +16,8 @@ interface MoveGridProps {
   onClose: () => void;
   currentPuck: PuckList | null;
   currentSlot: number | null;
-  currentPosition: number | null;
   gridDetails: GridDetailsResponse | null;
   gridId: number | null;
-  selectedUser?: UserList | null;
   onSuccess?: (newPuckId: number, newSlotPosition: number, newGridBoxId: number, newPositionInBox: number) => void;
 }
 
