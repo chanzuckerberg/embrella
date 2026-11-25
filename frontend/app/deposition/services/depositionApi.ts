@@ -177,7 +177,7 @@ export async function listCopickRuns(sessionName: string): Promise<CopickRunOpti
 export interface AnnotatedCount {
   count: number;
   scanned: boolean; // the scan job finished (drives polling)
-  complete?: boolean; // it covered the whole project; annotated mode needs this
+  complete: boolean;
 }
 
 export async function getCopickRunObjects(sessionName: string, run: string): Promise<string[]> {
@@ -198,7 +198,6 @@ export async function getAnnotatedCount(
     `?session_id=${encodeURIComponent(sessionName)}` +
     `&runs=${encodeURIComponent(runs.join(','))}` +
     `&dataset=${datasetId}` +
-    // Intersect with the AreTomo run so the count matches what submit stages.
     (aretomoRun ? `&aretomo_run=${encodeURIComponent(normalizeRun(aretomoRun))}` : '');
   const data = await parse<{
     success?: boolean;
@@ -206,7 +205,7 @@ export async function getAnnotatedCount(
     scanned?: boolean;
     complete?: boolean;
   }>(await fetchResource(url(`${API.COPICK_ANNOTATED_COUNT}${q}`)));
-  // success:false means the metrics couldn't be read; surface it so the UI shows "count unavailable".
+  // metrics unreadable: the UI shows "count unavailable"
   if (data.success === false) throw new Error('annotated count unavailable');
   return {
     count: data.annotated_count ?? 0,

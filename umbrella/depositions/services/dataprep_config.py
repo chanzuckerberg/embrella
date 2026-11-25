@@ -195,21 +195,17 @@ def _dataset_block(dataset, annotated_positions=None, custom_positions=None):
         .order_by("msi_session__name")
     )
     for session in selected_sessions:
+        name = session.msi_session.name
         config = _session_config(session, metadata.get("authors", []))
         if dataset.tomogram_subset_mode == "custom":
             # Custom selections must not fall back to processing all positions.
-            name = session.msi_session.name
             resolved = custom_positions.get(name) if custom_positions else None
             config.update(custom_subset_config(session, resolved))
         elif dataset.tomogram_subset_mode == "annotated":
-            # Submit resolves these before the lock and passes them in; recompute only when it didn't
-            # (e.g. config preview).
-            name = session.msi_session.name
-            if annotated_positions is not None and name in annotated_positions:
-                config["positions"] = annotated_positions[name]
-            else:
-                config["positions"] = require_annotated_positions(session, dataset)
-        sessions[session.msi_session.name] = config
+            # Submit pre-resolves these; recompute only for config preview.
+            resolved = annotated_positions.get(name) if annotated_positions else None
+            config["positions"] = resolved or require_annotated_positions(session, dataset)
+        sessions[name] = config
     if not sessions:
         raise SubmissionValidationError("Select at least one session before preparing the dataset.")
     return {"dataset_id": dataset.dataset_id, "metadata": metadata, "sessions": sessions}

@@ -732,9 +732,7 @@ def get_copick_runs(request) -> JsonResponse:
 
 
 def aggregate_annotated_runs(session, runs, dataset_id) -> tuple[set[str], bool, bool]:
-    """Annotated run names across a session's copick runs, with ``scanned`` (every scan job finished)
-    and ``full`` (every scan covered the whole project). A Custom-subset scan is ``scanned`` but not
-    ``full``. Shared by the count, compat and config paths."""
+    """Annotated run names, plus scanned (all scan jobs finished)"""
     annotated: set[str] = set()
     scanned = True
     full = True
@@ -753,15 +751,14 @@ def aggregate_annotated_runs(session, runs, dataset_id) -> tuple[set[str], bool,
 
 
 def _safe_run_name(name) -> bool:
-    """Path-safe run directory name; reuses the deposition validator's pattern so they can't drift."""
+    """Path-safe run directory name."""
     from depositions.validators import SAFE_RUN_NAME_RE
 
     return bool(SAFE_RUN_NAME_RE.fullmatch(name))
 
 
 def _aretomo_produced(session, run_number):
-    """Positions the AreTomo run produced on the deposition cluster (where prep stages), or None when
-    the metrics or cluster can't be read (the count endpoint then reports the count unavailable)."""
+    """Positions the AreTomo run produced on the deposition cluster, or None if unreadable."""
     from depositions.services.cluster import deposition_cluster_id
 
     from workflow.views.metadata_views import aretomo_positions
@@ -777,8 +774,7 @@ def _aretomo_produced(session, run_number):
 
 
 def get_copick_annotated_count(request) -> JsonResponse:
-    """Annotated-tomogram count for a session. With an ``aretomo_run``, intersect with the positions
-    that run produced so the number matches what submit stages."""
+    """Annotated-tomogram count for a session, limited to the AreTomo run's positions when given."""
     session_id = request.GET.get("session_id")
     dataset_id = _parse_dataset_id(request.GET.get("dataset"))
     runs = [r.strip() for r in request.GET.get("runs", "").split(",") if r.strip()]
@@ -808,7 +804,6 @@ def get_copick_annotated_count(request) -> JsonResponse:
             "success": True,
             "annotated_count": len(annotated),
             "annotated_runs": sorted(annotated),
-            # scanned drives polling; complete means the scan covered the whole project (annotated needs it).
             "scanned": scanned,
             "complete": full,
         }

@@ -140,7 +140,7 @@ def _read_metrics(loc):
 
 def aretomo_positions(cluster, msi_session, run_number) -> set[str]:
     """The tilt-series stems an AreTomo run produced, from its metrics CSV over HTTP. Raises
-    FileNotFoundError when absent. Shared by the compat endpoint and the deposition config builder."""
+    FileNotFoundError when absent."""
     return set(_read_metrics(RunLocation(cluster, msi_session, run_number))["Tilt_Series"])
 
 

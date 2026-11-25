@@ -114,8 +114,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly, reportBlocking 
         queryKey: ['copick-scan', dataset.id, active.name, [...active.runs].sort()],
       });
       queryClient.invalidateQueries({ queryKey: ['copick-aretomo-compat', dataset.id, active.name] });
-      // Drop the cached annotated count (a finished partial/legacy scan stops its polling), so Sources
-      // and Submit pick up the full rescan instead of showing stale "rescan the whole project".
+      // Drop the cached annotated count so a finished rescan isn't shown as stale.
       queryClient.invalidateQueries({
         queryKey: ['deposition', 'sources', 'annotated-count', dataset.id, active.name],
       });

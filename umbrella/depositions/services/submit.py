@@ -59,10 +59,12 @@ def submit_dataset_prep(dataset):
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before submitting.")
     db = dataset._state.db
     cluster_id = deposition_cluster_id()
-    # Resolve subsets before the lock - the HTTP scan / SFTP reads shouldn't be held under it.
+    # Resolve before the lock so the HTTP/SFTP reads aren't held under it.
     annotated_positions = None
     custom_positions = None
     if dataset.tomogram_subset_mode == "annotated":
+        if not dataset_is_ready(dataset):
+            raise SubmissionValidationError(NOT_READY)
         annotated_positions = {
             s.msi_session.name: require_annotated_positions(s, dataset)
             for s in dataset.sessions.select_related("msi_session")

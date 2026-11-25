@@ -69,7 +69,7 @@ def _add(kind, obj, obj_id, user_id, session_id, run_name, count):
 
 
 warnings = []
-failed_runs = []  # runs that errored while loading; coverage is incomplete, so not a full scan
+failed_runs = []
 try:
     import copick
 
@@ -128,8 +128,7 @@ else:
         v["runs"].sort()  # deterministic order for the UI chip
     out = {
         "scanned": True,
-        # full=True only for an unfiltered scan where every run loaded; a Custom-subset scan or any
-        # per-run load failure means incomplete coverage, which annotated mode must not trust.
+        # full: unfiltered scan with every run loaded
         "full": (not _wanted) and not failed_runs,
         "session": msi_session,
         "run": msi_run,
