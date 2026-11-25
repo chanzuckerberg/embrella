@@ -156,6 +156,7 @@ class DepositionViewSet(MetadataLockedMixin, viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         # Lean list rows; prefetch sessions/annotations to avoid N+1.
         queryset = self.filter_queryset(self.get_queryset()).prefetch_related(
+            "datasets__job",  # Dataset.status derives from it
             "datasets__sessions__msi_session",
             "datasets__sessions__annotations",
             "datasets__sessions__tiltseries_metadata",

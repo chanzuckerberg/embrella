@@ -17,6 +17,7 @@ class DatasetInline(admin.TabularInline):
     model = Dataset
     extra = 0
     fields = ("dataset_id", "title", "status")
+    readonly_fields = ("status",)  # derived from the job's state
     show_change_link = True
 
 
@@ -45,7 +46,6 @@ class DepositionSessionInline(admin.TabularInline):
 @admin.register(Dataset)
 class DatasetAdmin(admin.ModelAdmin):
     list_display = ("dataset_id", "title", "deposition", "status", "created_at")
-    list_filter = ("status",)
     search_fields = ("title", "dataset_id", "description")
     raw_id_fields = ("deposition", "sample")
     readonly_fields = ("created_at", "updated_at")

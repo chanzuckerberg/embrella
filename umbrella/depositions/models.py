@@ -40,13 +40,6 @@ class Deposition(models.Model):
 
 
 class Dataset(models.Model):
-    STATUS_CHOICES = [
-        ("draft", "Draft"),
-        ("syncing", "Syncing"),
-        ("pushed", "Pushed"),
-        ("failed", "Failed"),
-    ]
-
     deposition = models.ForeignKey(Deposition, on_delete=models.CASCADE, related_name="datasets")
     dataset_id = models.IntegerField(null=True, unique=True, blank=True, help_text="Assigned by reservation service")
     title = models.CharField(max_length=256, blank=True)
@@ -57,13 +50,6 @@ class Dataset(models.Model):
     assay_label = models.CharField(max_length=256, blank=True)
     assay_ontology_id = models.CharField(max_length=256, blank=True)
     is_authors_same_as_deposition = models.BooleanField(default=True)
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default="draft",
-        db_index=True,
-        help_text="Display/submission status; written by the syncer from DatasetJob.state.",
-    )
     sample = models.ForeignKey(
         "cryo_grids.Sample",
         null=True,
@@ -101,6 +87,12 @@ class Dataset(models.Model):
     def __str__(self):
         return f"Dataset {self.dataset_id or self.pk} — {self.title}"
 
+    @property
+    def status(self) -> str:
+        """Derived from the job's state."""
+        job = getattr(self, "job", None)
+        return job.dataset_status if job else "draft"
+
 
 class DatasetFunding(models.Model):
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="funding")
@@ -123,20 +115,9 @@ class DatasetJob(models.Model):
         ("failed", "Failed"),
     ]
 
-    # Submit state machine
-    TRANSITIONS = {
-        "pending": {"prep_submitted"},
-        "prep_submitted": {"prep_running", "prep_completed", "failed"},
-        "prep_running": {"prep_completed", "failed"},
-        "prep_completed": {"prep_submitted", "push_submitted", "pending", "failed"},
-        "push_submitted": {"push_running", "completed", "failed"},
-        "push_running": {"completed", "failed"},
-        "failed": {"prep_submitted", "pending"},
-        "completed": set(),
-    }
     # Cluster/config locks cover active, staged, and uploaded attempts. Failed
     # attempts can be retried, but metadata edits still require reset (services.metadata).
-    CLUSTER_FROZEN_STATES = frozenset(TRANSITIONS) - {"pending", "failed"}
+    CLUSTER_FROZEN_STATES = frozenset(s for s, _ in STATE_CHOICES) - {"pending", "failed"}
     DATASET_STATUS = {
         # After a reset, pending means an editable draft.
         "pending": "draft",
@@ -183,15 +164,6 @@ class DatasetJob(models.Model):
     def dataset_status(self):
         """Coarse Dataset.status this job maps to."""
         return self.DATASET_STATUS[self.state]
-
-    def can_transition_to(self, new_state):
-        return new_state in self.TRANSITIONS.get(self.state, set())
-
-    def transition_to(self, new_state):
-        """Validate and set the next state; the caller persists."""
-        if not self.can_transition_to(new_state):
-            raise ValueError(f"Invalid DatasetJob transition: {self.state} -> {new_state}")
-        self.state = new_state
 
 
 class DepositionSession(models.Model):

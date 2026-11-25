@@ -1,5 +1,7 @@
 """Tests for the DatasetJob submission-chaining service."""
 
+from datetime import timedelta
+
 import pytest
 from django.db.models.query import QuerySet
 from django.utils import timezone
@@ -354,38 +356,13 @@ class TestOnPushComplete:
         failed.dataset.refresh_from_db()
         assert failed.dataset.status == "failed"
 
-
-@pytest.mark.django_db
-@pytest.mark.parametrize("state", ["prep_submitted", "prep_running", "push_submitted", "push_running"])
-@pytest.mark.parametrize("success", [True, False])
-def test_dataset_save_failure_rolls_back_completion_and_allows_retry(state, success, monkeypatch):
-    job = _job(state)
-    job.dataset.status = "syncing"
-    job.dataset.save()
-    complete = submission.on_prep_complete if state in submission.PREP_ACTIVE else submission.on_push_complete
-    original_save = Dataset.save
-
-    def fail_after_save(dataset, *args, **kwargs):
-        original_save(dataset, *args, **kwargs)
-        raise RuntimeError("dataset save failed")
-
-    with monkeypatch.context() as patch:
-        patch.setattr(Dataset, "save", fail_after_save)
-        with pytest.raises(RuntimeError, match="dataset save failed"):
-            complete(job, success)
-
-    job.refresh_from_db()
-    job.dataset.refresh_from_db()
-    assert job.state == state
-    assert job.completed_at is None
-    assert not job.error_message
-    assert job.dataset.status == "syncing"
-
-    complete(job, success)
-    expected_state = "prep_completed" if state in submission.PREP_ACTIVE else "completed"
-    assert job.state == (expected_state if success else "failed")
-    job.dataset.refresh_from_db()
-    assert job.dataset.status == job.dataset_status
+    def test_state_change_advances_dataset_updated_at(self):
+        job = _job("push_running")
+        past = timezone.now() - timedelta(days=1)
+        Dataset.objects.filter(pk=job.dataset_id).update(updated_at=past)
+        submission.on_push_complete(job, True)
+        job.dataset.refresh_from_db()
+        assert job.dataset.updated_at > past
 
 
 @pytest.mark.django_db

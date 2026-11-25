@@ -1,11 +1,8 @@
-"""State-machine contract for DatasetJob (#860)."""
-
-import pytest
+"""DatasetJob status mapping and cluster-freeze contract."""
 
 from depositions.models import DatasetJob
 
 ALL_STATES = [s for s, _ in DatasetJob.STATE_CHOICES]
-ACTIVE_STATES = [s for s in ALL_STATES if s not in {"pending", "completed", "failed"}]
 
 
 def test_every_state_maps_to_a_dataset_status():
@@ -22,49 +19,3 @@ def test_only_pending_and_failed_allow_cluster_selection():
     assert not DatasetJob(state="failed").cluster_is_frozen
     assert DatasetJob(state="prep_completed").cluster_is_frozen
     assert DatasetJob(state="push_running").cluster_is_frozen
-
-
-def test_prep_completed_can_push_or_retry_preparation():
-    # Upload still needs an explicit claim; retry starts a fresh prep attempt.
-    job = DatasetJob(state="prep_completed")
-    assert job.can_transition_to("push_submitted")
-    assert job.can_transition_to("prep_submitted")
-    assert not job.can_transition_to("push_running")
-    assert not job.can_transition_to("completed")
-
-
-def test_short_job_may_skip_its_running_state():
-    # A poll can miss the running state, so *_submitted -> completion is allowed.
-    assert DatasetJob(state="prep_submitted").can_transition_to("prep_completed")
-    assert DatasetJob(state="push_submitted").can_transition_to("completed")
-
-
-def test_prep_completed_can_reset_to_pending():
-    # prep_completed can return to pending (invalidating prep).
-    assert DatasetJob(state="prep_completed").can_transition_to("pending")
-
-
-def test_failed_can_retry_prep():
-    assert DatasetJob(state="failed").can_transition_to("prep_submitted")
-
-
-def test_completed_is_terminal():
-    assert DatasetJob.TRANSITIONS["completed"] == set()
-
-
-@pytest.mark.parametrize("state", ACTIVE_STATES)
-def test_any_active_state_can_fail(state):
-    assert DatasetJob(state=state).can_transition_to("failed")
-
-
-def test_transition_to_sets_state_on_valid_move():
-    job = DatasetJob(state="pending")
-    job.transition_to("prep_submitted")
-    assert job.state == "prep_submitted"
-
-
-def test_transition_to_rejects_invalid_move():
-    job = DatasetJob(state="pending")
-    with pytest.raises(ValueError):
-        job.transition_to("completed")
-    assert job.state == "pending"
