@@ -253,6 +253,15 @@ def test_custom_mode_rejects_an_empty_selection(dataset):
         _build(dataset)
 
 
+def _annotated_dataset(dataset, runs=("copick-config-1",)):
+    session = dataset.sessions.get()
+    session.selected_copick_runs = list(runs)  # copick config names, not AreTomo run names
+    session.save(update_fields=["selected_copick_runs"])
+    dataset.tomogram_subset_mode = "annotated"
+    dataset.save()
+    return dataset
+
+
 @pytest.mark.parametrize("path", ["relative/path.csv", "/hpc/../etc/passwd.csv", "/hpc/subset.txt"])
 def test_custom_csv_path_must_be_a_safe_absolute_csv(dataset, path):
     session = dataset.sessions.get()
@@ -271,6 +280,45 @@ def _custom_path_dataset(dataset):
     dataset.tomogram_subset_mode = "custom"
     dataset.save()
     return dataset
+
+
+def _mock_annotated(monkeypatch, *, annotated, full=True, produced=None):
+    Cluster.objects.update_or_create(cluster_id="c1", defaults={"name": "C1", "is_active": True})
+    monkeypatch.setattr("depositions.services.dataprep_config.deposition_cluster_id", lambda: "c1")
+    monkeypatch.setattr(
+        "workflow.processors.copick.views.aggregate_annotated_runs",
+        lambda session, runs, dataset_id: (set(annotated), True, full),
+    )
+    monkeypatch.setattr(
+        "workflow.views.metadata_views.aretomo_positions",
+        lambda cluster, session, run: set(produced if produced is not None else annotated),
+    )
+
+
+def test_annotated_mode_keeps_positions_produced_by_this_aretomo_run(dataset, monkeypatch):
+    # Position_99 is annotated but not in this run's metrics, so it must be dropped.
+    _mock_annotated(
+        monkeypatch, annotated={"Position_2", "Position_1", "Position_99"}, produced={"Position_1", "Position_2"}
+    )
+    assert _session(_build(_annotated_dataset(dataset)))["positions"] == ["Position_1", "Position_2"]
+
+
+def test_annotated_mode_requires_selected_runs(dataset):
+    with pytest.raises(SubmissionValidationError, match="no annotated runs selected"):
+        _build(_annotated_dataset(dataset, runs=()))
+
+
+def test_annotated_mode_rejects_an_incomplete_scan(dataset, monkeypatch):
+    # A running or subset-scoped scan would prune to a partial set; block until a full scan exists.
+    _mock_annotated(monkeypatch, annotated={"Position_1"}, full=False)
+    with pytest.raises(SubmissionValidationError, match="only covered a subset"):
+        _build(_annotated_dataset(dataset))
+
+
+def test_annotated_mode_rejects_when_none_are_in_this_run(dataset, monkeypatch):
+    _mock_annotated(monkeypatch, annotated={"Position_99"}, produced={"Position_1", "Position_2"})
+    with pytest.raises(SubmissionValidationError, match="none of the annotated tomograms are in"):
+        _build(_annotated_dataset(dataset))
 
 
 def test_custom_csv_with_no_overlap_is_rejected(dataset, monkeypatch):

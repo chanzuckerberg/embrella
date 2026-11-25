@@ -114,6 +114,10 @@ export function AnnotationsStep({ dataset, reportSave, readOnly, reportBlocking 
         queryKey: ['copick-scan', dataset.id, active.name, [...active.runs].sort()],
       });
       queryClient.invalidateQueries({ queryKey: ['copick-aretomo-compat', dataset.id, active.name] });
+      // Drop the cached annotated count so a finished rescan isn't shown as stale.
+      queryClient.invalidateQueries({
+        queryKey: ['deposition', 'sources', 'annotated-count', dataset.id, active.name],
+      });
     } catch {
       setRescanError('Couldn’t start the scan. Try again.');
     } finally {
