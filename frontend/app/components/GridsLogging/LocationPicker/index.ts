@@ -3,4 +3,4 @@ export type { LocationPickerDialogProps } from './LocationPickerDialog';
 export { LocationField } from './LocationField';
 export { pickLabel } from './labels';
 export { PickTarget, SelectMode } from './types';
-export type { PickedLocation, PickerStart } from './types';
+export type { PickedLocation, PickerStart, TrashedGrid } from './types';

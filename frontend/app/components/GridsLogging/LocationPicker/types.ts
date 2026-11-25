@@ -47,6 +47,17 @@ export interface PickedLocation {
   gridName?: string;
 }
 
+/**
+ * A trashed grid from the inventory search. It has no location, so search offers it by name
+ * and picking it bypasses the selection.
+ *   { id: 1619, name: "WT_RPE_B1_G4 (id=1619)", detail: "User Name · Project" }
+ */
+export interface TrashedGrid {
+  id: number;
+  name: string;
+  detail: string;
+}
+
 // Where the dialog opens; defaults to the owner gallery.
 export interface PickerStart {
   puckId?: number;

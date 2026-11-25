@@ -6,18 +6,32 @@
  *   Grid target, single: a grid hit picks it and opens its box.
  *   Grid target, multi:  a grid hit toggles it; results stay open to add several.
  *   Other targets:       hits only navigate.
+ *   Trashed grids (with onPickTrashed): inventory search with status Trashed, own section
+ *   below live hits, always shown on a match since live and trashed grids often share names.
  */
 
 import React, { useState } from 'react';
-import { Box, InputAdornment, List, ListItemButton, ListItemText, Paper, TextField } from '@mui/material';
+import {
+  Box,
+  InputAdornment,
+  List,
+  ListItemButton,
+  ListItemText,
+  ListSubheader,
+  Paper,
+  TextField,
+} from '@mui/material';
 import { Icon } from '@czi-sds/components';
 import { CRUMB } from './labels';
-import { PickedLocation, PickTarget, SelectMode } from './types';
+import { PickedLocation, PickTarget, SelectMode, TrashedGrid } from './types';
 import { HitKind, SearchHit, useLocationSearch } from './useLocationSearch';
+import { useTrashedSearch } from './useTrashedSearch';
 import { PickerNav } from './usePickerNav';
 import { Selection } from './useSelection';
 
 const RESULTS_HEIGHT = '280px';
+const PLACEHOLDER = 'Search grid, box or puck';
+const PLACEHOLDER_TRASHED = `${PLACEHOLDER} (incl. trashed grids)`;
 
 const hitDetail = (h: SearchHit) =>
   h.kind === HitKind.Grid
@@ -44,9 +58,10 @@ interface LocationSearchProps {
   nav: PickerNav;
   selection: Selection;
   canPick: (pick: PickedLocation) => boolean;
+  onPickTrashed?: (grid: TrashedGrid) => void;
 }
 
-export const LocationSearch = ({ nav, selection, canPick }: LocationSearchProps) => {
+export const LocationSearch = ({ nav, selection, canPick, onPickTrashed }: LocationSearchProps) => {
   const { actions, allPucks, target } = nav;
   const [term, setTerm] = useState('');
   const boxHits = useLocationSearch(term);
@@ -54,6 +69,7 @@ export const LocationSearch = ({ nav, selection, canPick }: LocationSearchProps)
 
   const needle = term.trim().toLowerCase();
   const puckHits = needle ? allPucks.filter((p) => p.name.toLowerCase().includes(needle)) : [];
+  const trashedHits = useTrashedSearch(term, onPickTrashed !== undefined);
 
   const done = () => setTerm('');
 
@@ -79,7 +95,7 @@ export const LocationSearch = ({ nav, selection, canPick }: LocationSearchProps)
       <TextField
         size="small"
         fullWidth
-        placeholder="Search grid, box or puck"
+        placeholder={onPickTrashed ? PLACEHOLDER_TRASHED : PLACEHOLDER}
         value={term}
         onChange={(e) => setTerm(e.target.value)}
         InputProps={{
@@ -128,7 +144,17 @@ export const LocationSearch = ({ nav, selection, canPick }: LocationSearchProps)
                 </ListItemButton>
               );
             })}
-            {!puckHits.length && !boxHits.length && (
+            {trashedHits.length > 0 && <ListSubheader>Trashed</ListSubheader>}
+            {trashedHits.map((g) => (
+              <ListItemButton key={`t${g.id}`} onClick={() => onPickTrashed?.(g)}>
+                <ListItemText
+                  primary={g.name}
+                  secondary={g.detail}
+                  primaryTypographyProps={{ color: 'text.secondary' }}
+                />
+              </ListItemButton>
+            ))}
+            {!puckHits.length && !boxHits.length && !trashedHits.length && (
               <ListItemText sx={{ px: '16px', color: 'text.secondary' }} primary="No matches" />
             )}
           </List>
