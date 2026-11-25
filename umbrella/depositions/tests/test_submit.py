@@ -24,6 +24,13 @@ def _raise_no_creds():
     raise RuntimeError("service credentials unavailable")
 
 
+def _build_config_for_real(monkeypatch):
+    """Undo the mocks fixture's config-yaml stub so custom-subset handling runs for real."""
+    from depositions.services import dataprep_config
+
+    monkeypatch.setattr(submit, "dataprep_config_yaml", dataprep_config.dataprep_config_yaml)
+
+
 @pytest.fixture
 def dataset(db, test_msi_session):
     author = Person.objects.create(given_name="Ada", family_name="Lovelace")
@@ -71,27 +78,23 @@ def mocks(monkeypatch, db):
 
     calls["auth"] = {"username": "service-user", "pkey": "test-key"}
     monkeypatch.setattr(submit.clusterio, "get_auth_service_user", lambda: calls["auth"])
-    monkeypatch.setattr(submit, "cluster_id_for_run", lambda *a, **k: "cluster-a")
+    monkeypatch.setattr(submit, "deposition_cluster_id", lambda: "cluster-a")
     monkeypatch.setattr(submit.clusterio, "ensure_remote_dir", lambda *a: calls.__setitem__("mkdir", a))
     monkeypatch.setattr(submit.clusterio, "write_remote_file_atomic", write)
 
-    def config_yaml(dataset, *, output_dir, sync_destination=None):
+    def config_yaml(
+        dataset, *, output_dir, sync_destination=None, annotated_positions=None, cluster_id=None, custom_positions=None
+    ):
         calls["sync_destination"] = sync_destination
         calls["built_dataset_id"] = dataset.dataset_id
+        calls["annotated_positions"] = annotated_positions
+        calls["custom_positions"] = custom_positions
         return "yaml-text"
 
     monkeypatch.setattr(submit, "dataprep_config_yaml", config_yaml)
     monkeypatch.setattr(submit, "launch_deposition_job", launch)
     monkeypatch.setattr(submit.tasks, "start_deposition_job_syncer", lambda *a: calls.__setitem__("synced", a))
     return calls
-
-
-@pytest.mark.django_db
-def test_cluster_for_dataset_scopes_to_aretomo(dataset, monkeypatch):
-    captured = {}
-    monkeypatch.setattr(submit, "cluster_id_for_run", lambda *a, **k: captured.update(k) or "cluster-a")
-    assert submit._cluster_for_dataset(dataset) == "cluster-a"
-    assert captured["processor_class"] == "aretomo3"
 
 
 @pytest.mark.django_db
@@ -180,7 +183,8 @@ class TestSubmitDatasetPrep:
         assert launched["auth"] is mocks["auth"]
         assert mocks["synced"] == (job.id, "prep", "cluster-a", "slurm-500")
 
-    def test_custom_mode_requires_a_selection_per_session(self, dataset, mocks):
+    def test_custom_mode_requires_a_selection_per_session(self, dataset, mocks, monkeypatch):
+        _build_config_for_real(monkeypatch)
         dataset.tomogram_subset_mode = "custom"
         dataset.save(update_fields=["tomogram_subset_mode"])
         with pytest.raises(SubmissionValidationError, match="no custom subset selected"):
@@ -188,15 +192,65 @@ class TestSubmitDatasetPrep:
         assert mocks["launched"] is None
         assert not DatasetJob.objects.filter(dataset=dataset).exists()
 
-    def test_custom_mode_rejects_cluster_path_subset(self, dataset, mocks):
+    def test_custom_mode_resolves_a_cluster_csv_path_to_positions(self, dataset, mocks, monkeypatch):
+        from depositions.services import subset
+
         dataset.tomogram_subset_mode = "custom"
         dataset.save(update_fields=["tomogram_subset_mode"])
         session = dataset.sessions.get()
         session.subset_csv_path = "/cluster/path/subset.csv"
         session.save(update_fields=["subset_csv_path"])
-        with pytest.raises(SubmissionValidationError, match="cluster CSV path"):
+
+        def fake_read(cluster_id, path, *a, **kw):
+            # The typed CSV and the session's AreTomo metrics are both read over SFTP; intersect them.
+            if path.endswith("TiltSeries_Metrics.csv"):
+                return "Tilt_Series\nPosition_1.mrc\nPosition_2\n"
+            return "Tilt_Series\nPosition_1\nPosition_9\n"  # Position_9 isn't in the run, dropped
+
+        monkeypatch.setattr(subset.clusterio, "read_remote_file", fake_read)
+        job = submit.submit_dataset_prep(dataset)
+        assert job.state == "prep_submitted"
+        # Resolved before the lock and handed to the builder; the path never reaches the config.
+        assert mocks["custom_positions"] == {session.msi_session.name: ["Position_1"]}
+
+    def test_custom_mode_rejects_both_upload_and_cluster_path(self, dataset, mocks):
+        dataset.tomogram_subset_mode = "custom"
+        dataset.save(update_fields=["tomogram_subset_mode"])
+        session = dataset.sessions.get()
+        session.subset_csv_path = "/cluster/path/subset.csv"
+        session.subset_selection = {"Selected positions": ["Position_1"]}
+        session.save(update_fields=["subset_csv_path", "subset_selection"])
+        # Fails pre-lock in resolve_custom_positions, before any SFTP read.
+        with pytest.raises(SubmissionValidationError, match="keep only one"):
             submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
+
+    def test_annotated_mode_resolves_positions_before_the_claim(self, dataset, mocks, monkeypatch):
+        session = dataset.sessions.get()
+        session.selected_copick_runs = ["copick-config-1"]
+        session.save(update_fields=["selected_copick_runs"])
+        dataset.tomogram_subset_mode = "annotated"
+        dataset.save(update_fields=["tomogram_subset_mode"])
+        monkeypatch.setattr(
+            "workflow.processors.copick.views.aggregate_annotated_runs",
+            lambda s, runs, dataset_id: ({"Position_1"}, True, True),
+        )
+        monkeypatch.setattr(
+            "workflow.views.metadata_views.aretomo_positions",
+            lambda cluster, s, run: {"Position_1", "Position_2"},
+        )
+        job = submit.submit_dataset_prep(dataset)
+        assert job.state == "prep_submitted"
+        # Resolved out of the lock and handed to the builder.
+        assert mocks["annotated_positions"] == {session.msi_session.name: ["Position_1"]}
+
+    def test_annotated_mode_with_no_runs_fails_before_the_claim(self, dataset, mocks):
+        dataset.tomogram_subset_mode = "annotated"
+        dataset.save(update_fields=["tomogram_subset_mode"])
+        with pytest.raises(SubmissionValidationError, match="no annotated runs selected"):
+            submit.submit_dataset_prep(dataset)
+        assert mocks["launched"] is None
+        assert not DatasetJob.objects.filter(dataset=dataset).exists()
 
     def test_rejects_unreserved_ids(self, dataset, mocks):
         dataset.dataset_id = None  # checked on the passed object
@@ -260,15 +314,61 @@ class TestSubmitDatasetPrep:
         assert job.prep_completed_at is None
         assert job.completed_at is None
 
-    def test_path_resolution_failure_fails_row_without_launching(self, dataset, mocks, monkeypatch):
+    def test_path_resolution_failure_does_not_claim(self, dataset, mocks, monkeypatch):
         def boom(*a, **k):
             raise RuntimeError("no deposition_staging PathType")
 
         monkeypatch.setattr(submit, "resolve_dir", boom)
         with pytest.raises(RuntimeError):
             submit.submit_dataset_prep(dataset)
+        # Paths resolve before the claim now, so a failure leaves the dataset unclaimed, not failed.
+        assert not DatasetJob.objects.filter(dataset=dataset).exists()
+        assert mocks["launched"] is None
+
+    def test_config_build_failure_does_not_claim(self, dataset, mocks, monkeypatch):
+        def boom(*a, **k):
+            raise SubmissionValidationError("Session needs autofill before preparing the dataset.")
+
+        monkeypatch.setattr(submit, "dataprep_config_yaml", boom)
+        with pytest.raises(SubmissionValidationError, match="needs autofill"):
+            submit.submit_dataset_prep(dataset)
+        assert mocks["launched"] is None
+        assert not DatasetJob.objects.filter(dataset=dataset).exists()
+
+    def test_config_build_failure_leaves_prior_attempt_untouched(self, dataset, mocks, monkeypatch):
+        # A fixable error on resubmit must not wipe or fail a completed attempt - the dataset stays usable.
+        DatasetJob.objects.create(
+            dataset=dataset,
+            state="prep_completed",
+            prep_slurm_job_id="p1",
+            validation={"status": "passed"},
+        )
+
+        def boom(*a, **k):
+            raise SubmissionValidationError("Session needs autofill before preparing the dataset.")
+
+        monkeypatch.setattr(submit, "dataprep_config_yaml", boom)
+        with pytest.raises(SubmissionValidationError, match="needs autofill"):
+            submit.submit_dataset_prep(dataset)
         job = DatasetJob.objects.get(dataset=dataset)
-        assert job.state == "failed"  # rolled back, not stranded at prep_submitted
+        assert job.state == "prep_completed"
+        assert job.prep_slurm_job_id == "p1"
+        assert job.validation == {"status": "passed"}
+        assert mocks["launched"] is None
+
+    def test_config_build_failure_leaves_prior_failed_attempt_untouched(self, dataset, mocks, monkeypatch):
+        # A pre-claim failure returns a 400 and doesn't write the job, so the old message stays.
+        DatasetJob.objects.create(dataset=dataset, state="failed", error_message="original failure")
+
+        def boom(*a, **k):
+            raise SubmissionValidationError("Session needs autofill before preparing the dataset.")
+
+        monkeypatch.setattr(submit, "dataprep_config_yaml", boom)
+        with pytest.raises(SubmissionValidationError, match="needs autofill"):
+            submit.submit_dataset_prep(dataset)
+        job = DatasetJob.objects.get(dataset=dataset)
+        assert job.state == "failed"
+        assert job.error_message == "original failure"
         assert mocks["launched"] is None
 
     def test_poller_start_failure_cancels_job_and_fails_row(self, dataset, mocks, monkeypatch):
@@ -571,7 +671,7 @@ class TestPreviewConfigYaml:
         monkeypatch.setattr(submit, "resolve_dir", lambda *a, cluster, **k: seen.update(cluster=cluster) or "/staged")
         monkeypatch.setattr(submit, "resolve_sync_destination", lambda *, cluster: "s3://x")
         submit.preview_config_yaml(dataset)
-        assert seen["cluster"] == "cluster-a"  # derived via _cluster_for_dataset, not "stale-cluster"
+        assert seen["cluster"] == "cluster-a"  # derived via deposition_cluster_id, not "stale-cluster"
 
     def test_locked_job_previews_the_staged_cluster(self, dataset, mocks, monkeypatch):
         DatasetJob.objects.create(dataset=dataset, state="prep_running", cluster_id="staged-cluster")

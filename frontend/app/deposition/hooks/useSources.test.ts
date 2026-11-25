@@ -31,11 +31,11 @@ it('sums selected and available counts across AreTomo and denoise sources', () =
 
 describe('annotatedRefetchInterval', () => {
   it('polls (5s) while a completed response is not yet scanned', () => {
-    expect(annotatedRefetchInterval({ count: 0, scanned: false })).toBe(5000);
+    expect(annotatedRefetchInterval({ count: 0, scanned: false, complete: false })).toBe(5000);
   });
 
   it('stops once the scan has completed', () => {
-    expect(annotatedRefetchInterval({ count: 3, scanned: true })).toBe(false);
+    expect(annotatedRefetchInterval({ count: 3, scanned: true, complete: true })).toBe(false);
   });
 
   it('stops before the first response (no data yet)', () => {
@@ -43,6 +43,6 @@ describe('annotatedRefetchInterval', () => {
   });
 
   it('stops on a terminal error even if the last data was unscanned', () => {
-    expect(annotatedRefetchInterval({ count: 0, scanned: false }, true)).toBe(false);
+    expect(annotatedRefetchInterval({ count: 0, scanned: false, complete: false }, true)).toBe(false);
   });
 });

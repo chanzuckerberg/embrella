@@ -2,10 +2,11 @@
 
 import hashlib
 
-from processes.services.cluster_resolver import cluster_id_for_run
 from workflow.processors import get_processor
 
+from depositions.services.cluster import deposition_cluster_id
 from depositions.services.exceptions import SubmissionValidationError
+from depositions.validators import ensure_safe_run_name
 
 KINDS = {"picks": "picks", "segmentations": "segmentation_mask"}
 
@@ -63,12 +64,11 @@ def session_annotations(session, authors):
         if annotation.method_type:
             entry["method_type"] = annotation.method_type
         annotations.append(entry)
-    aretomo_run = session.aretomo_run_name
-    cluster = cluster_id_for_run(
-        label, aretomo_run if aretomo_run.startswith("run") else f"run{aretomo_run}", processor_class="aretomo3"
-    )
-    base = get_processor("copick").get_processing_base_path(cluster=cluster).rstrip("/")
-    configs = [f"{base}/{label}/{copick_run}/config.json" for copick_run in session.selected_copick_runs]
+    base = get_processor("copick").get_processing_base_path(cluster=deposition_cluster_id()).rstrip("/")
+    configs = []
+    for copick_run in session.selected_copick_runs:
+        ensure_safe_run_name(copick_run)
+        configs.append(f"{base}/{label}/{copick_run}/config.json")
     for entry in annotations:
         entry["copick_config"] = configs
     return annotations

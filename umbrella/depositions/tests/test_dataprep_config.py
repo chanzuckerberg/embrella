@@ -8,8 +8,7 @@ import pytest
 import yaml
 from django.core.exceptions import ImproperlyConfigured
 from people.models import Person
-from processes.models import Pipe, PipeExecution, PipeInPlan, ProcRun, ProcSoftware
-from processes.services.cluster_resolver import get_default_cluster_id
+from processes.models import ProcSoftware
 from stores.models import Cluster, DataKind, PathType
 from tem.models import MsiSession
 
@@ -108,37 +107,14 @@ def denoise_dataset(dataset):
     return dataset
 
 
-def _record_execution(session, plan, processor_class, run, cluster_id):
-    software, _ = ProcSoftware.objects.get_or_create(
-        processor_class=processor_class, defaults={"name": processor_class}
-    )
-    pipe = Pipe.objects.create(name=processor_class, software=software)
-    step = PipeInPlan.objects.create(plan=plan, pipe=pipe, step=1, name=processor_class)
-    proc_run = ProcRun.objects.create(name=run, proc_plan=plan, msi_session=session.msi_session)
-    return PipeExecution.objects.create(proc_run=proc_run, pipe_in_plan=step, parameters={"cluster_id": cluster_id})
-
-
 def test_denoise_source_resolved_from_selected_run(denoise_dataset):
-    session = denoise_dataset.sessions.get()
-    with mock.patch("depositions.services.dataprep_config.cluster_id_for_run", return_value="c1") as lookup:
-        config = _build(denoise_dataset)
+    config = _build(denoise_dataset)
     assert _session(config)["paths"]["denoise"] == "/custom/denoise/24nov10/run005"
-    assert lookup.call_args_list == [
-        mock.call(session.msi_session.name, "run001", processor_class="aretomo3"),
-        mock.call(session.msi_session.name, "run005", default="c1", processor_class="denoiset"),
-    ]
 
 
-@pytest.mark.parametrize("denoise_run", ["005", "run005"])
-def test_denoise_missing_execution_falls_back_to_prep_cluster(denoise_dataset, test_proc_plan, denoise_run):
-    session = denoise_dataset.sessions.get()
-    session.aretomo_run_name = "001"
-    session.denoise_run_name = denoise_run
-    session.save()
-    assert get_default_cluster_id() != "c1"
-    _record_execution(session, test_proc_plan, "aretomo3", "run001", "c1")
-    # An unrelated execution with the denoise run's name must not determine its cluster.
-    _record_execution(session, test_proc_plan, "aretomo3", "run005", get_default_cluster_id())
+def test_denoise_resolved_on_the_deposition_cluster(denoise_dataset, monkeypatch):
+    # The denoise path comes from the deposition cluster's root, not wherever the run executed.
+    monkeypatch.setattr("depositions.services.dataprep_config.deposition_cluster_id", lambda: "c1")
     ProcSoftware.objects.filter(processor_class="denoiset").update(processing_root=None)
     PathType.objects.update_or_create(
         data_kind=DataKind.objects.get(data_type="processing_root"),
@@ -149,24 +125,16 @@ def test_denoise_missing_execution_falls_back_to_prep_cluster(denoise_dataset, t
     assert _session(config)["paths"]["denoise"] == "/cluster-c1/denoise/24nov10/run005"
 
 
-def test_denoise_on_another_cluster_is_rejected(denoise_dataset, test_proc_plan):
-    session = denoise_dataset.sessions.get()
-    _record_execution(session, test_proc_plan, "aretomo3", "run001", "c1")
-    _record_execution(session, test_proc_plan, "denoiset", "run005", "c2")
-    with pytest.raises(SubmissionValidationError, match="denoise run 'run005'.*'c2'.*AreTomo cluster 'c1'"):
-        _build(denoise_dataset)
-
-
 @pytest.mark.parametrize("error", [ImproperlyConfigured("No denoise root"), PathType.DoesNotExist("Missing root")])
 def test_misconfigured_denoise_raises_actionable_error(denoise_dataset, error, caplog):
     with (
-        mock.patch("depositions.services.dataprep_config.cluster_id_for_run", return_value="c1"),
+        mock.patch("depositions.services.dataprep_config.deposition_cluster_id", return_value="c1"),
         mock.patch("depositions.services.dataprep_config.get_processor") as processor,
     ):
         processor.return_value.get_processing_base_path.side_effect = error
         with pytest.raises(SubmissionValidationError) as raised:
             _build(denoise_dataset)
-        assert raised.value.public_message == "Denoise isn't configured on this cluster."
+        assert raised.value.public_message == "Denoise isn't configured on the deposition cluster."
         assert str(error) not in raised.value.public_message
     record = next(record for record in caplog.records if record.exc_info)
     assert record.name == "depositions.services.dataprep_config"
@@ -283,6 +251,86 @@ def test_custom_mode_rejects_an_empty_selection(dataset):
     dataset.save()
     with pytest.raises(SubmissionValidationError, match="no custom subset selected"):
         _build(dataset)
+
+
+def _annotated_dataset(dataset, runs=("copick-config-1",)):
+    session = dataset.sessions.get()
+    session.selected_copick_runs = list(runs)  # copick config names, not AreTomo run names
+    session.save(update_fields=["selected_copick_runs"])
+    dataset.tomogram_subset_mode = "annotated"
+    dataset.save()
+    return dataset
+
+
+@pytest.mark.parametrize("path", ["relative/path.csv", "/hpc/../etc/passwd.csv", "/hpc/subset.txt"])
+def test_custom_csv_path_must_be_a_safe_absolute_csv(dataset, path):
+    session = dataset.sessions.get()
+    session.subset_csv_path = path
+    session.save(update_fields=["subset_csv_path"])
+    dataset.tomogram_subset_mode = "custom"
+    dataset.save()
+    with pytest.raises(SubmissionValidationError, match="Invalid subset CSV path"):
+        _build(dataset)
+
+
+def _custom_path_dataset(dataset):
+    session = dataset.sessions.get()
+    session.subset_csv_path = "/hpc/subsets/24nov10.csv"
+    session.save(update_fields=["subset_csv_path"])
+    dataset.tomogram_subset_mode = "custom"
+    dataset.save()
+    return dataset
+
+
+def _mock_annotated(monkeypatch, *, annotated, full=True, produced=None):
+    Cluster.objects.update_or_create(cluster_id="c1", defaults={"name": "C1", "is_active": True})
+    monkeypatch.setattr("depositions.services.dataprep_config.deposition_cluster_id", lambda: "c1")
+    monkeypatch.setattr(
+        "workflow.processors.copick.views.aggregate_annotated_runs",
+        lambda session, runs, dataset_id: (set(annotated), True, full),
+    )
+    monkeypatch.setattr(
+        "workflow.views.metadata_views.aretomo_positions",
+        lambda cluster, session, run: set(produced if produced is not None else annotated),
+    )
+
+
+def test_annotated_mode_keeps_positions_produced_by_this_aretomo_run(dataset, monkeypatch):
+    # Position_99 is annotated but not in this run's metrics, so it must be dropped.
+    _mock_annotated(
+        monkeypatch, annotated={"Position_2", "Position_1", "Position_99"}, produced={"Position_1", "Position_2"}
+    )
+    assert _session(_build(_annotated_dataset(dataset)))["positions"] == ["Position_1", "Position_2"]
+
+
+def test_annotated_mode_requires_selected_runs(dataset):
+    with pytest.raises(SubmissionValidationError, match="no annotated runs selected"):
+        _build(_annotated_dataset(dataset, runs=()))
+
+
+def test_annotated_mode_rejects_an_incomplete_scan(dataset, monkeypatch):
+    # A running or subset-scoped scan would prune to a partial set; block until a full scan exists.
+    _mock_annotated(monkeypatch, annotated={"Position_1"}, full=False)
+    with pytest.raises(SubmissionValidationError, match="only covered a subset"):
+        _build(_annotated_dataset(dataset))
+
+
+def test_annotated_mode_rejects_when_none_are_in_this_run(dataset, monkeypatch):
+    _mock_annotated(monkeypatch, annotated={"Position_99"}, produced={"Position_1", "Position_2"})
+    with pytest.raises(SubmissionValidationError, match="none of the annotated tomograms are in"):
+        _build(_annotated_dataset(dataset))
+
+
+def test_custom_csv_with_no_overlap_is_rejected(dataset, monkeypatch):
+    monkeypatch.setattr("depositions.services.subset.deposition_cluster_id", lambda: "c1")
+    monkeypatch.setattr(
+        "depositions.services.subset.clusterio.read_remote_file",
+        lambda cluster_id, path, *a, **kw: (
+            "Tilt_Series\nPosition_1\n" if path.endswith("TiltSeries_Metrics.csv") else "Tilt_Series\nPosition_9\n"
+        ),
+    )
+    with pytest.raises(SubmissionValidationError, match="none of the positions"):
+        _build(_custom_path_dataset(dataset))
 
 
 def test_user_edits_override_autofill_without_changing_saved_raw_data(dataset):
@@ -490,15 +538,11 @@ def test_selected_annotations_use_sync_contract_and_reviewed_authors(dataset, mo
     DepositionAnnotationMethodLink.objects.create(
         annotation=selected, link_type="source_code", link="https://example.org/code"
     )
-    cluster_kwargs = {}
-    monkeypatch.setattr(
-        annotation_config, "cluster_id_for_run", lambda *a, **k: cluster_kwargs.update(k) or "cluster-a"
-    )
+    monkeypatch.setattr(annotation_config, "deposition_cluster_id", lambda: "cluster-a")
     monkeypatch.setattr(
         annotation_config, "get_processor", lambda _: SimpleNamespace(get_processing_base_path=lambda **kw: "/copick")
     )
     annotations = _session(_build(dataset))["annotations"]
-    assert cluster_kwargs["processor_class"] == "aretomo3"
     assert len(annotations) == 1
     entry = annotations[0]
     assert entry["kind"] == expected and entry["copick_ref"] == "ribosome:alice/0"
@@ -523,4 +567,36 @@ def test_annotation_export_rejects_unsupported_or_incomplete_selections(dataset,
         session=session, copick_kind="meshes" if problem == "mesh" else "picks", copick_ref="ribosome:alice/0"
     )
     with pytest.raises(SubmissionValidationError, match=match):
+        _build(dataset)
+
+
+def test_denoise_path_build_guard_catches_unsafe_saved_name(dataset):
+    """A run name saved straight onto the model (bypassing the serializer) is still caught at path-build."""
+    session = dataset.sessions.get()
+    session.denoise_run_name = "a/b"
+    session.save(update_fields=["denoise_run_name"])
+    with pytest.raises(SubmissionValidationError, match="Invalid run name"):
+        _build(dataset)
+
+
+def test_annotation_path_build_guard_catches_unsafe_saved_copick_run(dataset, monkeypatch):
+    """An unsafe selected_copick_runs value that bypassed the serializer is caught before path-build."""
+    session = dataset.sessions.get()
+    session.selected_copick_runs = ["../etc"]
+    session.save(update_fields=["selected_copick_runs"])
+    TomogramMetadata.objects.create(session=session, flavor="filtered", voxel_spacing=12, is_visualization_default=True)
+    DepositionAnnotation.objects.create(
+        session=session,
+        copick_kind="picks",
+        copick_ref="ribosome:alice/0",
+        object_id="GO:0022626",
+        object_name="ribosome",
+        annotation_method="Manual annotation",
+        annotation_software="Copick",
+    )
+    monkeypatch.setattr(annotation_config, "deposition_cluster_id", lambda: "cluster-a")
+    monkeypatch.setattr(
+        annotation_config, "get_processor", lambda _: SimpleNamespace(get_processing_base_path=lambda **kw: "/copick")
+    )
+    with pytest.raises(SubmissionValidationError, match="Invalid run name"):
         _build(dataset)

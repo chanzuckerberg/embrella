@@ -9,7 +9,6 @@ from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema, extend_schema_view
-from processes.services.cluster_resolver import cluster_id_for_run
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -36,8 +35,10 @@ from .services.autofill import (
     map_session_to_metadata,
     run_autofill_init,
 )
+from .services.cluster import deposition_cluster_id
 from .services.exceptions import SubmissionValidationError
 from .services.metadata import metadata_edit
+from .validators import ensure_safe_run_name
 
 logger = logging.getLogger(__name__)
 
@@ -470,14 +471,19 @@ class DepositionSessionViewSet(
         run_number = (
             session.aretomo_run_name if session.aretomo_run_name.startswith("run") else f"run{session.aretomo_run_name}"
         )
+        try:
+            ensure_safe_run_name(run_number)
+        except SubmissionValidationError as error:
+            return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
 
         msi_session = session.msi_session
-        cluster_id = cluster_id_for_run(msi_session.name, run_number, processor_class="aretomo3")
+        # Auto-fill runs cryoetportalprep, which lives on the deposition cluster, not where AreTomo ran.
+        cluster_id = deposition_cluster_id()
         try:
             cluster = Cluster.objects.get(cluster_id=cluster_id, is_active=True)
         except Cluster.DoesNotExist:
             return Response(
-                {"detail": f"Unknown cluster for this run: {cluster_id}."},
+                {"detail": f"Deposition cluster {cluster_id!r} isn't configured."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

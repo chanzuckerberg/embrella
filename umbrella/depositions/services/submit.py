@@ -6,17 +6,17 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import transaction
 from django.utils import timezone
-from processes.services.cluster_resolver import cluster_id_for_run, get_default_cluster_id
 from stores.paths import resolve_dir
 
 from common import clusterio
 from depositions import tasks
 from depositions.models import DatasetJob, Deposition
+from depositions.services.cluster import deposition_cluster_id
 from depositions.services.dataprep_config import (
     dataprep_config_yaml,
     dataset_is_ready,
     is_defining_dataset,
-    require_custom_positions,
+    require_annotated_positions,
     resolve_sync_destination,
 )
 from depositions.services.dataset_metadata import build_dataset_metadata, build_deposition_metadata
@@ -24,11 +24,13 @@ from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
 from depositions.services.metadata_requirements import deposition_metadata_issues, metadata_issues
 from depositions.services.submission import PREP_ACTIVE, PUSH_ACTIVE, apply_status, on_push_complete, start_push
+from depositions.services.subset import resolve_custom_positions
 from depositions.services.validation import require_validation
 
 logger = logging.getLogger(__name__)
 
 CONFIG_FILENAME = "dataprep_config.yaml"
+NOT_READY = "This dataset isn't ready to submit - add sessions and run auto-fill first."
 
 
 def _notification_parameters(deposition):
@@ -39,15 +41,6 @@ def _notification_parameters(deposition):
     except ValidationError:
         return {}
     return {"slurm_mail_user": address}
-
-
-def _cluster_for_dataset(dataset):
-    session = dataset.sessions.select_related("msi_session").order_by("msi_session__name").first()
-    if session is None:
-        return get_default_cluster_id()
-    run = session.aretomo_run_name or ""
-    run_number = run if run.startswith("run") else f"run{run}"
-    return cluster_id_for_run(session.msi_session.name, run_number, processor_class="aretomo3")
 
 
 def _service_auth():
@@ -65,17 +58,33 @@ def submit_dataset_prep(dataset):
     if deposition.deposition_id is None or dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before submitting.")
     db = dataset._state.db
-    # Serialize prep claims within the shared deposition staging directory.
+    cluster_id = deposition_cluster_id()
+    # Resolve before the lock so the HTTP/SFTP reads aren't held under it.
+    annotated_positions = None
+    custom_positions = None
+    if dataset.tomogram_subset_mode == "annotated":
+        if not dataset_is_ready(dataset):
+            raise SubmissionValidationError(NOT_READY)
+        annotated_positions = {
+            s.msi_session.name: require_annotated_positions(s, dataset)
+            for s in dataset.sessions.select_related("msi_session")
+        }
+    elif dataset.tomogram_subset_mode == "custom":
+        if not dataset_is_ready(dataset):
+            raise SubmissionValidationError(NOT_READY)
+        custom_positions = {
+            s.msi_session.name: resolve_custom_positions(s, cluster_id)
+            for s in dataset.sessions.select_related("msi_session", "tiltseries_metadata")
+            if s.subset_csv_path.strip()
+        }
+    # Serialize prep claims; the lock also builds the config from the same state it's claimed on.
     with transaction.atomic(using=db):
         Deposition.objects.using(db).select_for_update().get(pk=deposition.pk)
         deposition.refresh_from_db()
         dataset.refresh_from_db()
         if not dataset_is_ready(dataset):
-            raise SubmissionValidationError(
-                "This dataset isn't ready to submit - add sessions and run auto-fill first."
-            )
+            raise SubmissionValidationError(NOT_READY)
         auth = _service_auth()
-        cluster_id = _cluster_for_dataset(dataset)
         if (
             DatasetJob.objects.using(db)
             .filter(dataset__deposition=deposition, state__in=PREP_ACTIVE)
@@ -92,16 +101,21 @@ def submit_dataset_prep(dataset):
             issues += deposition_metadata_issues(build_deposition_metadata(deposition))
         if issues:
             raise SubmissionValidationError("Complete the metadata before preparation:\n" + "\n".join(issues))
-        # Fail fast (pre-claim) if a custom dataset has an unusable selection; dataprep_config
-        # re-checks it as the backstop.
-        if dataset.tomogram_subset_mode == "custom":
-            for session in dataset.sessions.select_related("msi_session"):
-                require_custom_positions(session)
+        # Build the config before claiming so a fixable error leaves the job unclaimed and retryable.
+        output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
+        config_path = f"{output_dir.rstrip('/')}/{dataset.dataset_id}/{CONFIG_FILENAME}"
+        config_yaml = dataprep_config_yaml(
+            dataset,
+            output_dir=output_dir,
+            sync_destination=resolve_sync_destination(cluster=cluster_id),
+            annotated_positions=annotated_positions,
+            custom_positions=custom_positions,
+        )
         job, _ = DatasetJob.objects.using(db).get_or_create(dataset=dataset)
         claimed = (
             DatasetJob.objects.using(db)
             .filter(pk=job.pk, state__in=("pending", "failed", "prep_completed"))
-            # Clear the prior attempt's ids + log so a re-failed prep doesn't surface the old output.
+            # Clear the prior attempt's ids + log on claim so a later failure doesn't show old output.
             .update(
                 state="prep_submitted",
                 prep_slurm_job_id="",
@@ -125,14 +139,6 @@ def submit_dataset_prep(dataset):
 
     slurm_job_id = None
     try:
-        # Resolve paths inside the try so a resolution failure rolls the claim back, not strands it.
-        output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
-        config_path = f"{output_dir.rstrip('/')}/{dataset.dataset_id}/{CONFIG_FILENAME}"
-        config_yaml = dataprep_config_yaml(
-            dataset,
-            output_dir=output_dir,
-            sync_destination=resolve_sync_destination(cluster=cluster_id),
-        )
         params = {
             "dataset_id": dataset.dataset_id,
             "output_dir": output_dir,
@@ -206,7 +212,7 @@ def submit_dataset_push(dataset):
     require_validation(job)
 
     # Upload from the cluster used for preparation.
-    cluster_id = job.cluster_id or _cluster_for_dataset(dataset)
+    cluster_id = job.cluster_id or deposition_cluster_id()
     auth = _service_auth()
     output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
     base = output_dir.rstrip("/")
@@ -251,8 +257,8 @@ def preview_config_yaml(dataset):
     if deposition.deposition_id is None or dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before downloading the config.")
     job = getattr(dataset, "job", None)
-    # Show the staged cluster only while the job is locked; otherwise derive it the way a resubmit will.
-    cluster_id = (job.cluster_id if job and job.cluster_is_frozen else "") or _cluster_for_dataset(dataset)
+    # Frozen job keeps its staged cluster; otherwise resolve it like a resubmit would.
+    cluster_id = (job.cluster_id if job and job.cluster_is_frozen else "") or deposition_cluster_id()
     output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
     return dataprep_config_yaml(
         dataset,

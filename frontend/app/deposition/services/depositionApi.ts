@@ -176,7 +176,8 @@ export async function listCopickRuns(sessionName: string): Promise<CopickRunOpti
 
 export interface AnnotatedCount {
   count: number;
-  scanned: boolean;
+  scanned: boolean; // the scan job finished (drives polling)
+  complete: boolean;
 }
 
 export async function getCopickRunObjects(sessionName: string, run: string): Promise<string[]> {
@@ -189,17 +190,28 @@ export async function getCopickRunObjects(sessionName: string, run: string): Pro
 export async function getAnnotatedCount(
   sessionName: string,
   runs: string[],
-  datasetId: number
+  datasetId: number,
+  aretomoRun?: string
 ): Promise<AnnotatedCount> {
-  if (runs.length === 0) return { count: 0, scanned: true };
+  if (runs.length === 0) return { count: 0, scanned: true, complete: true };
   const q =
     `?session_id=${encodeURIComponent(sessionName)}` +
     `&runs=${encodeURIComponent(runs.join(','))}` +
-    `&dataset=${datasetId}`;
-  const data = await parse<{ annotated_count?: number; scanned?: boolean }>(
-    await fetchResource(url(`${API.COPICK_ANNOTATED_COUNT}${q}`))
-  );
-  return { count: data.annotated_count ?? 0, scanned: data.scanned ?? false };
+    `&dataset=${datasetId}` +
+    (aretomoRun ? `&aretomo_run=${encodeURIComponent(normalizeRun(aretomoRun))}` : '');
+  const data = await parse<{
+    success?: boolean;
+    annotated_count?: number;
+    scanned?: boolean;
+    complete?: boolean;
+  }>(await fetchResource(url(`${API.COPICK_ANNOTATED_COUNT}${q}`)));
+  // metrics unreadable: the UI shows "count unavailable"
+  if (data.success === false) throw new Error('annotated count unavailable');
+  return {
+    count: data.annotated_count ?? 0,
+    scanned: data.scanned ?? false,
+    complete: data.complete ?? false,
+  };
 }
 
 export interface CopickAretomoCompat {
@@ -304,7 +316,7 @@ export async function getTomogramCount(sessionName: string, runNumber: string): 
   const q = `?session_name=${encodeURIComponent(sessionName)}&run_number=${encodeURIComponent(run)}`;
   const res = await fetchResource(url(`${API.METADATA_SUMMARY}${q}`));
   if (!res.ok) throw new Error(`tomogram count unavailable (${res.status})`);
-  const text = (await res.text()).replace(/\bNaN\b/g, 'null');
+  const text = await res.text();
   const data = text ? (JSON.parse(text) as { num_tomograms?: number }) : {};
   return data.num_tomograms ?? 0;
 }

@@ -183,3 +183,6 @@ CLAUDE.md
 
 # Uploaded media (MEDIA_ROOT fallback; the dev image folder lives in .scratch/media)
 umbrella/media/
+
+# Playwright MCP snapshots/logs
+.playwright-mcp/

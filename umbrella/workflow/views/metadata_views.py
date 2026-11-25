@@ -6,6 +6,7 @@ and quality metrics from remote processing directories.
 """
 
 import json
+import math
 from dataclasses import dataclass
 from enum import StrEnum
 from io import StringIO
@@ -65,6 +66,22 @@ def _error(message, status):
     return JsonResponse({"error": message}, status=status)
 
 
+def _json_safe(value):
+    """NaN/inf (e.g. the std of a single-row metrics CSV) aren't valid JSON; render them as null so
+    clients don't have to patch the raw response text."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    return value
+
+
+def _metadata_response(data):
+    return JsonResponse(_json_safe(data), json_dumps_params={"indent": 2})
+
+
 def _locate_run(request):
     """(RunLocation, None) for the run named by the query string, or (None, error response).
 
@@ -121,6 +138,12 @@ def _read_metrics(loc):
     return df
 
 
+def aretomo_positions(cluster, msi_session, run_number) -> set[str]:
+    """The tilt-series stems an AreTomo run produced, from its metrics CSV over HTTP. Raises
+    FileNotFoundError when absent."""
+    return set(_read_metrics(RunLocation(cluster, msi_session, run_number))["Tilt_Series"])
+
+
 @require_http_methods(["GET"])
 def get_copick_aretomo_compat(request):
     """Annotated copick runs not produced by the deposited AreTomo run."""
@@ -129,30 +152,19 @@ def get_copick_aretomo_compat(request):
         return error
 
     try:
-        aretomo_runs = set(_read_metrics(loc)["Tilt_Series"])
+        aretomo_runs = aretomo_positions(loc.cluster, loc.msi_session, loc.run_number)
     except FileNotFoundError:
         return _error("Required files not found", HTTP_NOT_FOUND)
 
     # Lazy import: the copick scan helpers live in the copick processor module.
-    from workflow.processors.copick.views import _copick_root_url, _parse_dataset_id, _read_scan_json
+    from workflow.processors.copick.views import _parse_dataset_id, aggregate_annotated_runs
 
     dataset_id = _parse_dataset_id(request.GET.get("dataset"))
     if dataset_id is None:
         return _error("a numeric dataset is required", HTTP_BAD_REQUEST)
 
     copick_runs = [r.strip() for r in request.GET.get("copick_runs", "").split(",") if r.strip()]
-    annotated: set[str] = set()
-    scanned = True
-    for run in copick_runs:
-        try:
-            result = _read_scan_json(_copick_root_url(loc.msi_session, run), dataset_id)
-        except Exception as exc:  # a bad run degrades to "not scanned", never a 500
-            logger.warning("copick-compat: resolve failed for %s/%s: %s", loc.msi_session.name, run, exc)
-            result = {"scanned": False}
-        if not result.get("scanned"):
-            scanned = False
-        annotated.update(result.get("annotated_runs", []))
-
+    annotated, scanned, _full = aggregate_annotated_runs(loc.msi_session, copick_runs, dataset_id)
     incompatible = sorted(annotated - aretomo_runs)
     return JsonResponse(
         {
@@ -216,7 +228,7 @@ def get_metadata_summary(request):
             "grid_name": grid_name,
         }
 
-        return JsonResponse(response, json_dumps_params={"indent": 2})
+        return _metadata_response(response)
 
     except Exception:
         logger.exception(GENERIC_ERROR)
@@ -372,7 +384,7 @@ def get_metadata_viz_data(request):
             "rejected_results": rejected_results,
         }
 
-        return JsonResponse(response_data, json_dumps_params={"indent": 2})
+        return _metadata_response(response_data)
 
     except Exception:
         logger.exception(GENERIC_ERROR)
