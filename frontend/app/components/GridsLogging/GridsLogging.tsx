@@ -165,11 +165,14 @@ export const GridsLogging: React.FC = () => {
   };
 
   const handleMoveGridBoxSuccess = (newPuckId: number, newSlotPosition: number) => {
+    // A puck outside the owner filter (someone else's) would not be found; widen to all pucks.
+    const inList = pucksList.some((p) => p.id === newPuckId);
     setUrlState({
       puck_id: newPuckId,
       slot_position: newSlotPosition,
       grid_position: null,
       grid_id: null,
+      ...(inList ? {} : { owner: false }),
     });
     if (puckDetailsRefetch) {
       puckDetailsRefetch();
@@ -313,6 +316,7 @@ export const GridsLogging: React.FC = () => {
             onRefetchReady={handlePuckDetailsRefetchReady}
             onGridBoxInfoRefetchReady={handleGridBoxInfoRefetchReady}
             onPuckDeleted={handlePuckDeleted}
+            onShowSlot={handleMoveGridBoxSuccess}
           />
         )}
       </Box>
