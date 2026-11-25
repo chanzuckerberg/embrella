@@ -18,7 +18,7 @@ import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { GridBoxFit, GridBoxSize, GridBoxSVG } from './GridBoxSvg';
 import { defaultNumbering } from './gridBoxLayout';
 import { ColorDropdown, FIELD_HEIGHT, NumberingDropdown, SizeDropdown } from './StyleDropdowns';
-import { SlotPicker } from './SlotPicker';
+import { LocationField, PickTarget } from '../LocationPicker';
 
 const PREVIEW_SIZE = 160;
 const PREVIEW_SIZE_NARROW = 128;
@@ -47,6 +47,8 @@ interface Draft {
   color: string;
   numbering: string;
   position: number | '';
+  // Picked from another puck in the location picker; null = the puck this dialog opened on.
+  destination: { id: number; name: string } | null;
   // null = use the suggested name.
   name: string | null;
 }
@@ -59,6 +61,7 @@ const initialDraft = (choices: GridLoggingChoicesResponse | undefined, position?
     color: defaults?.color ?? FALLBACK.color,
     numbering: defaults?.numbering ?? FALLBACK.numbering,
     position: position ?? '',
+    destination: null,
     name: null,
   };
 };
@@ -118,7 +121,7 @@ interface AddGridBoxProps {
   selectedUser?: UserList | null;
   puck?: PuckList | null;
   positionInPuck?: number;
-  onGridBoxCreated?: (slotPosition: number) => void;
+  onGridBoxCreated?: (slotPosition: number, puckId: number) => void;
 }
 
 export const AddGridBox: React.FC<AddGridBoxProps> = ({
@@ -153,10 +156,11 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
     }
   }, [open, puck?.id, refetchPuckSlots]);
 
-  // Opened from the header button: default to the first free slot.
+  // Opened from the header button: default to the first free slot of this puck.
   const firstFree = slotsData?.slots.find((slot) => slot.status !== FILLED)?.position;
-  const position = draft.position || firstFree || '';
-  const name = draft.name ?? suggestName(puck?.name, position);
+  const position = draft.position || (draft.destination ? '' : firstFree) || '';
+  const target = draft.destination ?? puck;
+  const name = draft.name ?? suggestName(target?.name, position);
 
   // Switching size resets numbering to that size's default (e.g. 8 → col).
   const setSize = (maxGrids: GridBoxSize) => update({ maxGrids, numbering: defaultNumbering(choices, maxGrids) });
@@ -176,14 +180,14 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
     return () => clearTimeout(timer);
   }, [open, hasName]);
 
-  const isFormValid = Boolean(name && draft.numbering && puck && position && choicesLoaded && usersLoaded);
+  const isFormValid = Boolean(name && draft.numbering && target && position && choicesLoaded && usersLoaded);
 
   const handleSave = async () => {
-    if (!isFormValid || !puck || !position) return;
+    if (!isFormValid || !target || !position) return;
 
     const result = await createGridBox({
-      puck_id: puck.id,
-      puckName: puck.name,
+      puck_id: target.id,
+      puckName: target.name,
       gridBoxName: name,
       color: draft.color,
       numbering: draft.numbering,
@@ -193,7 +197,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
     if (!result) return;
 
     onClose();
-    onGridBoxCreated?.(position);
+    onGridBoxCreated?.(position, target.id);
   };
 
   const handleNameKey = (event: React.KeyboardEvent) => {
@@ -266,11 +270,24 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
 
         <Box sx={layout.position}>
           <Labeled label="Position">
-            <SlotPicker
-              puck={puck ?? undefined}
-              slots={slotsData}
-              value={position}
-              onChange={(slot) => update({ position: slot })}
+            {/* Opens on this puck; any free slot in any puck can take the new box. */}
+            <LocationField
+              label="Position"
+              placeholder="Pick a slot"
+              dialogTitle="Pick a slot"
+              target={PickTarget.EmptySlot}
+              value={
+                target && position
+                  ? { key: `p${target.id}-s${position}`, puckId: target.id, puckName: target.name, slot: position }
+                  : null
+              }
+              start={puck ? { puckId: puck.id } : undefined}
+              onChange={(pick) =>
+                update({
+                  position: pick.slot,
+                  destination: pick.puckId === puck?.id ? null : { id: pick.puckId, name: pick.puckName },
+                })
+              }
             />
           </Labeled>
         </Box>

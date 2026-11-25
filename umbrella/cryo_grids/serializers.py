@@ -40,6 +40,8 @@ class PuckSerializer(serializers.ModelSerializer):
 
     color_display = serializers.CharField(source="get_color_display", read_only=True)
     user_name = serializers.CharField(source="user.username", read_only=True)
+    # Annotated by PuckViewSet; a just-created puck has no annotation and no boxes.
+    grid_box_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Puck
@@ -53,6 +55,7 @@ class PuckSerializer(serializers.ModelSerializer):
             "user",
             "user_name",
             "cane",
+            "grid_box_count",
         ]
         validators = []
 
@@ -327,6 +330,7 @@ class CaneSerializer(serializers.ModelSerializer):
 
     color_code = serializers.CharField(source="get_color_display", read_only=True)
     pucks_count = serializers.SerializerMethodField()
+    dewar_name = serializers.CharField(source="dewar.name", read_only=True, default=None)
 
     class Meta:
         model = Cane
@@ -338,6 +342,7 @@ class CaneSerializer(serializers.ModelSerializer):
             "position_in_dewar",
             "max_pucks",
             "dewar",
+            "dewar_name",
             "pucks_count",
         ]
 

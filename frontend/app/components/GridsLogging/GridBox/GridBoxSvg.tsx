@@ -33,6 +33,7 @@ interface GridBoxSVGProps {
   disableGridClick?: boolean;
   gridBoxData?: GridBoxDetailResponse;
   selectedGrid?: number | null;
+  selectedGrids?: number[]; // multi-select; highlighted like selectedGrid
   slotsData?: PuckSlotsResponse;
   selectedSlot?: number | null;
   maxGrids?: GridBoxSize;
@@ -118,6 +119,7 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   disableGridClick = false,
   gridBoxData,
   selectedGrid = null,
+  selectedGrids,
   slotsData,
   selectedSlot = null,
   maxGrids = 4,
@@ -152,7 +154,7 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   const slotStyle = (position: number) => {
     const isOccupied = getGridStatus(position) === GridStatus.Occupied;
 
-    if (position === selectedGrid)
+    if (position === selectedGrid || selectedGrids?.includes(position))
       return { paint: { fill: SELECTED_FILL } as SlotPaint, filter: SELECTED_FILTER, isSelected: true };
 
     return { paint: slotPaint(palette, isOccupied), filter: undefined, isSelected: false };

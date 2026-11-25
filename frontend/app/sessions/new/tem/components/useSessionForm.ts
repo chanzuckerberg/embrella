@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback, useContext, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { UserContext } from '@app/common/context/UserProvider';
 import {
   createSession,
   fetchFormOptions,
@@ -65,7 +64,7 @@ interface UseSessionFormReturn {
 /**
  * Server data is declared with React Query, keyed on the form state it depends on:
  *
- *   filterUserId  -> grids            (default grid pre-selected once they arrive)
+ *   filterUserId  -> grids            (never pre-selected: users pick the grid they loaded)
  *   sessionPlanId -> magnifications
  *   sessionPlanId -> suggested name   (applied to the field only while it is untouched)
  *
@@ -73,16 +72,14 @@ interface UseSessionFormReturn {
  * done during render with the previous-value pattern, so there are no effects.
  */
 export function useSessionForm(): UseSessionFormReturn {
-  const user = useContext(UserContext);
-  const currentUserId = user?.id ? Number(user.id) : null;
-
   const [state, setState] = useState<SessionFormState>({
     sessionPlanId: null,
     projectId: null,
     gridId: null,
     magnificationId: null,
     name: '',
-    filterUserId: currentUserId,
+    // All users' grids: the grid is picked by location, often from someone else's puck.
+    filterUserId: null,
     superResolution: false,
     phasePlateUsed: false,
     energyFilterUsed: true,
@@ -113,19 +110,6 @@ export function useSessionForm(): UseSessionFormReturn {
   const grids = gridsQuery.data ?? NO_GRIDS;
   const magnifications =
     state.sessionPlanId !== null ? (magnificationsQuery.data ?? NO_MAGNIFICATIONS) : NO_MAGNIFICATIONS;
-
-  // The signed-in user arrives after mount: adopt them as the grid filter when they do.
-  const [prevUserId, setPrevUserId] = useState(currentUserId);
-  if (currentUserId !== prevUserId) {
-    setPrevUserId(currentUserId);
-    setState((prev) => ({ ...prev, filterUserId: currentUserId, gridId: null }));
-  }
-
-  // A fresh grid list pre-selects its default grid; a grid the user picked is left alone.
-  const defaultGrid = grids.find((g) => g.is_default);
-  if (state.gridId === null && defaultGrid) {
-    setState((prev) => (prev.gridId === null ? { ...prev, gridId: defaultGrid.id } : prev));
-  }
 
   // Apply a newly suggested name only while the field is empty or still shows the previous
   // suggestion. Keyed on plan + value so the same text for a new plan still re-applies.
