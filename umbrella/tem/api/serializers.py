@@ -3,6 +3,7 @@ import re
 from rest_framework import serializers
 
 from tem.models import MsiSession
+from tem.serializers import NamedRefSerializer
 
 
 class MsiSessionCreateSerializer(serializers.Serializer):
@@ -65,6 +66,7 @@ class ProjectOptionSerializer(serializers.Serializer):
 class FormOptionsSerializer(serializers.Serializer):
     session_plans = SessionPlanOptionSerializer(many=True)
     projects = ProjectOptionSerializer(many=True)
+    default_grid = NamedRefSerializer(allow_null=True)
 
 
 class SuggestNameSerializer(serializers.Serializer):

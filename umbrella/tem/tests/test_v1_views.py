@@ -1,6 +1,7 @@
 import time
 
 import pytest
+from cryo_grids.models import CryoGrid
 
 from tem.models import (
     AcquisitionSettings,
@@ -52,6 +53,25 @@ class TestFormOptions:
             "phase_plate_used": False,
             "energy_filter_used": True,
         }
+
+    def test_offers_seeded_default_grid(self, client, test_user):
+        # Migration 0044 seeds the placeholder, so even a fresh DB offers one
+        placeholder = CryoGrid.objects.get(is_placeholder=True)
+        client.force_login(test_user)
+
+        data = client.get("/tem/v1/sessions/form-options/").json()
+
+        assert data["default_grid"] == {"id": placeholder.id, "name": placeholder.name}
+
+    def test_trashed_default_grid_is_still_offered(self, client, test_user):
+        # There is only one placeholder; trashing it must not hide it from the form
+        placeholder = CryoGrid.objects.get(is_placeholder=True)
+        CryoGrid.objects.filter(pk=placeholder.pk).update(trashed=True)
+        client.force_login(test_user)
+
+        data = client.get("/tem/v1/sessions/form-options/").json()
+
+        assert data["default_grid"]["id"] == placeholder.id
 
     def test_filters_to_tomo_and_sngl_workflows(self, client, test_user, microscope, camera, software):
         client.force_login(test_user)
