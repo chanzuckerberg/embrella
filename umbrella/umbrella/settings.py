@@ -357,8 +357,9 @@ FILESERVER_ALLOWED_HOSTS = [h.rstrip("/") for h in _env_list("FILESERVER_ALLOWED
 FILESERVER_INTERNAL_BASE_URL = os.environ.get("FILESERVER_INTERNAL_BASE_URL", "")
 
 AUTHENTICATION_BACKENDS = [
-    "django.contrib.auth.backends.ModelBackend",
-    "allauth.account.auth_backends.AuthenticationBackend",
+    # Django and allauth password backends, refusing bots
+    "accounts.authentication.HumanModelBackend",
+    "accounts.authentication.HumanAllauthBackend",
     # Object-level permissions only; never authenticates.
     "guardian.backends.ObjectPermissionBackend",
 ]

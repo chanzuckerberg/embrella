@@ -5,6 +5,7 @@ django-allauth adapters for the Umbrella project.
   the cross-origin redirect bridge back to the frontend
 """
 
+from accounts.bots import BOT_PREFIX
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
@@ -86,7 +87,12 @@ class UmbrellaAccountAdapter(DefaultAccountAdapter):
         if first_name and last_name:
             candidates.append(f"{first_name}.{last_name}")
         candidates += [email, first_name, last_name, "unknown_user"]
-        user_username(user, username or self.generate_unique_username(candidates))
+        username = username or self.generate_unique_username(candidates)
+
+        # "bot-" names are reserved for bots
+        if username.startswith(BOT_PREFIX):
+            username = self.generate_unique_username([username.removeprefix(BOT_PREFIX)])
+        user_username(user, username)
 
     def is_open_for_signup(self, request):
         # No open local account registration — accounts come from Google SSO or

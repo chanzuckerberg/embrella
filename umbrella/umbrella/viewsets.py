@@ -20,7 +20,8 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     ViewSet for User model - ReadOnly since we only want to list users
     """
 
-    queryset = User.objects.all().order_by(Lower("username"))
+    # People only: bots never appear in user pickers
+    queryset = User.objects.filter(profile__bot_owner__isnull=True).order_by(Lower("username"))
     serializer_class = UserSerializer
 
     def list(self, request, *args, **kwargs):

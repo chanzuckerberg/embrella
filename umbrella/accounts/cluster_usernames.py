@@ -1,5 +1,7 @@
 from functools import lru_cache
 
+from .bots import is_bot
+
 
 class MissingClusterCredentialsError(Exception):
     """No UserClusterCredentials row exists for (user, cluster).
@@ -50,6 +52,11 @@ def resolve_cluster_username(user, cluster_id):
     """
     if user is None or not getattr(user, "is_authenticated", False):
         raise MissingClusterCredentialsError(getattr(user, "pk", None), cluster_id)
+
+    # Bots never run cluster jobs: they have no cluster account
+    if is_bot(user):
+        raise MissingClusterCredentialsError(user.pk, cluster_id)
+
     username = _lookup_username(user.pk, cluster_id)
     if username is None:
         raise MissingClusterCredentialsError(user.pk, cluster_id)
