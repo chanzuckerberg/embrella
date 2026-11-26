@@ -1,0 +1,13 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <p>Token <strong>{{ token.name }}</strong> for <strong>{{ token.owner.username }}</strong>.</p>
+    <p>Copy it now. It is shown only once and can't be recovered; if lost, delete it and create another.</p>
+    <pre style="user-select: all; font-size: 1.1em;">{{ raw }}</pre>
+    <p>Send it as <code>Authorization: Bearer &lt;token&gt;</code>.</p>
+    <a class="btn btn-primary" href="{% url 'admin:accounts_apitoken_changelist' %}">Done</a>
+  </div>
+</div>
+{% endblock %}

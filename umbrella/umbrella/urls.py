@@ -107,6 +107,7 @@ api_patterns = [
     path("api/redocs/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     # Other API endpoints
     path("user", get_user_info, name="user_info"),
+    path("api/tokens/", include("accounts.urls")),
     path("ping/", ping),
     path("annotations/v1/filterlist/", available_annotation_filter, name="get filter list for annotations"),
     # External resources (documentation links)

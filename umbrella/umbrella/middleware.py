@@ -4,10 +4,13 @@ Custom middleware for the Umbrella project.
 Contains middleware classes for handling authentication redirects and custom workflows.
 """
 
+from http import HTTPStatus
 from urllib.parse import parse_qs, urlencode, urlparse
 
+from accounts.scopes import allows, is_denied
+from accounts.tokens import TOKEN_PREFIX, authenticate
 from django.conf import settings
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 from umbrella_logger import logger
 
@@ -161,3 +164,55 @@ class FixLoginRedirectMiddleware(MiddlewareMixin):
                 response["Access-Control-Allow-Credentials"] = "true"
 
         return response
+
+
+BEARER_PREFIX = "Bearer "
+
+
+def _bearer(request) -> str | None:
+    """The raw ``emb_`` token from ``Authorization: Bearer emb_…``, else None."""
+    header = request.META.get("HTTP_AUTHORIZATION", "")
+    if not header.startswith(BEARER_PREFIX):
+        return None
+    raw = header.removeprefix(BEARER_PREFIX).strip()
+    return raw if raw.startswith(TOKEN_PREFIX) else None
+
+
+class TokenAuthMiddleware:
+    """Authenticate ``Bearer emb_…`` requests as the token's bot.
+
+    Request without a bearer → untouched (session auth as before).
+    Bad token → 401. Route denied to tokens, or outside the token's scopes → 403.
+    Never redirects to login. CSRF is skipped: browsers never send bearer headers on their own.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        raw = _bearer(request)
+        if raw is None:
+            return self.get_response(request)
+
+        token = authenticate(raw)
+        if token is None:
+            return JsonResponse({"error": "Invalid or expired token"}, status=HTTPStatus.UNAUTHORIZED)
+
+        # Set before any process_view, so Django's and DRF's CSRF checks see it
+        request.user = token.owner
+        request.api_token = token
+        request._dont_enforce_csrf_checks = True
+        return self.get_response(request)
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        token = getattr(request, "api_token", None)
+        if token is None:
+            return None
+
+        if is_denied(request.resolver_match, request.method):
+            return JsonResponse({"error": "Not available to API tokens"}, status=HTTPStatus.FORBIDDEN)
+
+        if not allows(token.scopes, request.method):
+            return JsonResponse({"error": "Token scope does not allow this method"}, status=HTTPStatus.FORBIDDEN)
+
+        return None

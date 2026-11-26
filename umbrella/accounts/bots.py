@@ -60,4 +60,3 @@ def is_usable(user) -> bool:
     if not is_bot(user):
         return True
     return user.profile.bot_owner.is_active
-

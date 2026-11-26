@@ -1,9 +1,14 @@
 from django import forms
 from django.contrib import admin
 from django.contrib.auth.models import User
+from django.template.response import TemplateResponse
 
 from .bots import BOT_PREFIX, BotState, create_bot, set_active
-from .models import Bot, Profile, SystemFeatureFlag, UserClusterCredentials
+from .models import APIToken, Bot, Profile, SystemFeatureFlag, UserClusterCredentials
+from .scopes import grantable_scopes
+from .tokens import create_token
+
+CREATED_TEMPLATE = "admin/accounts/apitoken/created.html"
 
 
 @admin.register(SystemFeatureFlag)
@@ -95,3 +100,57 @@ class BotAdmin(admin.ModelAdmin):
     def disable(self, request, queryset):
         for bot in queryset:
             set_active(bot, BotState.DISABLED)
+
+
+class APITokenAddForm(forms.ModelForm):
+    scopes = forms.MultipleChoiceField(choices=(), widget=forms.CheckboxSelectMultiple)
+
+    class Meta:
+        model = APIToken
+        fields = ("owner", "name", "scopes", "expires_at")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["owner"].queryset = User.objects.filter(profile__bot_owner__isnull=False)
+        self.fields["scopes"].choices = [(s, s) for s in grantable_scopes()]
+
+
+@admin.register(APIToken)
+class APITokenAdmin(admin.ModelAdmin):
+    """Raw token is shown once, after saving. Delete a row to revoke it."""
+
+    list_display = ("name", "owner", "scopes", "expires_at", "last_used_at", "created_by")
+    search_fields = ("name", "owner__username")
+    readonly_fields = ("owner", "name", "scopes", "audience", "expires_at", "last_used_at", "created_by", "created_at")
+
+    def get_form(self, request, obj=None, **kwargs):
+        if obj is None:
+            kwargs["form"] = APITokenAddForm
+        return super().get_form(request, obj, **kwargs)
+
+    def get_readonly_fields(self, request, obj=None):
+        return self.readonly_fields if obj else ()
+
+    def get_fields(self, request, obj=None):
+        if obj is None:
+            return ("owner", "name", "scopes", "expires_at")
+        return self.readonly_fields
+
+    def save_model(self, request, obj, form, change):
+        if change:
+            return
+        data = form.cleaned_data
+        token, raw = create_token(request.user, data["owner"], data["name"], data["scopes"], data["expires_at"])
+        obj.pk = token.pk
+        request._raw_token = raw
+
+    def response_add(self, request, obj, post_url_continue=None):
+        # The raw token exists only now: show it on its own page, not a dismissible banner
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "API token created",
+            "token": APIToken.objects.select_related("owner").get(pk=obj.pk),
+            "raw": request._raw_token,
+            "opts": self.opts,
+        }
+        return TemplateResponse(request, CREATED_TEMPLATE, context)

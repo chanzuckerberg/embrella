@@ -2,6 +2,8 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
 
+from .scopes import EMBRELLA_AUDIENCE
+
 
 class Profile(models.Model):
     """Per-user identity and feature-flag settings adjacent to ``auth.User``."""
@@ -99,7 +101,10 @@ class APIToken(models.Model):
     name = models.CharField(max_length=100)
     token_sha256 = models.CharField(max_length=64, unique=True)
     scopes = models.JSONField(default=list)
-    audience = models.CharField(max_length=64, default="embrella")
+
+    # Service the token is for. Embrella only accepts its own; tokens it issues for other services
+    # (e.g. an AI agent backend) get their audience, so a leaked one can't call Embrella's API.
+    audience = models.CharField(max_length=64, default=EMBRELLA_AUDIENCE)
     expires_at = models.DateTimeField(null=True, blank=True, help_text="Empty means it never expires.")
     last_used_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

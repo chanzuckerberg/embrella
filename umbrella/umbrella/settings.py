@@ -142,6 +142,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "umbrella.middleware.TokenAuthMiddleware",  # Bearer emb_… → bot user; before history/login checks
     "simple_history.middleware.HistoryRequestMiddleware",  # Stamps history rows with request.user
     "allauth.account.middleware.AccountMiddleware",
     "umbrella.middleware.APIAuthenticationMiddleware",
@@ -171,6 +172,7 @@ TEMPLATES = [
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "accounts.authentication.TokenFromMiddleware",
         "rest_framework.authentication.BasicAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
@@ -363,6 +365,9 @@ AUTHENTICATION_BACKENDS = [
     # Object-level permissions only; never authenticates.
     "guardian.backends.ObjectPermissionBackend",
 ]
+
+# Extension scopes grantable on API tokens but checked only by other services, e.g. "ai:agents:report"
+TOKEN_EXTRA_SCOPES = _env_list("TOKEN_EXTRA_SCOPES")
 
 # Skip guardian's AnonymousUser row; LoginRequiredMiddleware blocks anonymous access.
 ANONYMOUS_USER_NAME = None
