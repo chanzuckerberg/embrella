@@ -1,6 +1,5 @@
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -27,7 +26,6 @@ class GridTimelineView(APIView):
     Served for trashed grids too.
     """
 
-    authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
