@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.db import models
 
 
@@ -16,6 +17,14 @@ class Profile(models.Model):
         help_text="Verified ORCID iD for this account, set by the ORCID login flow.",
     )
     feature_flags = models.JSONField(default=dict, blank=True)
+    # Set only for bots: the human accountable for it. NULL means a human.
+    bot_owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="bots",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -24,6 +33,10 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"Profile({self.user.username})"
+
+    @property
+    def is_bot(self) -> bool:
+        return self.bot_owner_id is not None
 
 
 class SystemFeatureFlag(models.Model):
@@ -63,3 +76,37 @@ class UserClusterCredentials(models.Model):
 
     def __str__(self):
         return f"{self.user.username} @ {self.cluster_id} = {self.username}"
+
+
+class Bot(User):
+    """Proxy over users whose profile has a ``bot_owner``, i.e. bots."""
+
+    class Meta:
+        proxy = True
+        app_label = "accounts"
+
+
+class APIToken(models.Model):
+    """Bearer token for a bot. Only the SHA-256 of the raw token is stored."""
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="api_tokens")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="created_api_tokens",
+    )
+    name = models.CharField(max_length=100)
+    token_sha256 = models.CharField(max_length=64, unique=True)
+    scopes = models.JSONField(default=list)
+    audience = models.CharField(max_length=64, default="embrella")
+    expires_at = models.DateTimeField(null=True, blank=True, help_text="Empty means it never expires.")
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = "accounts"
+        verbose_name = "API token"
+
+    def __str__(self):
+        return f"{self.name} ({self.owner.username})"
