@@ -430,9 +430,8 @@ def format_puck(item):
 
 
 def format_user(item):
-    return UserModel(
-        id=item["userID"], name=item["username"].split("@")[0] if "@" in item["username"] else item["username"]
-    )
+    username = item["username"] or ""
+    return UserModel(id=item["userID"], name=username.split("@")[0] or None)
 
 
 def load_specimens(rows):
