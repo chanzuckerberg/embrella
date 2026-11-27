@@ -91,6 +91,7 @@ from cryo_grids.services import (
     update_grids,
 )
 from cryo_grids.viewset_helpers import (
+    OWNER_FILTER,
     add_selected_status,
     apply_grid_box_filters,
     apply_shared_grid_inventory_filters,
@@ -99,6 +100,7 @@ from cryo_grids.viewset_helpers import (
     natural_name_annotations,
     natural_name_ordering,
     parse_selected_filters,
+    puck_owner_q,
 )
 
 # Matches Image ids in URLs, e.g. 0b7c…-…; other strings 404 instead of erroring
@@ -2018,6 +2020,8 @@ class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
                 else:
                     puck_values = values if isinstance(values, list) else [values]
                     queryset = queryset.filter(name__in=puck_values)
+            elif category == OWNER_FILTER and values:
+                queryset = queryset.filter(puck_owner_q(values))
             elif category == "search" and values:
                 search_terms = values if isinstance(values, list) else [values]
                 search_q = Q()
