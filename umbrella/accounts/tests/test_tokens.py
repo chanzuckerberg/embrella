@@ -61,7 +61,8 @@ class TestTokens:
 
     def test_self(self, owner, bot):
         body = bearer_client(make_token(owner, bot)).get("/api/tokens/self").json()
-        assert body["owner"] == {"id": bot.id, "username": bot.username, "is_bot": True, "bot_owner": "alice"}
+        assert body["user"] == {"id": owner.id, "username": owner.username}
+        assert body["bot"] == {"id": bot.id, "username": bot.username}
         assert body["scopes"] == [Scope.READ]
 
 

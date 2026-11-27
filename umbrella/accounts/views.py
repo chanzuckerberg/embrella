@@ -12,18 +12,16 @@ from .tokens import describe
 # Swagger section, instead of the default "api" from the path prefix
 TAGS = ["tokens"]
 
+TOKEN_IDENTITY = inline_serializer(
+    name="TokenIdentity",
+    fields={"id": serializers.IntegerField(), "username": serializers.CharField()},
+)
+
 TOKEN_SELF = inline_serializer(
     name="TokenSelf",
     fields={
-        "owner": inline_serializer(
-            name="TokenOwner",
-            fields={
-                "id": serializers.IntegerField(),
-                "username": serializers.CharField(),
-                "is_bot": serializers.BooleanField(),
-                "bot_owner": serializers.CharField(allow_null=True),
-            },
-        ),
+        "user": TOKEN_IDENTITY,
+        "bot": TOKEN_IDENTITY,
         "name": serializers.CharField(),
         "scopes": serializers.ListField(child=serializers.CharField()),
         "audience": serializers.CharField(),

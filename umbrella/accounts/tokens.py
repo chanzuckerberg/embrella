@@ -78,16 +78,18 @@ def _touch(token: APIToken, now) -> None:
 
 def describe(token: APIToken) -> dict:
     """Payload for /api/tokens/self."""
-    owner = token.owner
+    # Tokens belong to bots only; ``user`` is the human the bot acts for ("my grids")
+    bot = token.owner
+    human = bot.profile.bot_owner
     return {
-        "owner": {
-            "id": owner.id,
-            "username": owner.username,
-            "is_bot": is_bot(owner),
-            "bot_owner": owner.profile.bot_owner.username if is_bot(owner) else None,
-        },
+        "user": _identity(human),
+        "bot": _identity(bot),
         "name": token.name,
         "scopes": token.scopes,
         "audience": token.audience,
         "expires_at": token.expires_at.isoformat() if token.expires_at else None,
     }
+
+
+def _identity(user) -> dict:
+    return {"id": user.id, "username": user.username}
