@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from accounts.bots import is_bot
 from cryo_grids.history import ChangeReason
 
 from timeline.types import Entry, EntryKind, Subject
@@ -76,6 +77,15 @@ def grid_entry(grid_id: int, at, kind: EntryKind, summary: str, user: str | None
 
 def username(user) -> str | None:
     return user.username if user else None
+
+
+def actor(row) -> str | None:
+    """Who created the record, e.g. "alice via bot-hydra-1" when a bot logged it for alice."""
+    logged_by = row.history_user
+    person = getattr(row, "user", None)
+    if not (is_bot(logged_by) and person):
+        return username(logged_by)
+    return f"{person.username} via {logged_by.username}"
 
 
 def attname(model, name: str) -> str:

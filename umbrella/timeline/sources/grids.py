@@ -11,6 +11,7 @@ from timeline.sources.base import (
     CREATED,
     DELETED,
     TRASHED,
+    actor,
     changes,
     grid_entry,
     history,
@@ -133,7 +134,7 @@ def _grid_entry(grid_id, prev, row) -> Entry | None:
 def _created(grid_id, row) -> Entry:
     """Baseline rows predate history: show creation at the grid's own create_on, by its owner."""
     if not is_baseline(row):
-        return grid_entry(grid_id, row.history_date, EntryKind.CREATED, "Grid created", username(row.history_user))
+        return grid_entry(grid_id, row.history_date, EntryKind.CREATED, "Grid created", actor(row))
 
     at = timezone.make_aware(datetime.combine(row.create_on, time.min))
     return grid_entry(grid_id, at, EntryKind.CREATED, "Grid created", username(row.user))

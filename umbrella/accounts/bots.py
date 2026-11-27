@@ -60,3 +60,22 @@ def is_usable(user) -> bool:
     if not is_bot(user):
         return True
     return user.profile.bot_owner.is_active
+
+
+class Write(Enum):
+    CREATE = "create"
+    UPDATE = "update"
+
+
+def on_behalf_error(actor, user, write: Write) -> str | None:
+    """Why a bot may not record this ``user`` as the person who did the work, if it may not.
+
+    A bot logs work for a human: the record's ``user`` is that human; history keeps the bot.
+    """
+    if not is_bot(actor):
+        return None
+    if user is None:
+        return "Bots must set 'user' to the person who did this." if write == Write.CREATE else None
+    if is_bot(user):
+        return "'user' must be a person, not a bot."
+    return None

@@ -5,6 +5,7 @@ Contains serializers for cryo-EM grid storage models including Pucks, Canes,
 CryoGridBoxes, and CryoGrids.
 """
 
+from accounts.serializers import OnBehalfMixin
 from django.utils import timezone as django_timezone
 from rest_framework import serializers
 from umbrella.choices import GRID_BOX_NUMBERING_BY_SIZE, PUCK_COLORS
@@ -33,7 +34,7 @@ class LabelSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_by", "created_by_name", "created_at"]
 
 
-class PuckSerializer(serializers.ModelSerializer):
+class PuckSerializer(OnBehalfMixin, serializers.ModelSerializer):
     """
     Serializer for Puck model with essential fields
     """
@@ -515,7 +516,7 @@ class GridDetailsSerializer(serializers.ModelSerializer):
         ]
 
 
-class CryoGridSerializer(serializers.ModelSerializer):
+class CryoGridSerializer(OnBehalfMixin, serializers.ModelSerializer):
     """
     Serializer for creating and updating CryoGrid
     """
@@ -714,7 +715,7 @@ class SpecimenSerializer(serializers.ModelSerializer):
         return specimen
 
 
-class FreezingSessionSerializer(serializers.ModelSerializer):
+class FreezingSessionSerializer(OnBehalfMixin, serializers.ModelSerializer):
     """
     Serializer for PlungeFreezingSession model
     """
