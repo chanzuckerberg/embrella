@@ -198,6 +198,8 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "API documentation for Embrella project",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": True,
+    # Redoc 3 dropped auto-init of the <redoc> tag used by drf-spectacular's template
+    "REDOC_DIST": "https://cdn.jsdelivr.net/npm/redoc@2",
     # Several models have a `status` field with different choice sets, this helps differentiate
     "ENUM_NAME_OVERRIDES": {
         "PreserveStatusEnum": "processes.models.DirectorySummary.PRESERVE_STATUS_CHOICES",
