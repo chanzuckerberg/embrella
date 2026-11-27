@@ -12,6 +12,7 @@ export const STORAGE_STATE_PATH = resolve(__dirname, '.auth/storageState.json');
 const PYTHON_BOOTSTRAP = `
 from django.contrib.auth import get_user_model, HASH_SESSION_KEY, BACKEND_SESSION_KEY, SESSION_KEY
 from django.contrib.sessions.backends.db import SessionStore
+from django.conf import settings
 User = get_user_model()
 user, _ = User.objects.get_or_create(
     username='playwright-test',
@@ -22,7 +23,7 @@ if not user.is_active:
     user.save(update_fields=['is_active'])
 session = SessionStore()
 session[SESSION_KEY] = str(user.pk)
-session[BACKEND_SESSION_KEY] = 'django.contrib.auth.backends.ModelBackend'
+session[BACKEND_SESSION_KEY] = settings.AUTHENTICATION_BACKENDS[0]
 session[HASH_SESSION_KEY] = user.get_session_auth_hash()
 session.create()
 print(session.session_key)
