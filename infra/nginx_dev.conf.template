@@ -145,6 +145,10 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
         }
 
+        # Optional extension locations (e.g. private overlays), mounted at
+        # /etc/nginx/conf.d/extensions via NGINX_EXTENSIONS_DIR. Empty by default.
+        include /etc/nginx/conf.d/extensions/*.conf;
+
         # Next.js (yarn dev) needs websocket upgrade for HMR.
         location / {
             set $upstream_frontend frontend;

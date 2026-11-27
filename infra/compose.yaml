@@ -74,6 +74,9 @@ services:
     volumes:
       - backend_static:/srv/staticfiles:ro
       - media:/srv/media:ro
+      # Extra nginx locations, pulled in by the templates' extensions include.
+      # Default is an empty folder; point NGINX_EXTENSIONS_DIR elsewhere to add some.
+      - ${NGINX_EXTENSIONS_DIR:-./nginx/extensions}:/etc/nginx/conf.d/extensions:ro
     environment:
       # The nginx image's entrypoint runs envsubst
       #   LOCAL_RESOLVERS: engine DNS (Docker or Podman) read from /etc/resolv.conf.

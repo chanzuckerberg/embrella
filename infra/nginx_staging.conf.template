@@ -167,6 +167,10 @@ http {
             gzip               off;
         }
 
+        # Optional extension locations (e.g. private overlays), mounted at
+        # /etc/nginx/conf.d/extensions via NGINX_EXTENSIONS_DIR. Empty by default.
+        include /etc/nginx/conf.d/extensions/*.conf;
+
         # ===== NEXT.JS FRONTEND (DEFAULT) =====
         location / {
             set $upstream_frontend frontend;
