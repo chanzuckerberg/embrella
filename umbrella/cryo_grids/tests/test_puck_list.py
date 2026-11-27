@@ -83,3 +83,47 @@ def test_grid_box_positions_report_numeric_grid_id(logged_in_client, test_puck, 
     position = next(p for p in response.json()["grid_box"]["positions"] if p["occupied"])
 
     assert position["grid_id"] == test_grid.pk
+
+
+PUCK_TABLE_URL = "/cryo_grids/v1/pucks/"
+
+
+def _owner_q(username):
+    return {"q": json.dumps([{"category": "owner", "value": [username]}])}
+
+
+def test_owner_filter_finds_owned_pucks(logged_in_client, test_user, test_puck):
+    # Empty owned puck matches; an unowned puck doesn't.
+    mine = Puck.objects.create(name="Mine", user=test_user, position_in_cane=2)
+
+    response = logged_in_client.get(PUCK_TABLE_URL, _owner_q(test_user.username))
+    ids = {r["puck"]["id"] for r in response.json()["result"]}
+
+    assert ids == {mine.pk}
+
+
+def test_owner_filter_ignores_grid_owner(logged_in_client, test_puck, test_grid):
+    # test_puck holds test_grid but has no owner.
+    response = logged_in_client.get(PUCK_TABLE_URL, _owner_q(test_grid.user.username))
+
+    assert response.json()["result"] == []
+
+
+def test_owner_filter_is_exact(logged_in_client, test_user, test_puck):
+    test_puck.user = test_user
+    test_puck.save()
+
+    response = logged_in_client.get(PUCK_TABLE_URL, _owner_q(test_user.username[:4]))
+
+    assert response.json()["result"] == []
+
+
+def test_grid_box_owner_filter_uses_puck_owner(logged_in_client, test_user, test_puck, test_box_a):
+    test_puck.user = test_user
+    test_puck.save()
+    Puck.objects.create(name="Other", position_in_cane=2)
+
+    response = logged_in_client.get(GRID_BOXES_URL, _owner_q(test_user.username))
+    ids = {r["gridBox"]["id"] for r in response.json()["result"]}
+
+    assert ids == {test_box_a.pk}

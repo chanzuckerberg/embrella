@@ -10,6 +10,9 @@ from django.db.models.functions import Cast
 
 from cryo_grids.models import CryoGrid, Label
 
+# Filter category for the puck's owner (Puck.user). `user` matches grid owners instead.
+OWNER_FILTER = "owner"
+
 
 def natural_name_annotations(field="name"):
     """Return annotation kwargs for natural (numeric-first) sorting on a name field.
@@ -103,6 +106,16 @@ def get_shared_search_suggestions(term, limit=5):
     return suggestions
 
 
+def username_q(username, field):
+    """Exact username or its local part: "ddong" matches "ddong" and "ddong@example.org", not "addong"."""
+    exact = Q(**{field: username})
+    if "@" in username:
+        return exact
+
+    # Search suggestions send usernames without their @domain
+    return exact | Q(**{f"{field}__startswith": f"{username}@"})
+
+
 def build_shared_grid_inventory_q_objects(q_params, grid_prefix=""):
     """Build Q objects for filter categories shared across GridInventory tabs.
 
@@ -160,9 +173,7 @@ def build_shared_grid_inventory_q_objects(q_params, grid_prefix=""):
             usernames = values if isinstance(values, list) else [values]
             q_username_filters = Q()
             for username in usernames:
-                if "@" in username:
-                    username = username.split("@")[0]
-                q_username_filters |= Q(**{f"{grid_prefix}user__username__icontains": username})
+                q_username_filters |= username_q(username, f"{grid_prefix}user__username")
             q_objects.append(q_username_filters)
         elif category == "date" and values:
             date_value = values[0] if isinstance(values, list) else values
@@ -241,6 +252,12 @@ def parse_selected_filters(q_params):
     return selected
 
 
+def puck_owner_q(values, puck_prefix=""):
+    """Match the puck's owner by username, e.g. ["ddong"] -> pucks ddong owns."""
+    usernames = values if isinstance(values, list) else [values]
+    return reduce(lambda q, u: q | username_q(u, f"{puck_prefix}user__username"), usernames, Q())
+
+
 def apply_grid_box_filters(queryset, q_params):
     """
     Apply filters to a CryoGridBox queryset based on q_params.
@@ -260,6 +277,8 @@ def apply_grid_box_filters(queryset, q_params):
                 if not isinstance(values, list):
                     values = [values]
                 q_objects.append(Q(puck__name__in=values))
+        elif category == OWNER_FILTER and values:
+            q_objects.append(puck_owner_q(values, puck_prefix="puck__"))
         elif category == "search" and values:
             search_terms = values if isinstance(values, list) else [values]
             search_q = Q()
